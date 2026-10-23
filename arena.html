@@ -1,0 +1,159 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Melee Arena</title>
+<style>
+:root{--bg:#f6f4ef;--fg:#1d1d1f;--mut:#666;--card:#fff;--line:#d8d4ca;--acc:#1d4e9e;--me:#2a7d3f;--foe:#b3261e;--hex:#e9eef7;--hexend:#ffd9d9}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e8e8ea;--mut:#9aa0a8;--card:#1f2228;--line:#363a42;--acc:#7fa8ee;--me:#6fcf86;--foe:#ff8d84;--hex:#262c38;--hexend:#4a2a2c}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 6px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+textarea{width:100%;box-sizing:border-box;min-height:70px;font:12px monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px}
+.mut{color:var(--mut);font-size:14px}.me{color:var(--me)}.foe{color:var(--foe)}
+table{border-collapse:collapse;width:100%}td{padding:2px 0}td:first-child{color:var(--mut);width:42%}
+svg{width:100%;height:auto;max-height:80vh}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+</style></head><body><main>
+<h1>Melee Arena</h1>
+<p class="mut">Stage 2: load your fighter, get a matched opponent, see both at their entrances. Fighting comes in later stages.</p>
+<div class="grid"><div>
+ <div class="card"><h2>Your fighter</h2>
+  <div class="row"><button class="pri" id="bLoad">Load from builder</button><button id="bEx">Use example</button></div>
+  <details><summary class="mut">Or paste a fighter (copy it from the builder)</summary><textarea id="paste" placeholder="paste JSON here"></textarea><div class="row"><button id="bPaste">Use pasted fighter</button></div></details>
+  <div id="msg" class="mut"></div><div id="me"></div></div>
+ <div class="card"><h2>Opponent</h2>
+  <div class="row"><button id="bFoe">New opponent</button></div><div id="foe"></div></div>
+</div>
+<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut">Top: opponent entrance. Bottom: yours. You start on the front hex nearest the middle; click any of the four green-outlined hexes at your end to start there instead.</div></div></div>
+</main>
+<script>
+"use strict";
+const RACES={human:{n:"Human",st:8,dx:8,iq:8,extra:8},orc:{n:"Orc",st:8,dx:8,iq:8,extra:8},elf:{n:"Elf",st:6,dx:10,iq:8,extra:8},dwarf:{n:"Dwarf",st:10,dx:6,iq:8,extra:8},hobbit:{n:"Hobbit",st:4,dx:12,iq:8,extra:4},goblin:{n:"Goblin",st:4,dx:4,iq:10,extra:10},hobgoblin:{n:"Hobgoblin",st:6,dx:6,iq:6,extra:8}};
+const ARMOR={none:{n:"No armor",stops:0,ma:10,pen:0},leather:{n:"Leather armor",stops:2,ma:8,pen:2},chain:{n:"Chainmail",stops:3,ma:6,pen:3},plate:{n:"Plate armor",stops:5,ma:4,pen:6}};
+const W={staff:{n:"Staff",d:1,m:0,st:0},dagger:{n:"Dagger",d:1,m:-1,st:0},rapier:{n:"Rapier",d:1,m:0,st:9},club:{n:"Club",d:1,m:0,st:9},hammer:{n:"Hammer",d:1,m:1,st:10},cutlass:{n:"Cutlass",d:2,m:-2,st:10},shortsw:{n:"Shortsword",d:2,m:-1,st:11},mace:{n:"Mace",d:2,m:-1,st:11},smallax:{n:"Small ax",d:1,m:2,st:11},broad:{n:"Broadsword",d:2,m:0,st:12},morning:{n:"Morningstar",d:2,m:1,st:13},twohsw:{n:"2-handed sword",d:3,m:-1,st:14,two:1},battle:{n:"Battleaxe",d:3,m:0,st:15,two:1},javelin:{n:"Javelin",d:1,m:-1,st:9},spear:{n:"Spear",d:1,m:2,st:11,two:1},halberd:{n:"Halberd",d:2,m:-1,st:13,two:1},pikeaxe:{n:"Pike axe",d:2,m:2,st:15,two:1},sling:{n:"Sling",miss:1},sbow:{n:"Small bow",miss:1},hbow:{n:"Horse bow",miss:1},lbow:{n:"Longbow",miss:1},lxbow:{n:"Light crossbow",miss:1},hxbow:{n:"Heavy crossbow",miss:1},mg:{n:"Main-gauche",d:1,m:-1,st:0,left:1}};
+const SHIELDS={small:{n:"Small shield",stops:1,pen:0},large:{n:"Large shield",stops:2,pen:1}};
+const MELEE=Object.keys(W).filter(k=>!W[k].miss&&k!=="staff"&&k!=="mg");
+const HEXES=[[0, 0, 0, 0], [-1, 1, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [-1, 2, 0, 0], [1, 1, 0, 0], [0, 2, 0, 0], [-2, 2, 1, 0], [-3, 2, 1, 0], [-3, 3, 1, 0], [-2, 3, 1, 0], [-4, 3, 1, 0], [-4, 4, 1, 0], [-3, 4, 1, 0], [2, -1, 2, 1], [2, 0, 2, 1], [3, -1, 2, 1], [3, 0, 2, 1], [-1, 3, 3, 0], [0, 3, 3, 0], [-2, 4, 3, 0], [-1, 4, 3, 0], [0, 4, 3, 0], [-2, 5, 3, 0], [-1, 5, 3, 0], [2, 1, 4, 0], [1, 2, 4, 0], [3, 1, 4, 0], [2, 2, 4, 0], [1, 3, 4, 0], [3, 2, 4, 0], [2, 3, 4, 0], [-5, 4, 5, 0], [-5, 5, 5, 0], [-6, 4, 5, 0], [-6, 5, 5, 0], [-6, 6, 5, 0], [-7, 5, 5, 0], [-7, 6, 5, 0], [-4, 5, 6, 0], [-3, 5, 6, 0], [-5, 6, 6, 0], [-3, 6, 6, 0], [-5, 7, 6, 0], [-4, 7, 6, 0], [-4, 6, 6, 0], [1, 4, 7, 0], [0, 5, 7, 0], [2, 4, 7, 0], [1, 5, 7, 0], [0, 6, 7, 0], [2, 5, 7, 0], [1, 6, 7, 0], [-2, 6, 8, 0], [-1, 6, 8, 0], [-3, 7, 8, 0], [-2, 7, 8, 0], [-1, 7, 8, 0], [-3, 8, 8, 0], [-2, 8, 8, 0], [-7, 7, 9, 0], [-6, 7, 9, 0], [-8, 8, 9, 0], [-7, 8, 9, 0], [-6, 8, 9, 0], [-8, 9, 9, 0], [-7, 9, 9, 0], [-8, 6, 10, 0], [-8, 7, 10, 0], [-9, 6, 10, 0], [-9, 7, 10, 0], [-9, 8, 10, 0], [-10, 7, 10, 0], [-10, 8, 10, 0], [-5, 8, 11, 0], [-4, 8, 11, 0], [-6, 9, 11, 0], [-5, 9, 11, 0], [-4, 9, 11, 0], [-6, 10, 11, 0], [-5, 10, 11, 0], [-9, 9, 12, 0], [-10, 9, 12, 0], [-10, 10, 12, 0], [-9, 10, 12, 0], [-11, 10, 12, 0], [-11, 11, 12, 0], [-10, 11, 12, 0], [-8, 10, 13, 0], [-7, 10, 13, 0], [-9, 11, 13, 0], [-8, 11, 13, 0], [-7, 11, 13, 0], [-9, 12, 13, 0], [-8, 12, 13, 0], [-11, 12, 14, 1], [-10, 12, 14, 1], [-11, 13, 14, 1], [-10, 13, 14, 1]]; /* [q,r,megahex,isEnd] */
+const KEY="wizard-builder-v1";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const dice=(d,m)=>d+"d"+(m>0?"+"+m:m<0?"−"+(-m):"");
+const ri=n=>Math.floor(Math.random()*n), pick=a=>a[ri(a.length)];
+
+/* ---- fighter from builder data ---- */
+function fromBuilder(o){
+  const R=RACES[o&&o.race]||RACES.human, ok=k=>k&&k!=="none";
+  const f={name:String(o.name||"Unnamed").slice(0,60),race:RACES[o.race]?o.race:"human",cls:o.cls==="wizard"?"wizard":"fighter",
+    st:Math.max(R.st,+o.st||R.st),dx:Math.max(R.dx,+o.dx||R.dx),iq:+o.iq||R.iq,
+    armor:ARMOR[o.armor]?o.armor:"none",silver:!!o.silver,right:"none",left:"none",slung:"none",dag:[]};
+  const hasStaff=f.cls==="wizard"&&Array.isArray(o.spells)&&o.spells.includes("Staff");
+  f.right=hasStaff?"staff":(W[o.a]&&!W[o.a].left?o.a:"none");
+  f.left=(SHIELDS[o.b]||(W[o.b]&&!W[o.b].two&&o.b!=="staff"))?o.b:"none";
+  if(f.right!=="none"&&W[f.right].two) f.left="none";
+  f.slung=(SHIELDS[o.s1]||(W[o.s1]&&o.s1!=="mg"))?o.s1:"none";
+  f.dag=[o.d1,o.d2].filter(k=>k==="dagger"||k==="mg");
+  return f;
+}
+function adjDX(f){ /* starting gear, old Melee/Wizard penalties as the builder computes them */
+  let a=f.dx-ARMOR[f.armor].pen, parts=[];
+  const hands=[f.right,f.left].filter(k=>k!=="none");
+  const sh=hands.filter(k=>SHIELDS[k]); sh.forEach(k=>a-=SHIELDS[k].pen);
+  const wp=hands.filter(k=>W[k]);
+  if(wp.includes("mg")) a-=2;
+  if(f.cls==="wizard"){
+    if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4;
+    if(!f.silver&&(f.armor!=="none"||wp.some(k=>k!=="staff"))) a-=4;
+  }
+  return a;
+}
+const MA=f=>{let m=ARMOR[f.armor].ma; if(f.race==="elf"){if(f.armor==="none")m=12;else if(f.armor==="leather")m=10;} return m;};
+const stops=f=>ARMOR[f.armor].stops+[f.right,f.left].reduce((t,k)=>t+(SHIELDS[k]?SHIELDS[k].stops:0),0)+(f.left==="mg"?1:0);
+const iname=k=>k==="none"?"nothing":(W[k]||SHIELDS[k]).n;
+function dmg(f,k){ if(!W[k]||W[k].miss)return""; let m=W[k].m; if(f.race==="dwarf"&&/hammer|smallax|battle/.test(k))m+=1; return dice(W[k].d,m); }
+
+/* ---- opponent: same ST+DX total as the player ---- */
+function makeOpponent(total){
+  const races=Object.keys(RACES).filter(k=>RACES[k].st+RACES[k].dx<=total&&k!=="orc");
+  let best=null;
+  for(let t=0;t<300;t++){
+    const rk=pick(races), R=RACES[rk]; let st=R.st, dx=R.dx, extra=total-st-dx;
+    while(extra-->0){ if(Math.random()<.5)st++; else dx++; }
+    const armor=pick(["none","leather","leather","chain","chain","plate"]);
+    const f={name:"",race:rk,cls:"fighter",st,dx,iq:R.iq,armor,silver:true,right:"none",left:"none",slung:"none",dag:["dagger"]};
+    const ws=MELEE.filter(k=>W[k].st<=st&&k!=="dagger"); if(!ws.length)continue;
+    f.right=pick(ws);
+    if(!W[f.right].two){ const r=Math.random(); f.left=r<.5?pick(["small","large"]):r<.7?"mg":"none"; }
+    const a=adjDX(f);
+    if(a<8) continue;
+    if(!best||a>best.a-3&&Math.random()<.35) best={f,a};
+    if(best&&t>60) break;
+  }
+  if(!best){const R=RACES.human; const f={race:"human",cls:"fighter",st:Math.max(8,Math.ceil(total/2)),dx:total-Math.max(8,Math.ceil(total/2)),iq:8,armor:"none",silver:true,right:"dagger",left:"none",slung:"none",dag:["dagger"]}; best={f};}
+  const n=["Grak","Brann","Silvo","Orsk","Vesh","Tamar","Dunn","Karg","Ilsa","Morn","Zed","Haldor"];
+  best.f.name=pick(n)+" the "+pick(["Gladiator","Sellsword","Brawler","Veteran","Duelist","Pit Fighter"]);
+  return best.f;
+}
+
+/* ---- display ---- */
+function card(f,cls){
+  const hands=f.right==="none"&&f.left==="none"?"empty hands":iname(f.right)+" (right), "+iname(f.left)+" (left)";
+  return `<h3 class="${cls}" style="margin:0 0 4px">${esc(f.name)}</h3><table>
+  <tr><td>Race / class</td><td>${RACES[f.race].n}, ${f.cls}</td></tr>
+  <tr><td>ST / DX / IQ</td><td><b>${f.st} / ${f.dx} / ${f.iq}</b> (ST+DX ${f.st+f.dx})</td></tr>
+  <tr><td>Armor</td><td>${ARMOR[f.armor].n}, MA ${MA(f)}</td></tr>
+  <tr><td>In hand</td><td>${esc(hands)}</td></tr>
+  <tr><td>Damage</td><td>${[f.right,f.left].filter(k=>W[k]&&!W[k].miss).map(k=>iname(k)+" "+dmg(f,k)).join(", ")||"none"}</td></tr>
+  <tr><td>Hits stopped</td><td>${stops(f)}</td></tr>
+  <tr><td>Adjusted DX</td><td><b>${adjDX(f)}</b></td></tr>
+  <tr><td>Other gear</td><td>${[f.slung!=="none"?iname(f.slung)+" (slung)":"",...f.dag.map(k=>iname(k)+" (sheathed)")].filter(Boolean).join(", ")||"none"}</td></tr></table>`;
+}
+let me=null, foe=null, myStart=null;
+function setMe(f,msg){ me=f; $("msg").textContent=msg||""; $("me").innerHTML=card(f,"me"); newFoe(); }
+function newFoe(){ if(!me)return; foe=makeOpponent(me.st+me.dx); $("foe").innerHTML=card(foe,"foe"); drawMap(); }
+$("bLoad").onclick=()=>{ let t=null; try{t=localStorage.getItem(KEY);}catch(e){}
+  if(!t){$("msg").textContent="No saved fighter found here. Open the builder on this same site first, or paste one below.";return;}
+  try{ setMe(fromBuilder(JSON.parse(t)),"Loaded from the builder."); }catch(e){ $("msg").textContent="Could not read the saved fighter."; } };
+$("bPaste").onclick=()=>{ try{ setMe(fromBuilder(JSON.parse($("paste").value)),"Loaded pasted fighter."); }catch(e){ $("msg").textContent="That does not look like a builder fighter."; } };
+$("bEx").onclick=()=>setMe(fromBuilder({name:"Flavius (example)",race:"human",cls:"fighter",st:11,dx:12,iq:9,a:"broad",b:"small",armor:"leather",d1:"dagger"}),"Example fighter.");
+$("bFoe").onclick=newFoe;
+
+/* ---- map: pointy-top, turned so entrances are at top and bottom ---- */
+function drawMap(){
+  const S3=Math.sqrt(3), pt=(q,r)=>[-(0.866*q+1.732*r), 1.5*q];
+  const P=HEXES.map(h=>({q:h[0],r:h[1],g:h[2],e:h[3],p:pt(h[0],h[1])}));
+  const xs=P.map(h=>h.p[0]),ys=P.map(h=>h.p[1]);
+  const x0=Math.min(...xs)-1.2,x1=Math.max(...xs)+1.2,y0=Math.min(...ys)-1.2,y1=Math.max(...ys)+1.2;
+  const key=(q,r)=>q+","+r, M=new Map(P.map(h=>[key(h.q,h.r),h]));
+  const corner=(h,i)=>{const a=Math.PI/180*(60*i+90); return [h.p[0]+Math.cos(a),h.p[1]+Math.sin(a)];};
+  let s="",edges="";
+  const dirs=[[1,0,30],[1,-1,-30],[0,-1,-90],[-1,0,-150],[-1,1,150],[0,1,90]];
+  for(const h of P){
+    const pts=[0,1,2,3,4,5].map(i=>corner(h,i).map(v=>v.toFixed(2)).join(",")).join(" ");
+    s+=`<polygon points="${pts}" fill="var(${h.e?"--hexend":"--hex"})" stroke="var(--line)" stroke-width=".05"/>`;
+    for(const [dq,dr,ang] of dirs){ const n=M.get(key(h.q+dq,h.r+dr));
+      if(!n||n.g!==h.g){ const a0=Math.PI/180*(ang+90-30),a1=Math.PI/180*(ang+90+30);
+        edges+=`<line x1="${(h.p[0]+Math.cos(a0)).toFixed(2)}" y1="${(h.p[1]+Math.sin(a0)).toFixed(2)}" x2="${(h.p[0]+Math.cos(a1)).toFixed(2)}" y2="${(h.p[1]+Math.sin(a1)).toFixed(2)}" stroke="var(--acc)" stroke-width=".16" stroke-linecap="round"/>`; } }
+  }
+  let tok="";
+  if(me){
+    const ends=P.filter(h=>h.e), my=ys.reduce((a,b)=>a+b,0)/ys.length, mx=xs.reduce((a,b)=>a+b,0)/xs.length;
+    const bottom=ends.filter(h=>h.p[1]>my), top=ends.filter(h=>h.p[1]<=my);
+    /* default: the front row (nearest the other end), then the hex nearer the middle of the board */
+    const front=(arr,sign)=>{ const fy=sign>0?Math.min(...arr.map(h=>h.p[1])):Math.max(...arr.map(h=>h.p[1]));
+      return arr.filter(h=>Math.abs(h.p[1]-fy)<.1).sort((a,b)=>Math.abs(a.p[0]-mx)-Math.abs(b.p[0]-mx))[0]; };
+    let mine=bottom.find(h=>key(h.q,h.r)===myStart)||front(bottom,1);
+    myStart=key(mine.q,mine.r);
+    const theirs=front(top,-1);
+    const pl=(h,c,t)=>`<circle cx="${h.p[0]}" cy="${h.p[1]}" r=".62" fill="${c}" pointer-events="none"/><text x="${h.p[0]}" y="${h.p[1]+.22}" text-anchor="middle" font-size=".62" fill="#fff" font-weight="700" pointer-events="none">${t}</text>`;
+    const pick=bottom.map(h=>`<polygon data-k="${key(h.q,h.r)}" points="${[0,1,2,3,4,5].map(i=>corner(h,i).map(v=>v.toFixed(2)).join(",")).join(" ")}" fill="${h===mine?"none":"var(--me)"}" fill-opacity=".18" stroke="var(--me)" stroke-width=".1" style="cursor:pointer"/>`).join("");
+    tok=pick+pl(mine,"var(--me)","You")+pl(theirs,"var(--foe)","Foe");
+  }
+  const stars=P.filter(h=>h.e).map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
+  const m=$("map"); m.setAttribute("viewBox",`${x0} ${y0} ${x1-x0} ${y1-y0}`); m.innerHTML=s+edges+(me?"":stars)+tok;
+  m.querySelectorAll("polygon[data-k]").forEach(e=>e.onclick=()=>{myStart=e.dataset.k;drawMap();});
+}
+drawMap();
+</script></body></html>
