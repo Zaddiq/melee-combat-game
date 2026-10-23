@@ -139,7 +139,7 @@ var ARMORS = Object.keys(RULES.ARMOR).map(function (k) { var a = RULES.ARMOR[k];
 var SHIELDS = [["No shield", 0, 0]].concat(Object.keys(RULES.SHIELDS).map(function (k) { var s = RULES.SHIELDS[k]; return [s.n, s.stops, s.pen]; }));
 
 var DEF = {
-  a: { name: "Flavius", st: "11", dx: "13", dmg: "2d-1", os: "0", od: "0", w: 5, ar: 2, sh: 2 },
+  a: { name: "Flavius", st: "12", dx: "12", dmg: "2d-1", os: "0", od: "0", w: 5, ar: Object.keys(RULES.ARMOR).indexOf("chain"), sh: 2 },
   b: { name: "Wulf", st: "14", dx: "10", dmg: "2d-1", os: "0", od: "0", w: 10, ar: 0, sh: 0 }
 };
 

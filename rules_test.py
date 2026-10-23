@@ -80,7 +80,7 @@ JS=r'''
  e1.engStart=true; e1.moved=1; ok("Engaged at start: may shift 1 and attack",options(e1,e2).some(x=>x.t==="attack"));
  ok("Engaged figures may defend and disengage; disengaged may not defend",options(e1,e2).some(x=>x.t==="defend")&&options(e1,e2).some(x=>x.t==="disengage"));
  /* --- armor tables as in Melee --- */
- ok("Armor: leather −2/stops 2/MA 8; chain −3/3/6; plate −6/5/4",ARMOR.leather.pen===2&&ARMOR.leather.stops===2&&ARMOR.leather.ma===8&&ARMOR.chain.pen===3&&ARMOR.chain.stops===3&&ARMOR.chain.ma===6&&ARMOR.plate.pen===6&&ARMOR.plate.stops===5&&ARMOR.plate.ma===4,JSON.stringify(ARMOR.plate));
+ ok("Armor: leather −2/stops 2/MA 8; chain −3/3/6; plate −5/5/MA 6, cloth −1, half-plate −4",ARMOR.leather.pen===2&&ARMOR.leather.stops===2&&ARMOR.leather.ma===8&&ARMOR.chain.pen===3&&ARMOR.chain.stops===3&&ARMOR.chain.ma===6&&ARMOR.plate.pen===5&&ARMOR.plate.stops===5&&ARMOR.plate.ma===6&&ARMOR.cloth.pen===1&&ARMOR.halfplate.pen===4,JSON.stringify(ARMOR.plate));
  rollN=saved; G=null; me=null;
  return R;
 }'''
