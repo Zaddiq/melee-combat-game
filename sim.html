@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>tftfightersimulator</title>
+<meta name="theme-color" content="#1b268c">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#eef1f4;--panel:#ffffff;--ink:#1b2430;--muted:#5b6674;--line:#cfd6de;
+  --accent:#a3281f;--accent-ink:#ffffff;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161c;--panel:#1b212a;--ink:#e8ecf1;--muted:#9aa5b3;--line:#2e3744;
+    --accent:#e0584d;--accent-ink:#12161c;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161c;--panel:#1b212a;--ink:#e8ecf1;--muted:#9aa5b3;--line:#2e3744;
+  --accent:#e0584d;--accent-ink:#12161c;color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:46rem;margin:0 auto;padding:1.5rem 1rem 3rem}
+h1{font-size:1.6rem;line-height:1.2;margin:0 0 .25rem}
+.sub{color:var(--muted);margin:0 0 1.5rem}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1.25rem}
+.fighters{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+@media (max-width:36rem){.fighters{grid-template-columns:1fr}}
+fieldset{margin:0;min-width:0}
+legend{font-weight:700;font-size:1.05rem;padding:0 .4rem}
+label{display:block;font-weight:600;margin-bottom:.2rem}
+.hint{display:block;color:var(--muted);font-size:.85rem;margin-bottom:.35rem}
+input,select{width:100%;font:inherit;padding:.55rem .7rem;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.field{margin-bottom:.9rem}
+.field[hidden]{display:none}
+.chk{display:flex;gap:.6rem;align-items:flex-start;font-weight:400;margin:0}
+.chk input{width:auto;margin-top:.35rem}
+.live{color:var(--muted);font-size:.875rem;margin:.2rem 0 0}
+.live.warn{color:var(--accent)}
+#both_pdf{margin-top:0;margin-left:.6rem}
+.pdfbtn{margin-top:.8rem;background:transparent;color:var(--ink);border:1px solid var(--line)}
+button{font:inherit;font-weight:600;padding:.7rem 1.2rem;border:0;border-radius:6px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+#err{color:var(--accent);margin:.8rem 0;min-height:0}
+.results{margin-top:1.25rem}
+.results[hidden]{display:none}
+.vs{display:flex;gap:1rem}
+.vs div{flex:1;min-width:0}
+.big{font-size:2.2rem;font-weight:700;line-height:1.1;margin:0}
+.who{color:var(--muted);margin:0;overflow-wrap:anywhere}
+dl{margin:1.2rem 0 0}
+.row{display:flex;justify-content:space-between;gap:1rem;padding:.55rem 0;border-top:1px solid var(--line)}
+dt{color:var(--muted)}
+dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{color:var(--muted);font-size:.85rem;margin:1.2rem 0 0}
+.tw{overflow-x:auto;margin-top:1.2rem}
+.stats{width:100%;border-collapse:collapse;font-size:.95rem}
+.stats th,.stats td{padding:.5rem .4rem;border-top:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+.stats thead th{border-top:0;font-weight:700;overflow-wrap:anywhere}
+.stats th[scope=row]{text-align:left;font-weight:400;color:var(--muted)}
+.stats td{font-weight:600}
+.hh{font-size:1rem;margin:1.4rem 0 .3rem}
+#hist{list-style:none;margin:0;padding:0}
+#hist li{font-size:.875rem;color:var(--muted);padding:.4rem 0;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 .5rem"><a href="index.html">&larr; Menu</a> &middot; <a href="builder.html">Character builder</a> &middot; <a href="arena.html">Melee Arena</a></p>
+  <h1>TFT fighter simulator</h1>
+  <p class="sub">Two fighters, one fight, 10,000 times. Weapons, armor and shields follow the Melee weapon table.</p>
+
+  <form id="f" novalidate>
+    <div class="fighters" id="fighters"></div>
+    <div class="panel">
+      <label class="chk"><input type="checkbox" id="rules" checked>
+        <span>Use Melee special rules: automatic hits on 3, 4 and 5 (triple and double damage on 3 and 4), automatic misses on 16 to 18, wound penalties, and knockdown from 8 or more hits.</span></label>
+    </div>
+    <p id="err" role="alert"></p>
+    <button type="submit" id="go">Run fights</button>
+    <button type="button" class="pdfbtn" id="both_pdf" hidden>Save both on one page (PDF)</button>
+    <p class="live" id="both_msg" role="status"></p>
+  </form>
+
+  <section class="panel results" id="out" hidden aria-live="polite">
+    <div class="vs">
+      <div><p class="big" id="pa"></p><p class="who" id="na"></p></div>
+      <div><p class="big" id="pb"></p><p class="who" id="nb"></p></div>
+    </div>
+    <dl>
+      <div class="row"><dt>Fights nobody finishes (100 turns)</dt><dd id="pd"></dd></div>
+      <div class="row"><dt>Average turns per fight</dt><dd id="rd"></dd></div>
+      <div class="row"><dt id="lta"></dt><dd id="lva"></dd></div>
+      <div class="row"><dt id="ltb"></dt><dd id="lvb"></dd></div>
+    </dl>
+    <div class="tw"><table class="stats"><thead><tr><th></th><th id="ha"></th><th id="hb"></th></tr></thead><tbody>
+        <tr><th scope="row">Hit chance at starting adjusted DX</th><td id="s1a"></td><td id="s1b"></td></tr>
+        <tr><th scope="row">Hit chance in the fights, counting DX lost to wounds</th><td id="s2a"></td><td id="s2b"></td></tr>
+        <tr><th scope="row">Average damage per round, through armor</th><td id="s3a"></td><td id="s3b"></td></tr>
+        <tr><th scope="row">Average damage per hit, through armor</th><td id="s4a"></td><td id="s4b"></td></tr>
+        <tr><th scope="row">Attacks that do no damage (misses plus stopped hits)</th><td id="s5a"></td><td id="s5b"></td></tr>
+      </tbody></table></div>
+    <div id="histwrap" hidden><h2 class="hh">Previous runs, newest first</h2><ol id="hist"></ol></div>
+    <p class="note">Both fighters start adjacent and attack once per turn, highest adjusted DX first, ties decided randomly. A fighter is out at ST 1 and dead at 0, so the first to put the other at ST 1 or less wins. Not modeled: movement, facing, defend and dodge, forced retreat, hand-to-hand, left-hand dagger, pole-weapon charges. A 17 costs the next turn (picking up the weapon). An 18 breaks the weapon, so that fighter does no more damage.</p>
+  </section>
+</main>
+
+<script src="rules.js"></script>
+<script>
+var TRIALS = 10000, MAXR = 100, runs = [], S = [];
+var $ = function (id) { return document.getElementById(id); };
+function d6() { return Math.floor(Math.random() * 6) + 1; }
+function pct(x) { return (x * 100).toFixed(1) + "%"; }
+
+function probHit(eff, rules) {
+  var n = 0;
+  for (var x = 1; x <= 6; x++) for (var y = 1; y <= 6; y++) for (var z = 1; z <= 6; z++) {
+    var r = x + y + z;
+    var h = rules ? (r <= 5 ? true : r >= 16 ? false : r <= eff) : r <= eff;
+    if (h) n++;
+  }
+  return n / 216;
+}
+
+// Built from the shared rules.js so every page uses the same numbers.
+var fmtDmg = function (w) { return w.d + "d" + (w.m > 0 ? "+" + w.m : w.m < 0 ? "-" + (-w.m) : ""); };
+var WEAPONS = Object.keys(RULES.W).filter(function (k) { var w = RULES.W[k]; return !w.miss && k !== "staff" && k !== "mg"; })
+  .map(function (k) { var w = RULES.W[k]; return [w.n, fmtDmg(w), w.st, w.two ? 1 : 0]; });
+var ARMOR_SHORT = { none: "No armor", leather: "Leather", chain: "Chainmail", plate: "Plate" };
+var ARMORS = Object.keys(RULES.ARMOR).map(function (k) { var a = RULES.ARMOR[k]; return [ARMOR_SHORT[k], a.stops, a.pen.m, a.ma]; });
+var SHIELDS = [["No shield", 0, 0]].concat(Object.keys(RULES.SHIELDS).map(function (k) { var s = RULES.SHIELDS[k]; return [s.n, s.stops, s.pen]; }));
+
+var DEF = {
+  a: { name: "Flavius", st: "11", dx: "13", dmg: "2d-1", os: "0", od: "0", w: 5, ar: 2, sh: 2 },
+  b: { name: "Wulf", st: "14", dx: "10", dmg: "2d-1", os: "0", od: "0", w: 10, ar: 0, sh: 0 }
+};
+
+function sel(id, labels) {
+  return '<select id="' + id + '">' + labels.map(function (t, i) {
+    return '<option value="' + i + '">' + t + "</option>";
+  }).join("") + "</select>";
+}
+
+function field(s, k, label, hint, num) {
+  return '<div class="field"><label for="' + s + "_" + k + '">' + label + "</label>" +
+    (hint ? '<span class="hint">' + hint + "</span>" : "") +
+    '<input id="' + s + "_" + k + '" value="' + DEF[s][k] + '" autocomplete="off"' +
+    (num ? ' inputmode="numeric"' : "") + "></div>";
+}
+
+var WLABELS = WEAPONS.map(function (w) { return w[0] + " (" + w[1] + ")"; }).concat(["Custom damage"]);
+var ALABELS = ARMORS.map(function (a) { return a[0]; });
+var SLABELS = SHIELDS.map(function (a) { return a[0]; });
+
+function build(s) {
+  return '<fieldset class="panel"><legend>' + (s === "a" ? "Fighter A" : "Fighter B") + "</legend>" +
+    field(s, "name", "Name", "", false) +
+    field(s, "st", "ST", "Hit points. Out at 1, dead at 0.", true) +
+    field(s, "dx", "Basic DX", "Before armor and shield penalties.", true) +
+    '<div class="field"><label for="' + s + '_w">Weapon</label>' + sel(s + "_w", WLABELS) + "</div>" +
+    '<div class="field" id="' + s + '_cwrap" hidden><label for="' + s + '_dmg">Custom damage</label>' +
+    '<span class="hint">Examples: 2d-1, 1d+2, 3d. Treated as one-handed.</span>' +
+    '<input id="' + s + '_dmg" value="' + DEF[s].dmg + '" autocomplete="off"></div>' +
+    '<div class="field"><label for="' + s + '_ar">Armor</label>' + sel(s + "_ar", ALABELS) + "</div>" +
+    '<div class="field"><label for="' + s + '_sh">Shield</label>' + sel(s + "_sh", SLABELS) + "</div>" +
+    '<div class="field"><label for="' + s + '_race">Race</label>' + sel(s + "_race", ["Human or similar (MA 10)", "Elf (MA 12)", "Other (enter MA)"]) + "</div>" +
+    '<div class="field" id="' + s + '_mawrap" hidden><label for="' + s + '_ma">Movement allowance (MA)</label>' +
+    '<span class="hint">Final MA, for monsters or other races.</span>' +
+    '<input id="' + s + '_ma" value="10" inputmode="numeric" autocomplete="off"></div>' +
+    field(s, "os", "Extra hits stopped", "Monster hide, fur and so on. Use 0 for none.", true) +
+    field(s, "od", "Extra DX adjustment", "Other bonuses or penalties. Use 0 for none.", true) +
+    '<p class="live" id="' + s + '_live"></p>' +
+    '<button type="button" class="pdfbtn" id="' + s + '_pdf" hidden>Save character sheet (PDF)</button>' +
+    '<p class="live" id="' + s + '_pmsg" role="status"></p></fieldset>';
+}
+
+$("fighters").innerHTML = build("a") + build("b");
+["a", "b"].forEach(function (s) {
+  $(s + "_w").value = DEF[s].w;
+  $(s + "_ar").value = DEF[s].ar;
+  $(s + "_sh").value = DEF[s].sh;
+});
+
+function parseDamage(text) {
+  var m = text.replace(/\s/g, "").toLowerCase().match(/^(\d+)d(\d*)([+-]\d+)?$/);
+  if (!m) return null;
+  var dice = +m[1], sides = m[2] ? +m[2] : 6, mod = m[3] ? +m[3] : 0;
+  if (dice < 1 || dice > 50 || sides < 1) return null;
+  return { dice: dice, sides: sides, mod: mod };
+}
+
+function rollDamage(d) {
+  var t = d.mod;
+  for (var i = 0; i < d.dice; i++) t += Math.floor(Math.random() * d.sides) + 1;
+  return Math.max(0, t);
+}
+
+function val(s, k) { return $(s + "_" + k).value.trim(); }
+
+function read(s) {
+  var label = s === "a" ? "Fighter A" : "Fighter B";
+  var st = val(s, "st"), dx = val(s, "dx"), os = val(s, "os"), od = val(s, "od");
+  if (!/^\d+$/.test(st) || +st < 1) throw label + ": ST must be a whole number, 1 or more.";
+  if (!/^-?\d+$/.test(dx)) throw label + ": basic DX must be a whole number, like 11.";
+  if (!/^-?\d+$/.test(os) || !/^-?\d+$/.test(od)) throw label + ": extra armor and extra DX must be whole numbers (use 0 for none).";
+  var wi = +$(s + "_w").value, custom = wi === WEAPONS.length;
+  var w = custom ? null : WEAPONS[wi];
+  var dmgText = custom ? val(s, "dmg").replace(/\s/g, "") : w[1];
+  var dmg = parseDamage(dmgText);
+  if (!dmg) throw label + ": damage must look like 2d-1, 1d+2, or 3d.";
+  var ar = ARMORS[+$(s + "_ar").value], sh = SHIELDS[+$(s + "_sh").value];
+  var twoH = !custom && w[3] === 1, shOn = !twoH;
+  var race = +$(s + "_race").value, ma;
+  if (race === 2) {
+    var mt = val(s, "ma");
+    if (!/^\d+$/.test(mt) || +mt < 1) throw label + ": MA must be a whole number, 1 or more.";
+    ma = +mt;
+  } else ma = ar[3] + (race === 1 && ar[3] >= 8 ? 2 : 0);
+  return {
+    name: val(s, "name") || label, st: +st, dmg: dmg, dmgText: dmgText,
+    base: +dx - ar[2] - (shOn ? sh[2] : 0) + (+od),
+    stops: ar[1] + (shOn ? sh[1] : 0) + Math.max(0, +os),
+    need: custom ? 0 : w[2],
+    ma: ma, dx0: +dx, od: +od, os: Math.max(0, +os), weaponName: custom ? "Custom weapon" : w[0],
+    armorName: ar[0], armStops: ar[1], armPen: ar[2], shieldName: sh[0],
+    shStops: shOn ? sh[1] : 0, shPen: shOn ? sh[2] : 0, twoH: twoH, shOn: shOn,
+    shieldSlung: twoH && +$(s + "_sh").value > 0
+  };
+}
+
+function live(s) {
+  var el = $(s + "_live");
+  $(s + "_cwrap").hidden = +$(s + "_w").value !== WEAPONS.length;
+  $(s + "_mawrap").hidden = +$(s + "_race").value !== 2;
+  try {
+    var f = read(s);
+    el.className = "live";
+    el.textContent = "Adjusted DX " + f.base + ", MA " + f.ma + ", stops " + f.stops + " hits per attack, damage " + f.dmgText + "." +
+      (f.need > f.st ? " ST is too low for this weapon (needs " + f.need + ")." : "") +
+      (f.shieldSlung ? " The shield is slung on the back with a two-handed weapon, so it doesn't count." : "");
+  } catch (e) {
+    el.className = "live warn";
+    el.textContent = e;
+  }
+}
+$("fighters").addEventListener("input", function () { live("a"); live("b"); });
+$("fighters").addEventListener("change", function () { live("a"); live("b"); });
+live("a"); live("b");
+
+// ---- Character sheet PDF ----
+var hasClaude = !!(window.claude && window.claude.use), DL = null;
+function showPdfButtons() {
+  ["a", "b"].forEach(function (s) { $(s + "_pdf").hidden = false; });
+  $("both_pdf").hidden = false;
+}
+if (!hasClaude) showPdfButtons();
+else window.claude.use("downloads").then(function (d) { if (d) { DL = d; showPdfButtons(); } }, function () {});
+
+function makeSheet(f, doc, oy) {
+  // Half letter sheet: 8.5 x 5.5 inches. Pass a doc and offset to place it on a shared page.
+  var D = doc || new window.jspdf.jsPDF({ unit: "pt", format: [612, 396], orientation: "landscape" });
+  oy = oy || 0;
+  var d = {
+    text: function (t, x, y, o) { return D.text(t, x, y + oy, o); },
+    line: function (a, b, c, e) { return D.line(a, b + oy, c, e + oy); },
+    rect: function (x, y, w, h) { return D.rect(x, y + oy, w, h); },
+    circle: function (x, y, r, st) { return D.circle(x, y + oy, r, st); },
+    setFont: function (a, b) { return D.setFont(a, b); },
+    setFontSize: function (n) { return D.setFontSize(n); },
+    setTextColor: function (a, b, c) { return D.setTextColor(a, b, c); },
+    setDrawColor: function (a, b, c) { return D.setDrawColor(a, b, c); },
+    setFillColor: function (a, b, c) { return D.setFillColor(a, b, c); },
+    setLineWidth: function (n) { return D.setLineWidth(n); },
+    splitTextToSize: function (t, w) { return D.splitTextToSize(t, w); }
+  };
+  var navy = [27, 38, 140], ink = [30, 36, 48];
+  var LX = 34, LW = 266, RX = 316, RW = 262;
+  function color(c) { d.setTextColor(c[0], c[1], c[2]); }
+  function line(w) { d.setDrawColor(navy[0], navy[1], navy[2]); d.setLineWidth(w); }
+  function fit(t, w) { return d.splitTextToSize(String(t), w)[0]; }
+  function head(t, x, w, y) {
+    d.setFont("times", "bold"); d.setFontSize(12); color(navy); d.text(t, x, y);
+    line(1.2); d.line(x, y + 4, x + w, y + 4);
+    return y + 18;
+  }
+  function bullets(items, x, w, y, fs, lh) {
+    fs = fs || 8.5; lh = lh || 10.5;
+    d.setFont("times", "normal"); d.setFontSize(fs); color(ink);
+    items.forEach(function (t) {
+      d.setFillColor(ink[0], ink[1], ink[2]); d.circle(x + 3, y - 2.8, 1.2, "F");
+      d.splitTextToSize(t, w - 12).forEach(function (ln) { d.text(ln, x + 11, y); y += lh; });
+      y += 2;
+    });
+    return y;
+  }
+
+  line(1.5); d.rect(18, 18, 576, 360);
+  line(0.6); d.rect(22, 22, 568, 352);
+
+  // ---- Left column: title, details, stats, protection, weapons ----
+  d.setFont("times", "bold"); d.setFontSize(18); color(navy); d.text("Melee Character Sheet", LX, 50);
+  d.setFont("times", "italic"); d.setFontSize(8.5); color(ink);
+  d.text("The Fantasy Trip, Fifth Edition rules (Metagaming, 1981)", LX, 63);
+
+  var hasShield = f.shieldName !== "No shield";
+  var shieldTxt = !hasShield ? "None" : f.shOn ? f.shieldName + " (stops " + f.shStops + ")" : f.shieldName + " (slung on back)";
+  var rows = [
+    ["Name", f.name],
+    ["Armor", f.armorName + (f.armStops ? " (stops " + f.armStops + ")" : "")],
+    ["Shield", shieldTxt]
+  ];
+  var y = 72;
+  rows.forEach(function (r) {
+    y += 16;
+    d.setFont("times", "bold"); d.setFontSize(9.5); color(navy); d.text(r[0], LX, y);
+    d.setFont("times", "normal"); color(ink); d.text(fit(r[1], LW - 48), LX + 44, y);
+    line(0.6); d.line(LX, y + 4, LX + LW, y + 4);
+  });
+
+  y += 12;
+  var stats = [["ST", f.st], ["DX", f.dx0], ["adjDX", f.base], ["MA", f.ma]];
+  var bw = 58, gap = (LW - 4 * bw) / 3;
+  stats.forEach(function (s, i) {
+    var x = LX + i * (bw + gap);
+    line(1.2); d.rect(x, y, bw, 36);
+    d.setFont("times", "normal"); d.setFontSize(7.5); color(navy); d.text(s[0], x + bw / 2, y + 11, { align: "center" });
+    d.setFont("helvetica", "bold"); d.setFontSize(15); color(ink); d.text(String(s[1]), x + bw / 2, y + 29, { align: "center" });
+  });
+  y += 36 + 20;
+
+  y = head("Protection", LX, LW, y);
+  var prot = ["Armor: " + f.armorName + ", stops " + f.armStops + (f.armStops === 1 ? " hit" : " hits") + " per attack."];
+  if (hasShield) {
+    prot.push(f.shOn ? "Shield: " + f.shieldName + ", stops " + f.shStops + (f.shStops === 1 ? " hit" : " hits") + " per attack from the front."
+      : "The " + f.shieldName.toLowerCase() + " is slung on the back with a two-handed weapon, so it does not count.");
+  }
+  if (f.os) prot.push("Extra protection stops " + f.os + " more hits per attack.");
+  var parts = [];
+  if (f.armPen) parts.push(f.armPen + " for " + f.armorName.toLowerCase());
+  if (f.shPen) parts.push(f.shPen + " for the " + f.shieldName.toLowerCase());
+  prot.push("Total stopped: " + f.stops + " hits per attack. DX " + f.dx0 + (parts.length ? " minus " + parts.join(" and ") : "") +
+    (f.od ? (f.od > 0 ? " plus " : " minus ") + Math.abs(f.od) + " extra" : "") + " gives adjDX " + f.base + ".");
+  y = bullets(prot, LX, LW, y);
+
+  var ry = head("Weapons", LX, LW, y + 10);
+  d.setFont("times", "bold"); d.setFontSize(8.5); color(navy);
+  d.text("Item", LX + 2, ry); d.text("Damage", LX + 94, ry); d.text("Notes", LX + 148, ry);
+  line(0.6); d.line(LX, ry + 4, LX + LW, ry + 4);
+  var wnotes = [];
+  if (f.need) wnotes.push("Needs ST " + f.need + (f.st < f.need ? " (ST too low)" : ""));
+  if (f.twoH) wnotes.push("Two-handed");
+  var items = [[f.weaponName, f.dmgText, wnotes.join("; ") || "-"]];
+  if (f.shOn && hasShield) {
+    items.push([f.shieldName, "Stops " + f.shStops,
+      "Counts as a weapon; " + (f.shPen ? "DX -" + f.shPen : "no DX penalty")]);
+  }
+  var top = ry + 4;
+  items.forEach(function (r) {
+    d.setFont("times", "normal"); d.setFontSize(9); color(ink);
+    var il = d.splitTextToSize(r[0], 88), dl = d.splitTextToSize(r[1], 50), nl = d.splitTextToSize(r[2], LW - 152);
+    il.forEach(function (ln, i) { d.text(ln, LX + 2, top + 12 + i * 10); });
+    dl.forEach(function (ln, i) { d.text(ln, LX + 94, top + 12 + i * 10); });
+    nl.forEach(function (ln, i) { d.text(ln, LX + 148, top + 12 + i * 10); });
+    top += Math.max(il.length, dl.length, nl.length) * 10 + 8;
+    line(0.6); d.line(LX, top, LX + LW, top);
+  });
+
+  // ---- Right column: tall figure box (4:5), notes beside it ----
+  var BW = 140, BH = 175, BX = RX + RW - BW, BY = 32;
+  line(1.2); d.rect(BX, BY, BW, BH);
+  d.setFont("times", "italic"); d.setFontSize(7); color(navy);
+  d.text("Figure", BX + BW / 2, BY + BH + 9, { align: "center" });
+
+  var NW = BX - RX - 10;
+  var ny = head("Notes", RX, NW, 50);
+  var nend = bullets([
+    "To hit, roll adjDX or less on 3 dice. A 3 hits for triple damage, a 4 for double, and a 5 always hits. A 16 misses, a 17 drops the weapon, an 18 breaks it.",
+    "Subtract the hits stopped by armor and shield from each damage roll. A figure at ST 1 collapses; at ST 0 it is dead.",
+    "Taking 5 or more hits in one turn: DX -2 next turn. ST 3 or less: DX -3. Taking 8 or more hits in one turn: knocked down."
+  ], RX, NW, ny, 8, 9.8);
+
+  // Ruled lines for handwritten player notes, in the free space at lower right
+  var py = head("Player notes", RX, RW, Math.max(nend, BY + BH + 20) + 14);
+  d.setDrawColor(150, 160, 178); d.setLineWidth(0.5);
+  for (var ly = py + 8; ly < 358; ly += 16) d.line(RX, ly, RX + RW, ly);
+
+  d.setFont("times", "italic"); d.setFontSize(7); color(ink);
+  d.text("Built from the printed rules: attributes p. 4, attacks p. 10-11, armor and weapons p. 13, injury p. 17. Made with tftfightersimulator.", LX, 366);
+  return D;
+}
+
+function savePdf(d, name, msg) {
+  if (DL) {
+    DL.save({ filename: name, data: d.output("blob") }).then(function () {
+      msg.textContent = "Saved " + name + ".";
+    }, function (err) {
+      msg.className = "live warn";
+      msg.textContent = err && err.code === "declined" ? "Save cancelled." : "Couldn\u2019t save the PDF here.";
+    });
+  } else if (!hasClaude) {
+    d.save(name);
+  }
+}
+
+function cleanName(t) {
+  return t.replace(/[^A-Za-z0-9 _-]/g, "").trim().replace(/\s+/g, "_") || "fighter";
+}
+
+function exportBoth() {
+  var msg = $("both_msg"), a, b;
+  msg.className = "live"; msg.textContent = "";
+  try { a = read("a"); b = read("b"); } catch (e) { msg.className = "live warn"; msg.textContent = e; return; }
+  if (!window.jspdf) { msg.className = "live warn"; msg.textContent = "The PDF library did not load. Reload the page and try again."; return; }
+  var D = new window.jspdf.jsPDF({ unit: "pt", format: "letter" });
+  makeSheet(a, D, 0);
+  makeSheet(b, D, 396);
+  D.setDrawColor(150, 150, 150); D.setLineWidth(0.5);
+  D.setLineDashPattern([4, 3], 0); D.line(18, 396, 594, 396); D.setLineDashPattern([], 0);
+  savePdf(D, cleanName(a.name) + "_and_" + cleanName(b.name) + "_melee_sheets.pdf", msg);
+}
+
+function exportSheet(s) {
+  var msg = $(s + "_pmsg"), f;
+  msg.className = "live"; msg.textContent = "";
+  try { f = read(s); } catch (e) { msg.className = "live warn"; msg.textContent = e; return; }
+  if (!window.jspdf) { msg.className = "live warn"; msg.textContent = "The PDF library did not load. Reload the page and try again."; return; }
+  var d = makeSheet(f);
+  var name = (f.name.replace(/[^A-Za-z0-9 _-]/g, "").trim().replace(/\s+/g, "_") || "fighter") + "_melee_sheet.pdf";
+  savePdf(d, name, msg);
+}
+["a", "b"].forEach(function (s) {
+  $(s + "_pdf").addEventListener("click", function () { exportSheet(s); });
+});
+$("both_pdf").addEventListener("click", exportBoth);
+
+function swing(att, rules) {
+  var roll = d6() + d6() + d6(), mult = 1, hit;
+  if (rules && roll <= 5) { hit = true; mult = roll === 3 ? 3 : roll === 4 ? 2 : 1; }
+  else if (rules && roll >= 16) hit = false;
+  else hit = roll <= att.eff;
+  return { roll: roll, hit: hit, mult: mult };
+}
+
+function duel(a, b, rules) {
+  var f = [a, b].map(function (x) {
+    return { st: x.st, base: x.base, dmg: x.dmg, stops: x.stops, last: 0, skip: 0, broken: false, took: 0, acted: false, eff: 0 };
+  });
+  for (var t = 1; t <= MAXR; t++) {
+    f.forEach(function (x) {
+      x.eff = x.base - (rules ? (x.last >= 5 ? 2 : 0) + (x.st <= 3 ? 3 : 0) : 0);
+      x.took = 0; x.acted = false;
+    });
+    var order = f[0].eff > f[1].eff ? [0, 1] : f[0].eff < f[1].eff ? [1, 0] : (Math.random() < 0.5 ? [0, 1] : [1, 0]);
+    for (var i = 0; i < 2; i++) {
+      var me = f[order[i]], foe = f[1 - order[i]];
+      me.acted = true;
+      if (me.skip > 0) { me.skip--; continue; }
+      var r = swing(me, rules), sx = S[order[i]];
+      sx.att++; if (!r.hit) sx.none++;
+      if (r.hit) {
+        var raw = me.broken ? 0 : rollDamage(me.dmg) * r.mult;
+        var through = Math.max(0, raw - foe.stops);
+        foe.st -= through; foe.took += through;
+        sx.hit++; sx.dmg += through; if (through === 0) sx.none++;
+        if (foe.st <= 1) return { w: order[i] === 0 ? "a" : "b", r: t, left: me.st };
+        if (rules && through >= 8) foe.skip = foe.acted ? 1 : 2;
+      } else if (rules && r.roll === 17) me.skip = 1;
+      else if (rules && r.roll === 18) me.broken = true;
+    }
+    f.forEach(function (x) { x.last = x.took; });
+  }
+  return { w: "d", r: MAXR, left: 0 };
+}
+
+function renderHistory() {
+  var ol = $("hist");
+  ol.innerHTML = "";
+  runs.forEach(function (t) {
+    var li = document.createElement("li");
+    li.textContent = t;
+    ol.appendChild(li);
+  });
+  $("histwrap").hidden = runs.length === 0;
+}
+
+function desc(f) {
+  return f.name + " (ST " + f.st + ", adjDX " + f.base + ", " + f.dmgText + ", stops " + f.stops + ")";
+}
+
+$("f").addEventListener("submit", function (e) {
+  e.preventDefault();
+  $("err").textContent = "";
+  var a, b;
+  try { a = read("a"); b = read("b"); }
+  catch (msg) { $("err").textContent = msg; return; }
+
+  var rules = $("rules").checked;
+  S = [{ att: 0, hit: 0, dmg: 0, none: 0 }, { att: 0, hit: 0, dmg: 0, none: 0 }];
+  var wa = 0, wb = 0, wd = 0, turns = 0, leftA = 0, leftB = 0;
+  for (var i = 0; i < TRIALS; i++) {
+    var res = duel(a, b, rules);
+    turns += res.r;
+    if (res.w === "a") { wa++; leftA += res.left; }
+    else if (res.w === "b") { wb++; leftB += res.left; }
+    else wd++;
+  }
+
+  renderHistory();
+  $("pa").textContent = pct(wa / TRIALS);
+  $("na").textContent = a.name + " wins";
+  $("pb").textContent = pct(wb / TRIALS);
+  $("nb").textContent = b.name + " wins";
+  $("pd").textContent = pct(wd / TRIALS);
+  $("rd").textContent = (turns / TRIALS).toFixed(1);
+  $("lta").textContent = "Average ST " + a.name + " has left after winning";
+  $("lva").textContent = wa ? (leftA / wa).toFixed(1) : "n/a";
+  $("ltb").textContent = "Average ST " + b.name + " has left after winning";
+  $("lvb").textContent = wb ? (leftB / wb).toFixed(1) : "n/a";
+  $("ha").textContent = a.name;
+  $("hb").textContent = b.name;
+  ["a", "b"].forEach(function (id, k) {
+    var s = S[k], f = k === 0 ? a : b;
+    $("s1" + id).textContent = pct(probHit(f.base, rules));
+    $("s2" + id).textContent = s.att ? pct(s.hit / s.att) : "n/a";
+    $("s3" + id).textContent = s.att ? (s.dmg / s.att).toFixed(2) : "n/a";
+    $("s4" + id).textContent = s.hit ? (s.dmg / s.hit).toFixed(2) : "n/a";
+    $("s5" + id).textContent = s.att ? pct(s.none / s.att) : "n/a";
+  });
+  $("out").hidden = false;
+  $("go").textContent = "Run again";
+
+  runs.unshift(desc(a) + " vs " + desc(b) + ": " + a.name + " " + pct(wa / TRIALS) +
+    ", " + b.name + " " + pct(wb / TRIALS) + (wd ? ", unfinished " + pct(wd / TRIALS) : "") +
+    (rules ? "" : " (special rules off)"));
+  if (runs.length > 5) runs.pop();
+});
+</script>
+</body>
+</html>

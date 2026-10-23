@@ -15,10 +15,12 @@ textarea{width:100%;box-sizing:border-box;min-height:70px;font:12px monospace;ba
 .mut{color:var(--mut);font-size:14px}.me{color:var(--me)}.foe{color:var(--foe)}
 table{border-collapse:collapse;width:100%}td{padding:2px 0}td:first-child{color:var(--mut);width:42%}
 svg{width:100%;height:auto;max-height:80vh}
+#ctl button{margin:2px 4px 2px 0}#log{font-size:13px;color:var(--mut);max-height:170px;overflow:auto;margin-top:6px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
 </style></head><body><main>
 <h1>Melee Arena</h1>
-<p class="mut">Stage 2: load your fighter, get a matched opponent, see both at their entrances. Fighting comes in later stages.</p>
+<p style="margin:0 0 6px"><a href="index.html" style="color:var(--acc)">← Menu</a> · <a href="builder.html" style="color:var(--acc)">Character builder</a> · <a href="sim.html" style="color:var(--acc)">Fight simulator</a></p>
+<p class="mut">Basic fight against a computer opponent matched to your ST+DX. Win and loss records come in a later stage.</p>
 <div class="grid"><div>
  <div class="card"><h2>Your fighter</h2>
   <div class="row"><button class="pri" id="bLoad">Load from builder</button><button id="bEx">Use example</button></div>
@@ -26,15 +28,15 @@ svg{width:100%;height:auto;max-height:80vh}
   <div id="msg" class="mut"></div><div id="me"></div></div>
  <div class="card"><h2>Opponent</h2>
   <div class="row"><button id="bFoe">New opponent</button></div><div id="foe"></div></div>
+ <div class="card"><h2>Fight</h2><div id="ctl" class="mut">Load a fighter first.</div></div>
 </div>
 <div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut">Top: opponent entrance. Bottom: yours. You start on the front hex nearest the middle; click any of the four green-outlined hexes at your end to start there instead.</div></div></div>
 </main>
+<script src="rules.js"></script>
 <script>
 "use strict";
-const RACES={human:{n:"Human",st:8,dx:8,iq:8,extra:8},orc:{n:"Orc",st:8,dx:8,iq:8,extra:8},elf:{n:"Elf",st:6,dx:10,iq:8,extra:8},dwarf:{n:"Dwarf",st:10,dx:6,iq:8,extra:8},hobbit:{n:"Hobbit",st:4,dx:12,iq:8,extra:4},goblin:{n:"Goblin",st:4,dx:4,iq:10,extra:10},hobgoblin:{n:"Hobgoblin",st:6,dx:6,iq:6,extra:8}};
-const ARMOR={none:{n:"No armor",stops:0,ma:10,pen:0},leather:{n:"Leather armor",stops:2,ma:8,pen:2},chain:{n:"Chainmail",stops:3,ma:6,pen:3},plate:{n:"Plate armor",stops:5,ma:4,pen:6}};
-const W={staff:{n:"Staff",d:1,m:0,st:0},dagger:{n:"Dagger",d:1,m:-1,st:0},rapier:{n:"Rapier",d:1,m:0,st:9},club:{n:"Club",d:1,m:0,st:9},hammer:{n:"Hammer",d:1,m:1,st:10},cutlass:{n:"Cutlass",d:2,m:-2,st:10},shortsw:{n:"Shortsword",d:2,m:-1,st:11},mace:{n:"Mace",d:2,m:-1,st:11},smallax:{n:"Small ax",d:1,m:2,st:11},broad:{n:"Broadsword",d:2,m:0,st:12},morning:{n:"Morningstar",d:2,m:1,st:13},twohsw:{n:"2-handed sword",d:3,m:-1,st:14,two:1},battle:{n:"Battleaxe",d:3,m:0,st:15,two:1},javelin:{n:"Javelin",d:1,m:-1,st:9},spear:{n:"Spear",d:1,m:2,st:11,two:1},halberd:{n:"Halberd",d:2,m:-1,st:13,two:1},pikeaxe:{n:"Pike axe",d:2,m:2,st:15,two:1},sling:{n:"Sling",miss:1},sbow:{n:"Small bow",miss:1},hbow:{n:"Horse bow",miss:1},lbow:{n:"Longbow",miss:1},lxbow:{n:"Light crossbow",miss:1},hxbow:{n:"Heavy crossbow",miss:1},mg:{n:"Main-gauche",d:1,m:-1,st:0,left:1}};
-const SHIELDS={small:{n:"Small shield",stops:1,pen:0},large:{n:"Large shield",stops:2,pen:1}};
+const RACES=RULES.RACES, W=RULES.W, SHIELDS=RULES.SHIELDS;
+const ARMOR=Object.fromEntries(Object.entries(RULES.ARMOR).map(([k,v])=>[k,{n:v.n,stops:v.stops,ma:v.ma,pen:v.pen.m}]));  /* Melee DX penalties */
 const MELEE=Object.keys(W).filter(k=>!W[k].miss&&k!=="staff"&&k!=="mg");
 const HEXES=[[0, 0, 0, 0], [-1, 1, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [-1, 2, 0, 0], [1, 1, 0, 0], [0, 2, 0, 0], [-2, 2, 1, 0], [-3, 2, 1, 0], [-3, 3, 1, 0], [-2, 3, 1, 0], [-4, 3, 1, 0], [-4, 4, 1, 0], [-3, 4, 1, 0], [2, -1, 2, 1], [2, 0, 2, 1], [3, -1, 2, 1], [3, 0, 2, 1], [-1, 3, 3, 0], [0, 3, 3, 0], [-2, 4, 3, 0], [-1, 4, 3, 0], [0, 4, 3, 0], [-2, 5, 3, 0], [-1, 5, 3, 0], [2, 1, 4, 0], [1, 2, 4, 0], [3, 1, 4, 0], [2, 2, 4, 0], [1, 3, 4, 0], [3, 2, 4, 0], [2, 3, 4, 0], [-5, 4, 5, 0], [-5, 5, 5, 0], [-6, 4, 5, 0], [-6, 5, 5, 0], [-6, 6, 5, 0], [-7, 5, 5, 0], [-7, 6, 5, 0], [-4, 5, 6, 0], [-3, 5, 6, 0], [-5, 6, 6, 0], [-3, 6, 6, 0], [-5, 7, 6, 0], [-4, 7, 6, 0], [-4, 6, 6, 0], [1, 4, 7, 0], [0, 5, 7, 0], [2, 4, 7, 0], [1, 5, 7, 0], [0, 6, 7, 0], [2, 5, 7, 0], [1, 6, 7, 0], [-2, 6, 8, 0], [-1, 6, 8, 0], [-3, 7, 8, 0], [-2, 7, 8, 0], [-1, 7, 8, 0], [-3, 8, 8, 0], [-2, 8, 8, 0], [-7, 7, 9, 0], [-6, 7, 9, 0], [-8, 8, 9, 0], [-7, 8, 9, 0], [-6, 8, 9, 0], [-8, 9, 9, 0], [-7, 9, 9, 0], [-8, 6, 10, 0], [-8, 7, 10, 0], [-9, 6, 10, 0], [-9, 7, 10, 0], [-9, 8, 10, 0], [-10, 7, 10, 0], [-10, 8, 10, 0], [-5, 8, 11, 0], [-4, 8, 11, 0], [-6, 9, 11, 0], [-5, 9, 11, 0], [-4, 9, 11, 0], [-6, 10, 11, 0], [-5, 10, 11, 0], [-9, 9, 12, 0], [-10, 9, 12, 0], [-10, 10, 12, 0], [-9, 10, 12, 0], [-11, 10, 12, 0], [-11, 11, 12, 0], [-10, 11, 12, 0], [-8, 10, 13, 0], [-7, 10, 13, 0], [-9, 11, 13, 0], [-8, 11, 13, 0], [-7, 11, 13, 0], [-9, 12, 13, 0], [-8, 12, 13, 0], [-11, 12, 14, 1], [-10, 12, 14, 1], [-11, 13, 14, 1], [-10, 13, 14, 1]]; /* [q,r,megahex,isEnd] */
 const KEY="wizard-builder-v1";
@@ -48,7 +50,8 @@ function fromBuilder(o){
   const R=RACES[o&&o.race]||RACES.human, ok=k=>k&&k!=="none";
   const f={name:String(o.name||"Unnamed").slice(0,60),race:RACES[o.race]?o.race:"human",cls:o.cls==="wizard"?"wizard":"fighter",
     st:Math.max(R.st,+o.st||R.st),dx:Math.max(R.dx,+o.dx||R.dx),iq:+o.iq||R.iq,
-    armor:ARMOR[o.armor]?o.armor:"none",silver:!!o.silver,right:"none",left:"none",slung:"none",dag:[]};
+    armor:ARMOR[o.armor]?o.armor:"none",silver:!!o.silver,right:"none",left:"none",slung:"none",dag:[],src:o};
+  f.total=+o.total||(f.st+f.dx+f.iq);
   const hasStaff=f.cls==="wizard"&&Array.isArray(o.spells)&&o.spells.includes("Staff");
   f.right=hasStaff?"staff":(W[o.a]&&!W[o.a].left?o.a:"none");
   f.left=(SHIELDS[o.b]||(W[o.b]&&!W[o.b].two&&o.b!=="staff"))?o.b:"none";
@@ -88,6 +91,14 @@ function makeOpponent(total){
     if(!W[f.right].two){ const r=Math.random(); f.left=r<.5?pick(["small","large"]):r<.7?"mg":"none"; }
     const a=adjDX(f);
     if(a<8) continue;
+    /* keep the fight winnable for both sides: each must be able to get hits past the other's armor */
+    if(t<150){
+      const myMax=Math.max(6,...[me.right,me.left,me.slung,...me.dag].filter(k=>isW(k)).map(k=>W[k].d*6+W[k].m));
+      const myStops=ARMOR[me.armor].stops+Math.max(0,...[me.left,me.slung].map(k=>SHIELDS[k]?SHIELDS[k].stops:0));
+      const foeStops=ARMOR[f.armor].stops+(SHIELDS[f.left]?SHIELDS[f.left].stops:0)+(f.left==="mg"?1:0);
+      const foeMax=W[f.right].d*6+W[f.right].m;
+      if(foeStops>myMax-3||foeMax<myStops+3) continue;
+    }
     if(!best||a>best.a-3&&Math.random()<.35) best={f,a};
     if(best&&t>60) break;
   }
@@ -98,6 +109,14 @@ function makeOpponent(total){
 }
 
 /* ---- display ---- */
+function warn(f){
+  const usable=[f.right,f.left,f.slung,...f.dag].some(k=>isW0(k));
+  const w=[]; if(!usable) w.push("This fighter carries no melee weapon, and hand-to-hand fighting is not in the arena yet.");
+  if(f.right!=="none"&&W[f.right]&&W[f.right].miss) w.push("Missile weapons are not in the arena yet. A bow or crossbow in hand cannot attack; ready a dagger or other weapon first.");
+  if(f.cls==="wizard") w.push("Spells are not in the arena yet. A wizard fights with staff and weapons only.");
+  return w.length?`<div class="mut" style="margin-top:6px">⚠ ${w.map(esc).join(" ")}</div>`:"";
+}
+const isW0=id=>!!(W[id]&&!W[id].miss&&id!=="staff"||id==="staff");
 function card(f,cls){
   const hands=f.right==="none"&&f.left==="none"?"empty hands":iname(f.right)+" (right), "+iname(f.left)+" (left)";
   return `<h3 class="${cls}" style="margin:0 0 4px">${esc(f.name)}</h3><table>
@@ -111,8 +130,8 @@ function card(f,cls){
   <tr><td>Other gear</td><td>${[f.slung!=="none"?iname(f.slung)+" (slung)":"",...f.dag.map(k=>iname(k)+" (sheathed)")].filter(Boolean).join(", ")||"none"}</td></tr></table>`;
 }
 let me=null, foe=null, myStart=null;
-function setMe(f,msg){ me=f; $("msg").textContent=msg||""; $("me").innerHTML=card(f,"me"); newFoe(); }
-function newFoe(){ if(!me)return; foe=makeOpponent(me.st+me.dx); $("foe").innerHTML=card(foe,"foe"); drawMap(); }
+function setMe(f,msg){ G=null; me=applyRecord(f); $("msg").textContent=msg||""; renderMe(); newFoe(); }
+function newFoe(){ if(!me)return; G=null; foe=makeOpponent(me.st+me.dx); $("foe").innerHTML=card(foe,"foe"); ui(); drawMap(); }
 $("bLoad").onclick=()=>{ let t=null; try{t=localStorage.getItem(KEY);}catch(e){}
   if(!t){$("msg").textContent="No saved fighter found here. Open the builder on this same site first, or paste one below.";return;}
   try{ setMe(fromBuilder(JSON.parse(t)),"Loaded from the builder."); }catch(e){ $("msg").textContent="Could not read the saved fighter."; } };
@@ -120,40 +139,368 @@ $("bPaste").onclick=()=>{ try{ setMe(fromBuilder(JSON.parse($("paste").value)),"
 $("bEx").onclick=()=>setMe(fromBuilder({name:"Flavius (example)",race:"human",cls:"fighter",st:11,dx:12,iq:9,a:"broad",b:"small",armor:"leather",d1:"dagger"}),"Example fighter.");
 $("bFoe").onclick=newFoe;
 
-/* ---- map: pointy-top, turned so entrances are at top and bottom ---- */
+/* ---- board geometry: pointy-top, turned so the entrances are at top and bottom ---- */
+const DIRS=[[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];   /* six neighbours; a facing is an index into this */
+const SCR=[120,60,0,-60,-120,180];                      /* screen angle (deg, y down) toward each neighbour */
+const pt=(q,r)=>[-(0.866*q+1.732*r),1.5*q];
+const key=(q,r)=>q+","+r;
+const P=HEXES.map(h=>({q:h[0],r:h[1],g:h[2],e:h[3],p:pt(h[0],h[1])}));
+const M=new Map(P.map(h=>[key(h.q,h.r),h]));
+const nbr=(h,d)=>M.get(key(h.q+DIRS[d][0],h.r+DIRS[d][1]));
+const dist=(a,b)=>{const dq=a.q-b.q,dr=a.r-b.r;return Math.max(Math.abs(dq),Math.abs(dr),Math.abs(dq+dr));};
+const dirIdx=(from,to)=>DIRS.findIndex(d=>d[0]===to.q-from.q&&d[1]===to.r-from.r);
+const same=(a,b)=>a.q===b.q&&a.r===b.r;
+/* where hex h lies relative to a figure at t facing t.f: front (3 hexes), side (2) or rear (1). null if not adjacent */
+function relOf(t,h){ const d=dirIdx(t,h); if(d<0)return null; if(t.down)return "rear"; const k=(d-t.f+6)%6; return k===0||k===1||k===5?"front":k===3?"rear":"side"; }
+const isEngaged=(a,b)=>relOf(b,a)==="front";   /* a stands in one of b's front hexes */
+function faceToward(a,b){ const A=pt(a.q,a.r),B=pt(b.q,b.r); const ang=Math.atan2(B[1]-A[1],B[0]-A[0])*180/Math.PI;
+  let best=0,bd=999; SCR.forEach((s,i)=>{const dd=Math.abs((ang-s+540)%360-180); if(dd<bd){bd=dd;best=i;}}); return best; }
+/* hexes a figure may end its movement in. Engaged: shift one hex, staying next to the enemy. Otherwise up to MA hexes,
+   and movement must stop on entering any enemy front hex. */
+function reach(a,b,ma,eng){
+  const out=new Map([[key(a.q,a.r),{q:a.q,r:a.r,c:0}]]);
+  if(eng){ for(let d=0;d<6;d++){const n=nbr(a,d); if(n&&!same(n,b)&&dist(n,b)===1) out.set(key(n.q,n.r),{q:n.q,r:n.r,c:1});} return out; }
+  const qu=[{q:a.q,r:a.r,c:0}];
+  while(qu.length){ const cur=qu.shift(); if(cur.c>=ma)continue; if(cur.c>0&&relOf(b,cur)==="front")continue;
+    for(let d=0;d<6;d++){ const n=nbr(cur,d); if(!n||same(n,b)||out.has(key(n.q,n.r)))continue;
+      const e={q:n.q,r:n.r,c:cur.c+1}; out.set(key(n.q,n.r),e); qu.push(e); } }
+  return out;
+}
+
+
+/* ---- arena record (kept in this browser) ---- */
+const RKEY="melee-arena-v1";
+let REC={}; try{ REC=JSON.parse(localStorage.getItem(RKEY)||"{}")||{}; }catch(e){ REC={}; }
+function saveRec(){ try{ localStorage.setItem(RKEY,JSON.stringify(REC)); }catch(e){} }
+const recKey=f=>f.name.trim().toLowerCase();
+function applyRecord(f){
+  const k=recKey(f); let r=REC[k];
+  if(!r){ r={name:f.name,st:f.st,dx:f.dx,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false}; REC[k]=r; saveRec(); }
+  f.st=r.st; f.dx=r.dx; f.rec=r; return f;
+}
+function recBlock(){
+  const r=me&&me.rec; if(!r) return "";
+  let h=`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b>Arena record</b><br>
+    Wins <b>${r.wins}</b>/16 · Losses ${r.losses} · EP ${r.ep}/100 · Points earned ${r.pts}${r.banked?' · <b>1 point banked</b>':''}`;
+  if(r.dead) h+=`<br><b class="foe">Dead. This fighter's run is over.</b>`;
+  if(r.retired) h+=`<br><b class="me">Retired champion!</b> Started at ${r.total0}, now ${r.total0+r.pts} (+8). Carry this total into Advanced Melee.`;
+  if(r.pend>0) h+=`<div style="margin:6px 0"><b>You earned an attribute point.</b> ${r.pend} to spend${r.must?" (you hold a banked point too, so you must spend both)":""}:<br>
+    <button data-sp="st">+1 ST</button><button data-sp="dx">+1 DX</button>${r.pend===1&&!r.must&&r.wins<16?'<button data-sp="bank">Bank it for later</button>':''}</div>`;
+  h+=`<div class="row"><button id="bCopy">Copy updated fighter</button><button id="bReset">Reset record</button></div><textarea id="exp" style="display:none" readonly></textarea></div>`;
+  return h;
+}
+function renderMe(){
+  if(!me) return; $("me").innerHTML=card(me,"me")+warn(me)+recBlock();
+  $("me").querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>spend(e.dataset.sp));
+  const c=$("bCopy"); if(c) c.onclick=()=>{ const r=me.rec; const o=Object.assign({},me.src,{st:r.st,dx:r.dx,total:r.total0+r.pts,ep:r.ep,arenaWins:r.wins,arenaRetired:r.retired});
+    const t=JSON.stringify(o), ta=$("exp"); ta.style.display="block"; ta.value=t; ta.select(); try{navigator.clipboard.writeText(t);}catch(e){} $("msg").textContent="Copied. Paste it into the builder's save/load box to update your fighter."; };
+  const x=$("bReset"); if(x) x.onclick=()=>{ if(confirm("Erase the arena record for "+me.name+"? Wins, EP and gained points are lost.")){ delete REC[recKey(me)]; saveRec(); const o=me.src; setMe(fromBuilder(o),"Record erased. Starting fresh from the builder's version."); } };
+}
+function spend(k){
+  const r=me.rec;
+  if(k==="bank"){ r.banked=true; r.pend=0; r.must=false; }
+  else { r[k]++; me[k]++; r.pts++; r.pend--; if(r.pend===0) r.must=false; }
+  if(r.pend===0&&r.wins>=16) r.retired=true;
+  saveRec(); renderMe();
+  if(r.pend===0){ newFoe(); } else ui();
+}
+/* called once when a fight ends */
+function settle(){
+  if(G.settled) return; G.settled=true; const r=me.rec; if(!r) return;
+  if(G.me.hp<=0){ r.dead=true; r.losses++; lg("Your run ends here."); }
+  else if(G.me.hp===1){ r.losses++; lg("A loss earns no EP. You heal and may fight again."); }
+  else {
+    r.wins++; r.ep+=50; lg(`Victory: +50 EP (${r.wins} wins).`);
+    if(r.ep>=100){ r.ep-=100; if(r.banked){ r.pend=2; r.must=true; r.banked=false; } else { r.pend=1; r.must=false; }
+      lg("100 EP: you earned an attribute point."); }
+    if(r.wins>=16&&r.pend===0) r.retired=true;
+    if(r.wins>=16) lg("That is 16 wins. This fighter retires as a champion.");
+  }
+  saveRec(); renderMe();
+}
+
+/* ---- the fight ---- */
+let G=null;
+const d6=()=>1+ri(6);
+let rollN=n=>Array.from({length:n},d6);   /* a test can swap this for scripted dice */
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const isW=id=>!!(W[id]&&!W[id].miss);                 /* a usable melee weapon (main-gauche included) */
+const sub=u=>u===G.me?"You":u.p.name, vb=(u,a,b)=>u===G.me?a:b;
+const other=u=>u===G.me?G.foe:G.me;
+const lg=t=>G.log.push(t);
+function startHexes(){
+  const ends=P.filter(h=>h.e), ys=P.map(h=>h.p[1]), xs=P.map(h=>h.p[0]);
+  const my=ys.reduce((a,b)=>a+b,0)/ys.length, mx=xs.reduce((a,b)=>a+b,0)/xs.length;
+  const bottom=ends.filter(h=>h.p[1]>my), top=ends.filter(h=>h.p[1]<=my);
+  const front=(arr,sign)=>{ const fy=sign>0?Math.min(...arr.map(h=>h.p[1])):Math.max(...arr.map(h=>h.p[1]));
+    return arr.filter(h=>Math.abs(h.p[1]-fy)<.1).sort((a,b)=>Math.abs(a.p[0]-mx)-Math.abs(b.p[0]-mx))[0]; };
+  const mine=bottom.find(h=>key(h.q,h.r)===myStart)||front(bottom,1);
+  myStart=key(mine.q,mine.r);
+  return {bottom,top,mine,theirs:front(top,-1)};
+}
+const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,
+  engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
+function startFight(){
+  if(!me||!foe)return; const s=startHexes();
+  G={me:mk(s.mine,me),foe:mk(s.theirs,foe),turn:0,phase:"",log:[],order:[],idx:0,start:null,reach:null,eng:false,moved:0,floor:[]};
+  G.me.f=faceToward(G.me,G.foe); G.foe.f=faceToward(G.foe,G.me);
+  nextTurn(); ui(); drawMap();
+}
+function nextTurn(){
+  for(const u of [G.me,G.foe]){ u.wound2=u.hits>=5; u.hits=0; u.dealt=u.tookHit=u.defending=false; u.act=null; u.standUp=false; u.moved=0; u.engStart=false; }
+  G.turn++; let a,b; do{a=d6();b=d6();}while(a===b);
+  lg(`— Turn ${G.turn}. Initiative: you ${a}, ${foe.name} ${b}.`);
+  if(G.me.wound2) lg("You took 5 or more hits last turn: DX −2 this turn.");
+  if(G.foe.wound2) lg(`${foe.name} took 5 or more hits last turn: DX −2 this turn.`);
+  if(a>b){ G.phase="choose"; }
+  else { lg(`${foe.name} wins it and moves second.`); G.order=["me","foe"]; G.idx=0; advance(); }
+}
+function choose(first){ G.order=first?["me","foe"]:["foe","me"]; G.idx=0; lg(first?"You move first.":"You move second."); advance(); ui(); drawMap(); }
+function advance(){
+  if(G.idx>=2){ beginActions(); return; }
+  if(G.order[G.idx]==="foe"){ aiMove(); G.idx++; advance(); return; }
+  const u=G.me;
+  if(u.down){ u.down=false; u.standUp=true; lg("You stand up. No other action this turn."); G.idx++; advance(); return; }
+  G.phase="move"; G.start={q:u.q,r:u.r}; G.eng=isEngaged(u,G.foe); G.moved=0;
+  G.reach=reach(G.start,G.foe,MA(me),G.eng);
+}
+function aiMove(){
+  const a=G.foe,b=G.me;
+  if(a.down){ a.down=false; a.standUp=true; lg(`${foe.name} stands up.`); return; }
+  const eng=isEngaged(a,b), R=reach(a,b,MA(foe),eng); let best=null;
+  for(const h of R.values()){
+    const d=dist(h,b); let s=d*10;
+    if(d===1){ const r=relOf(b,h); s=r==="rear"?0:r==="side"?2:5; if(!eng&&h.c>MA(foe)/2) s+=6; }
+    s+=Math.random()*1.5;
+    if(!best||s<best.s) best={h,s};
+  }
+  const moved=!same(best.h,a); a.q=best.h.q; a.r=best.h.r; a.f=faceToward(a,b); a.engStart=eng; a.moved=best.h.c;
+  lg(`${foe.name} ${eng?(moved?"shifts":"holds"):(moved?"moves "+best.h.c+" hex"+(best.h.c>1?"es":""):"holds")}.`);
+}
+function confirmMove(){ G.me.engStart=G.eng; G.me.moved=G.moved; lg(`You ${G.moved?"moved "+G.moved+" hex"+(G.moved>1?"es":""):"stayed put"}.`); G.idx++; advance(); ui(); drawMap(); }
+function undoMove(){ G.me.q=G.start.q; G.me.r=G.start.r; G.moved=0; ui(); drawMap(); }
+
+/* ---- attack rules ---- */
+function adjDXu(u,mode,tgt){
+  const p=u.p; let a=p.dx-ARMOR[p.armor].pen;
+  if(SHIELDS[u.left]) a-=SHIELDS[u.left].pen;
+  if(mode==="dual") a-=4; else if(u.left==="mg") a-=2;
+  const wp=[u.right,u.left].filter(isW);
+  if(p.cls==="wizard"){ if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4; if(!p.silver&&(p.armor!=="none"||wp.some(k=>k!=="staff"))) a-=4; }
+  if(u.wound2) a-=2;
+  if(u.hp<=3) a-=3;
+  if(tgt){ const r=relOf(tgt,u); if(r==="side")a+=2; else if(r==="rear")a+=4; }
+  return a;
+}
+function stopsFor(d,a){
+  let s=ARMOR[d.p.armor].stops; const r=relOf(d,a);
+  if(SHIELDS[d.left]&&r==="front") s+=SHIELDS[d.left].stops;
+  if(SHIELDS[d.slung]&&r==="rear") s+=SHIELDS[d.slung].stops;
+  if(d.left==="mg"&&r==="front") s+=1;
+  return s;
+}
+function dmgRoll(u,id){ const w=W[id]; let m=w.m; if(u.p.race==="dwarf"&&/hammer|smallax|battle/.test(id)) m+=1; const dice=rollN(w.d); return {dice,m,total:Math.max(0,sum(dice)+m)}; }
+function options(u,o){
+  const L=[]; if(u.standUp) return L;
+  const eng=u.engStart, half=u.moved<=MA(u.p)/2, inF=relOf(u,o)==="front"&&!u.down;
+  const wR=isW(u.right)?u.right:null, wL=(isW(u.left)&&!SHIELDS[u.left])?u.left:null;
+  if(inF&&(eng||half)&&(wR||wL)){ L.push({t:"attack",label:"Attack with "+iname(wR||wL)}); if(wR&&wL) L.push({t:"dual",label:"Attack with both weapons (−4 DX each)"}); }
+  if(eng&&(wR||wL)) L.push({t:"defend",label:"Defend (attackers roll 4 dice; you do not attack)"});
+  if(isEngaged(u,o)) L.push({t:"disengage",label:"Disengage (move 1 hex, no attack)"});
+  if(eng||u.moved<=2){
+    if(u.slung!=="none") L.push({t:"ready",it:{id:u.slung,src:"slung"},label:`Ready ${iname(u.slung)} (slung)`});
+    u.dag.forEach(k=>L.push({t:"ready",it:{id:k,src:"dag"},label:`Ready ${iname(k)} (sheathed)`}));
+    G.floor.filter(f=>f.q===u.q&&f.r===u.r).forEach(f=>L.push({t:"ready",it:{id:f.id,src:"floor",obj:f},label:`Pick up and ready ${iname(f.id)} (on the floor here)`}));
+  }
+  L.push({t:"none",label:"Do nothing"});
+  return L;
+}
+function freeNeighbors(u){ const out=[]; for(let d=0;d<6;d++){const n=nbr(u,d); if(n&&!same(n,G.me)&&!same(n,G.foe)) out.push(n);} return out; }
+function applyReady(u,it){
+  const id=it.id;
+  if(it.src==="slung") u.slung="none"; else if(it.src==="dag"){ const i=u.dag.indexOf(id); if(i>=0)u.dag.splice(i,1); } else { const i=G.floor.indexOf(it.obj); if(i>=0)G.floor.splice(i,1); }
+  const put=old=>{ if(old==="none")return; if(!u.engStart&&u.slung==="none")u.slung=old; else G.floor.push({q:u.q,r:u.r,id:old}); };
+  if(SHIELDS[id]||id==="mg"){ put(u.left); u.left=id; if(W[u.right]&&W[u.right].two){ put(u.right); u.right="none"; } }
+  else { put(u.right); u.right=id; if(W[id].two){ put(u.left); u.left="none"; } }
+}
+function aiAct(){
+  const u=G.foe,o=G.me; if(u.standUp) return {t:"none"};
+  const L=options(u,o), has=t=>L.find(x=>x.t===t);
+  const armed=isW(u.right)||(isW(u.left)&&!SHIELDS[u.left]);
+  if(!armed){ const rd=L.filter(x=>x.t==="ready"); const weap=rd.filter(x=>isW(x.it.id));
+    if(weap.length) return weap.find(x=>x.it.id==="dagger")||weap[0]; }
+  if(u.hp<=3&&has("disengage")&&Math.random()<.4){
+    const fr=freeNeighbors(u).map(h=>({h,s:dist(h,o)*3+(relOf(o,h)==="front"?-1:1)+Math.random()})).sort((a,b)=>b.s-a.s);
+    if(fr.length) return {t:"disengage",dest:fr[0].h};
+  }
+  if(has("defend")){ const edx=adjDXu(o,"single",u), mdx=adjDXu(u,"single",o); const bad=(edx-mdx>=3&&u.hp<=Math.max(6,u.p.st*.6))||u.hp<=5; if(bad&&Math.random()<.4) return has("defend"); }
+  if(has("dual")&&adjDXu(u,"dual",o)>=10) return has("dual");
+  return has("attack")||{t:"none"};
+}
+function beginActions(){
+  G.phase="pick"; const o=G.foe, u=G.me; G.opts=options(u,o);
+  if(!G.opts.some(x=>x.t==="attack")&&relOf(u,o)==="front"&&!u.engStart&&u.moved>MA(me)/2) lg(`You moved more than half your MA, so you cannot attack this turn.`);
+}
+function doAttack(a,d,wid,mode){
+  let dx=adjDXu(a,mode,d);
+  if(d.act&&d.act.t==="disengage"){ const dd=adjDXu(d,"single",a); if(dx<=dd) dx-=dd-dx; }   /* disengaging: attacker slower or equal loses the difference */
+  const defend=d.defending, n=defend?4:3, dice=rollN(n), t=sum(dice);
+  let hit,mult=1,fumble=null;
+  if(!defend){ if(t===3){hit=true;mult=3;} else if(t===4){hit=true;mult=2;} else if(t===5)hit=true; else if(t===16)hit=false; else if(t===17){hit=false;fumble="drop";} else if(t===18){hit=false;fumble="break";} else hit=t<=dx; }
+  else { if(t===4||t===5)hit=true; else if(t>=23){hit=false;fumble="break";} else if(t>=21){hit=false;fumble="drop";} else if(t>=20)hit=false; else hit=t<=dx; }
+  const head=`${sub(a)} ${vb(a,"attack","attacks")} ${d===G.me?"you":sub(d)} with ${iname(wid)} (needs ${dx} or less on ${n}d6, rolled ${t}${mult===3?": triple damage":mult===2?": double damage":""})`;
+  if(!hit){
+    let extra=""; 
+    if(fumble==="drop"){ extra=` — ${vb(a,"you drop","drops")} the ${iname(wid).toLowerCase()}!`; G.floor.push({q:a.q,r:a.r,id:wid}); if(a.right===wid)a.right="none"; else if(a.left===wid)a.left="none"; }
+    if(fumble==="break"){ extra=` — the ${iname(wid).toLowerCase()} breaks!`; if(a.right===wid)a.right="none"; else if(a.left===wid)a.left="none"; }
+    lg(head+": miss"+extra+"."); return;
+  }
+  const r=dmgRoll(a,wid), full=r.total*mult, st=stopsFor(d,a), hits=Math.max(0,full-st);
+  lg(`${head}: HIT. ${iname(wid)} ${dice_txt(r)}${mult>1?" ×"+mult+" = "+full:""}; armor and shield stop ${Math.min(st,full)}. ${hits?vb(d,"You take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
+  if(hits>0){
+    d.hp-=hits; d.hits+=hits; d.tookHit=true; a.dealt=true;
+    lg(`${vb(d,"Your","its")} ST is now ${Math.max(d.hp,0)}${d===G.me?"":" ("+d.p.name+")"}.`);
+    if(d.hits>=8&&d.hp>1&&!d.down){ d.down=true; lg(`${sub(d)} ${vb(d,"are","is")} knocked down by ${d.hits} hits!`); }
+  }
+  endCheck();
+}
+const dice_txt=r=>`(${r.dice.join("+")}${r.m?(r.m>0?"+":"−")+Math.abs(r.m):""} = ${r.total})`;
+function endCheck(){
+  if(G.phase==="over") return;
+  const a=G.me,b=G.foe;
+  if(a.hp<=1||b.hp<=1){
+    G.phase="over";
+    if(a.hp<=0) lg("You are dead."); else if(a.hp===1) lg("You collapse at ST 1. You lose the fight, but you live.");
+    else lg(`${foe.name} ${b.hp<=0?"is dead":"collapses at ST 1"}. You win the fight!`);
+    settle();
+  }
+}
+function resolveTurn(pa){
+  G.me.act=pa; G.foe.act=aiAct(); G.phase="resolve";
+  const U=[G.me,G.foe]; U.forEach(u=>{ u.defending=u.act.t==="defend"; });
+  const N2={attack:"attack",dual:"attack with both weapons",defend:"defend",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
+  const N3={attack:"attacks",dual:"attacks with both weapons",defend:"defends",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
+  U.forEach(u=>lg(`${sub(u)} ${u===G.me?"choose to "+N2[u.act.t]:"chooses to "+N2[u.act.t]}.`));
+  const ent=U.map(u=>({u,dx:adjDXu(u,u.act.t==="dual"?"dual":"single",other(u)),tie:Math.random()})).sort((a,b)=>b.dx-a.dx||a.tie-b.tie);
+  for(const pass of [1,2]) for(const e of ent){
+    if(G.phase==="over")break; const u=e.u,o=other(u),t=u.act.t;
+    if(u.down||u.hp<=1)continue;
+    if(pass===1){
+      if(t==="attack"){ const w=isW(u.right)?u.right:(isW(u.left)&&!SHIELDS[u.left]?u.left:null);
+        if(w&&relOf(u,o)==="front") doAttack(u,o,w,"single"); else lg(`${sub(u)} ${vb(u,"have","has")} no target in front.`); }
+      else if(t==="dual"){ if(isW(u.right)&&relOf(u,o)==="front") doAttack(u,o,u.right,"dual"); }
+      else if(t==="disengage"){ const dest=u.act.dest; if(dest&&!same(dest,o)&&dist(dest,u)===1){ u.q=dest.q; u.r=dest.r; lg(`${sub(u)} ${vb(u,"disengage","disengages")}.`);} }
+      else if(t==="ready"){ applyReady(u,u.act.it); lg(`${sub(u)} ${vb(u,"ready","readies")} ${iname(u.act.it.id).toLowerCase()} (usable next turn).`); u.justReady=true; }
+    } else if(t==="dual"){ if(isW(u.left)&&!SHIELDS[u.left]&&relOf(u,o)==="front") doAttack(u,o,u.left,"dual"); }
+  }
+  if(G.phase!=="over") afterActions();
+  ui(); drawMap();
+}
+function afterActions(){
+  const w=[G.me,G.foe].find(u=>u.dealt&&!u.tookHit&&u.hp>1);
+  if(!w){ endTurn(); return; }
+  const d=other(w), opts=freeNeighbors(d);
+  if(!opts.length){ const r=sum(rollN(3)), dx=adjDXu(d,"single"); if(r>dx){ d.down=true; lg(`${sub(d)} ${vb(d,"have","has")} nowhere to retreat and ${vb(d,"fall","falls")} (rolled ${r} vs DX ${dx}).`); } else lg(`${sub(d)} ${vb(d,"have","has")} nowhere to retreat but ${vb(d,"keep","keeps")} ${vb(d,"your","its")} feet.`); endTurn(); return; }
+  if(w===G.foe){
+    const pick1=opts.map(h=>({h,s:dist(h,w)*3+Math.random()})).sort((a,b)=>b.s-a.s)[0].h, from={q:d.q,r:d.r};
+    d.q=pick1.q; d.r=pick1.r; w.q=from.q; w.r=from.r;
+    lg(`${foe.name} forces you back one hex and follows.`); endTurn(); return; }
+  G.phase="retreat"; G.ropts=new Map(opts.map(h=>[key(h.q,h.r),h])); G.rfrom={q:d.q,r:d.r};
+}
+function doRetreat(h){ const d=G.foe; d.q=h.q; d.r=h.r; G.phase="advance"; lg(`You force ${foe.name} back one hex.`); ui(); drawMap(); }
+function doAdvance(yes){ if(yes){ G.me.q=G.rfrom.q; G.me.r=G.rfrom.r; lg("You advance into the vacated hex."); } else lg("You hold your ground."); endTurn(); ui(); drawMap(); }
+function endTurn(){ nextTurn(); }
+
+function ui(){
+  const c=$("ctl"); if(!c)return;
+  if(!me){c.innerHTML="Load a fighter first.";return;}
+  const rr=me.rec;
+  if(rr&&(rr.retired||rr.dead||rr.pend>0)&&!G){ c.innerHTML=rr.pend>0?"Spend your attribute point in the Your fighter box first.":rr.dead?"This fighter is dead. Load another fighter.":"This champion has retired. Copy the updated fighter, or load another."; return; }
+  if(!G){ c.innerHTML=`<button class="pri" id="bGo">Start fight</button> <span class="mut">You and ${esc(foe?foe.name:"")} enter at opposite ends.</span>`; $("bGo").onclick=startFight; return; }
+  const A=G.me,B=G.foe; let t="",b="";
+  const flags=u=>(u.down?" (down)":"")+(u.wound2?" (DX −2)":"");
+  const st=`<b>You</b> ST ${Math.max(A.hp,0)}/${me.st}${flags(A)} · <b>${esc(foe.name)}</b> ST ${Math.max(B.hp,0)}/${foe.st}${flags(B)}<br>You are ${isEngaged(A,B)?"<b>engaged</b>":"not engaged"}; ${esc(foe.name)} is ${isEngaged(B,A)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)}.`;
+  if(G.phase==="choose"){ t="You won the initiative roll. Move first or second?"; b=`<button class="pri" id="b1">Move first</button><button id="b2">Move second</button>`; }
+  else if(G.phase==="move"){
+    t=(G.eng?"You are engaged: you may shift one hex (staying next to the enemy). ":`Click a highlighted hex to move up to ${MA(me)} hexes. Entering an enemy front hex stops you. Moving more than half your MA (${Math.floor(MA(me)/2)}) means no attack this turn. `)+"Click a small circle beside your counter to change facing.";
+    b=`<button class="pri" id="bOk">End movement</button>`+(G.moved?`<button id="bUn">Undo move</button>`:""); }
+  else if(G.phase==="pick"){
+    t="Choose your action. The computer picks its own without seeing yours.";
+    b=G.opts.length?G.opts.map((o,i)=>`<button data-opt="${i}"${i===0&&o.t!=="none"?' class="pri"':""}>${esc(o.label)}</button>`).join(""):`<button class="pri" data-opt="-1">Continue</button>`; }
+  else if(G.phase==="dest"){ t="Click the highlighted hex on the map that you want to disengage into (on a phone, scroll to the map)."; b=`<button id="bBack">Back</button>`; }
+  else if(G.phase==="retreat"){ t=`You hit ${esc(foe.name)} and took no hits, so you may force a retreat: click a highlighted hex on the map to push them there (on a phone, scroll to the map). Or skip it.`; b=`<button id="bSkip">Skip the retreat</button>`; }
+  else if(G.phase==="advance"){ t="Move into the hex they left, or hold your ground?"; b=`<button class="pri" id="bAdv">Advance</button><button id="bStay">Stay</button>`; }
+  else if(G.phase==="over"){ t=A.hp<=1?(A.hp<=0?"You have fallen.":"You collapse at ST 1. You live, but this fight is lost (no EP)."):"Victory! +50 EP.";
+    const q=me.rec; if(q&&q.pend>0) t+=" Spend your attribute point in the Your fighter box."; else if(q&&(q.retired||q.dead)) t+=q.dead?" Load another fighter.":" 16 wins: this champion retires."; else b=`<button class="pri" id="bNew">Next fight</button>`; b+=` <a href="index.html"><button>Back to menu</button></a>`; }
+  c.innerHTML=`<div class="mut" style="margin-bottom:4px">Turn ${G.turn}</div><div>${t}</div><div class="mut" style="margin:4px 0">${st}</div><div>${b}</div><div id="log">${G.log.slice(-60).map(esc).join("<br>")}</div>`;
+  const lgE=$("log"); if(lgE) lgE.scrollTop=lgE.scrollHeight;
+  const on=(id,f)=>{const e=$(id); if(e)e.onclick=f;};
+  on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bUn",undoMove);
+  on("bSkip",()=>{lg("You do not force a retreat.");endTurn();ui();drawMap();}); on("bBack",()=>{G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false)); on("bNew",()=>newFoe());
+  c.querySelectorAll("[data-opt]").forEach(e=>e.onclick=()=>{
+    const o=G.opts[+e.dataset.opt]||{t:"none"};
+    if(o.t==="disengage"){ G.phase="dest"; G.dopts=new Map(freeNeighbors(G.me).map(h=>[key(h.q,h.r),h])); if(!G.dopts.size){G.phase="pick";lg("There is no free hex to disengage into.");} ui(); drawMap(); }
+    else resolveTurn(o);
+  });
+}
+
+/* ---- map ---- */
 function drawMap(){
-  const S3=Math.sqrt(3), pt=(q,r)=>[-(0.866*q+1.732*r), 1.5*q];
-  const P=HEXES.map(h=>({q:h[0],r:h[1],g:h[2],e:h[3],p:pt(h[0],h[1])}));
   const xs=P.map(h=>h.p[0]),ys=P.map(h=>h.p[1]);
   const x0=Math.min(...xs)-1.2,x1=Math.max(...xs)+1.2,y0=Math.min(...ys)-1.2,y1=Math.max(...ys)+1.2;
-  const key=(q,r)=>q+","+r, M=new Map(P.map(h=>[key(h.q,h.r),h]));
   const corner=(h,i)=>{const a=Math.PI/180*(60*i+90); return [h.p[0]+Math.cos(a),h.p[1]+Math.sin(a)];};
+  const poly=h=>[0,1,2,3,4,5].map(i=>corner(h,i).map(v=>v.toFixed(2)).join(",")).join(" ");
   let s="",edges="";
-  const dirs=[[1,0,30],[1,-1,-30],[0,-1,-90],[-1,0,-150],[-1,1,150],[0,1,90]];
   for(const h of P){
-    const pts=[0,1,2,3,4,5].map(i=>corner(h,i).map(v=>v.toFixed(2)).join(",")).join(" ");
-    s+=`<polygon points="${pts}" fill="var(${h.e?"--hexend":"--hex"})" stroke="var(--line)" stroke-width=".05"/>`;
-    for(const [dq,dr,ang] of dirs){ const n=M.get(key(h.q+dq,h.r+dr));
-      if(!n||n.g!==h.g){ const a0=Math.PI/180*(ang+90-30),a1=Math.PI/180*(ang+90+30);
+    s+=`<polygon points="${poly(h)}" fill="var(${h.e?"--hexend":"--hex"})" stroke="var(--line)" stroke-width=".05"/>`;
+    for(let d=0;d<6;d++){ const n=nbr(h,d);
+      if(!n||n.g!==h.g){ const a=SCR[d]; const a0=Math.PI/180*(a-30),a1=Math.PI/180*(a+30);
         edges+=`<line x1="${(h.p[0]+Math.cos(a0)).toFixed(2)}" y1="${(h.p[1]+Math.sin(a0)).toFixed(2)}" x2="${(h.p[0]+Math.cos(a1)).toFixed(2)}" y2="${(h.p[1]+Math.sin(a1)).toFixed(2)}" stroke="var(--acc)" stroke-width=".16" stroke-linecap="round"/>`; } }
   }
-  let tok="";
-  if(me){
-    const ends=P.filter(h=>h.e), my=ys.reduce((a,b)=>a+b,0)/ys.length, mx=xs.reduce((a,b)=>a+b,0)/xs.length;
-    const bottom=ends.filter(h=>h.p[1]>my), top=ends.filter(h=>h.p[1]<=my);
-    /* default: the front row (nearest the other end), then the hex nearer the middle of the board */
-    const front=(arr,sign)=>{ const fy=sign>0?Math.min(...arr.map(h=>h.p[1])):Math.max(...arr.map(h=>h.p[1]));
-      return arr.filter(h=>Math.abs(h.p[1]-fy)<.1).sort((a,b)=>Math.abs(a.p[0]-mx)-Math.abs(b.p[0]-mx))[0]; };
-    let mine=bottom.find(h=>key(h.q,h.r)===myStart)||front(bottom,1);
-    myStart=key(mine.q,mine.r);
-    const theirs=front(top,-1);
-    const pl=(h,c,t)=>`<circle cx="${h.p[0]}" cy="${h.p[1]}" r=".62" fill="${c}" pointer-events="none"/><text x="${h.p[0]}" y="${h.p[1]+.22}" text-anchor="middle" font-size=".62" fill="#fff" font-weight="700" pointer-events="none">${t}</text>`;
-    const pick=bottom.map(h=>`<polygon data-k="${key(h.q,h.r)}" points="${[0,1,2,3,4,5].map(i=>corner(h,i).map(v=>v.toFixed(2)).join(",")).join(" ")}" fill="${h===mine?"none":"var(--me)"}" fill-opacity=".18" stroke="var(--me)" stroke-width=".1" style="cursor:pointer"/>`).join("");
-    tok=pick+pl(mine,"var(--me)","You")+pl(theirs,"var(--foe)","Foe");
+  /* square counter: the flat top edge (where the head is) shows the facing. Original artwork, drawn here. */
+  const tokn=(f,c,fr)=>{ const h=M.get(key(f.q,f.r)), [x,y]=h.p, rot=SCR[f.f]+90;
+    const R=f.right!==undefined?f.right:fr.right, Lh=f.left!==undefined?f.left:fr.left, dead=f.hp!==undefined&&f.hp<=1;
+    const w=R!=="none"&&W[R];
+    const L=(fr.name||"?").trim().charAt(0).toUpperCase();
+    const fig=dead?`<ellipse cx="0" cy="-.05" rx=".2" ry=".22" fill="${c}"/><rect x="-.1" y=".1" width=".2" height=".12" fill="${c}"/><circle cx="-.08" cy="-.07" r=".05" fill="var(--card)"/><circle cx=".08" cy="-.07" r=".05" fill="var(--card)"/><path d="M-.3 .3 L.3 .1 M-.3 .1 L.3 .3" stroke="${c}" stroke-width=".06" stroke-linecap="round"/>`
+    :`<circle cx="0" cy="-.3" r=".1" fill="${c}"/>
+      <path d="M-.14 -.17 Q0 -.22 .14 -.17 L.12 .08 L-.12 .08 Z" fill="${c}"/>
+      <rect x="-.11" y=".08" width=".09" height=".26" rx=".03" fill="${c}"/><rect x=".02" y=".08" width=".09" height=".26" rx=".03" fill="${c}"/>
+      <path d="M-.14 -.15 L-.26 .02" stroke="${c}" stroke-width=".07" stroke-linecap="round" fill="none"/>
+      <path d="M.14 -.15 L.25 -.02" stroke="${c}" stroke-width=".07" stroke-linecap="round" fill="none"/>
+      ${w?`<path d="M.25 -.02 L.36 -.40" stroke="${c}" stroke-width=".045" stroke-linecap="round"/><path d="M.21 -.12 L.31 -.07" stroke="${c}" stroke-width=".04" stroke-linecap="round"/>`:""}
+      ${SHIELDS[Lh]?`<ellipse cx="-.3" cy=".0" rx=".1" ry=".15" fill="${c}" opacity=".85"/>`:""}`;
+    return `<g transform="translate(${x.toFixed(2)},${y.toFixed(2)}) rotate(${rot}) scale(1.12)" pointer-events="none" opacity="${f.down&&!dead?.6:1}">
+      <rect x="-.56" y="-.56" width="1.12" height="1.12" rx=".09" fill="var(--card)" stroke="${c}" stroke-width=".07"/>${fig}
+      <text x="-.46" y=".5" font-size=".26" font-weight="700" fill="${c}" transform="rotate(${-rot} -.46 .5)" text-anchor="middle">${L}</text></g>`; };
+  let layer="";
+  const hl=(map,attr,col)=>[...map.values()].map(h=>`<polygon ${attr}="${key(h.q,h.r)}" points="${poly(h)}" fill="var(${col})" fill-opacity=".3" stroke="var(${col})" stroke-width=".07" style="cursor:pointer"/>`).join("");
+  if(!G){
+    if(me){ const st=startHexes();
+      const pk=st.bottom.map(h=>`<polygon data-k="${key(h.q,h.r)}" points="${poly(h)}" fill="${h===st.mine?"none":"var(--me)"}" fill-opacity=".18" stroke="var(--me)" stroke-width=".1" style="cursor:pointer"/>`).join("");
+      const fm={...st.mine,f:0},ff={...st.theirs,f:0}; fm.f=faceToward(fm,ff); ff.f=faceToward(ff,fm);
+      layer=pk+tokn(fm,"var(--me)",me)+tokn(ff,"var(--foe)",foe); }
+    else layer=P.filter(h=>h.e).map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
+  } else {
+    for(const [f,c] of [[G.me,"--me"],[G.foe,"--foe"]]) if(!f.down&&f.hp>1) for(const k of [-1,0,1]){ const n=nbr(f,(f.f+k+6)%6); if(n) layer+=`<polygon points="${poly(n)}" fill="var(${c})" fill-opacity=".13" pointer-events="none"/>`; }
+    if(G.phase==="move"){
+      for(const r of G.reach.values()){ const h=M.get(key(r.q,r.r)); layer+=`<polygon data-go="${key(r.q,r.r)}" points="${poly(h)}" fill="var(--acc)" fill-opacity="${same(r,G.me)?0:.22}" stroke="var(--acc)" stroke-width=".05" style="cursor:pointer"/>`; }
+    }
+    if(G.phase==="dest") layer+=hl(G.dopts,"data-dest","--acc");
+    if(G.phase==="retreat") layer+=hl(G.ropts,"data-ret","--acc");
+    layer+=G.floor.map(f=>{ const [x,y]=M.get(key(f.q,f.r)).p; return `<path d="M${x-.35} ${y+.45} L${x+.35} ${y+.25}" stroke="var(--mut)" stroke-width=".07" stroke-linecap="round" pointer-events="none"/>`; }).join("");
+    layer+=tokn(G.foe,"var(--foe)",foe)+tokn(G.me,"var(--me)",me);
+    if(G.phase==="move"){ const [x,y]=M.get(key(G.me.q,G.me.r)).p;
+      for(let d=0;d<6;d++){ const a=SCR[d]*Math.PI/180; const cx=(x+Math.cos(a)*.98).toFixed(2), cy=(y+Math.sin(a)*.98).toFixed(2);
+        layer+=`<circle data-face="${d}" cx="${cx}" cy="${cy}" r=".2" fill="${d===G.me.f?"var(--me)":"var(--card)"}" stroke="var(--me)" stroke-width=".07" style="cursor:pointer"/><circle data-face="${d}" cx="${cx}" cy="${cy}" r=".42" fill="transparent" style="cursor:pointer"/>`; } }
   }
-  const stars=P.filter(h=>h.e).map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
-  const m=$("map"); m.setAttribute("viewBox",`${x0} ${y0} ${x1-x0} ${y1-y0}`); m.innerHTML=s+edges+(me?"":stars)+tok;
+  const m=$("map"); m.setAttribute("viewBox",`${x0} ${y0} ${x1-x0} ${y1-y0}`); m.innerHTML=s+edges+layer;
+  if(G&&(G.phase==="retreat"||G.phase==="dest")&&window.innerWidth<=760&&!G.scrolled){ G.scrolled=true; m.scrollIntoView({block:"center"}); } if(G&&G.phase!=="retreat"&&G.phase!=="dest") G.scrolled=false;
   m.querySelectorAll("polygon[data-k]").forEach(e=>e.onclick=()=>{myStart=e.dataset.k;drawMap();});
+  m.querySelectorAll("[data-go]").forEach(e=>e.onclick=()=>{ const r=G.reach.get(e.dataset.go); G.me.q=r.q; G.me.r=r.r; G.moved=r.c; ui(); drawMap(); });
+  m.querySelectorAll("[data-face]").forEach(e=>e.onclick=()=>{ G.me.f=+e.dataset.face; drawMap(); });
+  m.querySelectorAll("[data-dest]").forEach(e=>e.onclick=()=>{ resolveTurn({t:"disengage",dest:G.dopts.get(e.dataset.dest)}); });
+  m.querySelectorAll("[data-ret]").forEach(e=>e.onclick=()=>{ doRetreat(G.ropts.get(e.dataset.ret)); });
 }
-drawMap();
+ui(); drawMap();
 </script></body></html>

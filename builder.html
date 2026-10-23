@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}</style>
+<title>Wizard Character Builder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=UnifrakturCook:wght@700&display=swap">
+<style>
+/* Layout: builder steps on the left, a sticky character sheet on the right; stacks on phones. */
+:root{
+  --bg:#e8ebef; --panel:#f6f7f9; --ink:#1b2130; --muted:#586174; --line:#c8cfd9;
+  --accent:#1f6b68; --accent-ink:#ffffff; --accent-soft:#d5e8e6;
+  --warn:#9a5600; --warn-soft:#f6e6cc; --bad:#a3262a; --bad-soft:#f3d9da; --ok:#2b7a3d;
+  --f-display:"UnifrakturCook","Old English Text MT",Georgia,serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10141b; --panel:#181e28; --ink:#e5e8ee; --muted:#98a2b4; --line:#2c3544;
+    --accent:#5cc0b6; --accent-ink:#0b1514; --accent-soft:#1c3331;
+    --warn:#e0a24a; --warn-soft:#33281a; --bad:#ee7b7f; --bad-soft:#3a2024; --ok:#6cc27f; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10141b; --panel:#181e28; --ink:#e5e8ee; --muted:#98a2b4; --line:#2c3544;
+  --accent:#5cc0b6; --accent-ink:#0b1514; --accent-soft:#1c3331;
+  --warn:#e0a24a; --warn-soft:#33281a; --bad:#ee7b7f; --bad-soft:#3a2024; --ok:#6cc27f; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body);
+  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-bottom:18px}
+h1{font:700 44px/1 var(--f-display);margin:0;letter-spacing:.01em}
+.sub{color:var(--muted);font-size:14px;max-width:60ch}
+.grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.steps{display:flex;flex-direction:column;gap:16px;min-width:0}
+section.step{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+section.step>h2{display:flex;align-items:baseline;gap:10px;margin:0 0 12px;font:600 15px var(--f-body);text-transform:uppercase;letter-spacing:.08em}
+h2 .n{font:500 13px var(--f-mono);color:var(--accent);border:1px solid var(--accent);border-radius:50%;width:24px;height:24px;display:inline-grid;place-items:center;letter-spacing:0}
+h2 .count{margin-left:auto;font:500 13px var(--f-mono);letter-spacing:0;text-transform:none;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;min-width:0}
+input[type=text],input[type=number],select,textarea{font:15px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 9px;min-width:0;max-width:100%}
+textarea{width:100%;resize:vertical}
+select{text-transform:none;letter-spacing:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:500 14px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:var(--bg)}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.attrs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+@media (max-width:480px){.attrs{grid-template-columns:minmax(0,1fr)}}
+.attr{border:1px solid var(--line);border-radius:4px;padding:10px;background:var(--bg)}
+.attr .lab{font:500 12px var(--f-mono);color:var(--muted);letter-spacing:.08em}
+.attr .ctl{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
+.attr .val{font:600 30px var(--f-mono);font-variant-numeric:tabular-nums}
+.attr button{width:34px;height:34px;padding:0;font-size:18px}
+.attr .min{font-size:12px;color:var(--muted)}
+.pts{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin-top:12px;font-size:14px}
+.pts b{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font:500 12px var(--f-mono);padding:2px 8px;border-radius:10px;background:var(--accent-soft);color:var(--accent)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.alert{font-size:13px;border-radius:4px;padding:7px 10px;margin:8px 0 0;background:var(--warn-soft);color:var(--warn)}
+.alert.bad{background:var(--bad-soft);color:var(--bad)}
+.spellgroup{margin-top:12px}
+.spellgroup h3{margin:0 0 6px;font:600 13px var(--f-mono);letter-spacing:.06em;color:var(--accent);display:flex;gap:8px;align-items:baseline}
+.spellgroup.locked h3{color:var(--muted)}
+.spells{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px}
+.spell{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 8px;border:1px solid var(--line);border-radius:4px;padding:7px 9px;background:var(--bg);cursor:pointer}
+.spell.on{border-color:var(--accent);background:var(--accent-soft)}
+.spell.dis{opacity:.45;cursor:not-allowed}
+.spell input{grid-row:span 2;margin-top:3px}
+.spell .nm{font-weight:600;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline}
+.spell .tp{font:500 11px var(--f-mono);border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--muted)}
+.spell .cs{font:500 12px var(--f-mono);color:var(--muted);margin-left:auto}
+.spell .cs.hi{color:var(--bad)}
+.spell .ds{grid-column:2;font-size:12.5px;color:var(--muted)}
+.gear{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:560px){.gear{grid-template-columns:minmax(0,1fr)}}
+.gear select{width:100%}
+/* sheet */
+aside.sheet{position:sticky;top:12px;background:var(--panel);border:1px solid var(--ink);border-radius:3px;padding:16px;min-width:0;box-shadow:4px 4px 0 var(--line)}
+@media (max-width:860px){aside.sheet{position:static}}
+.sheet .nameline{display:flex;gap:8px;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:6px}
+.sheet #name{flex:1;font:700 26px var(--f-display);background:transparent;border:0;padding:0;border-radius:0;min-width:0}
+.sheet .who{font:500 12px var(--f-mono);color:var(--muted);margin-top:6px}
+.figure,.printtop,.ptitle,.pname{display:none}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:12px 0}
+.stat{border:1px solid var(--line);border-radius:3px;padding:6px 8px;background:var(--bg)}
+.stat .k{font:500 11px var(--f-mono);color:var(--muted);letter-spacing:.08em}
+.stat .v{font:600 24px var(--f-mono);font-variant-numeric:tabular-nums}
+.sheet h3{font:600 12px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;border-bottom:1px solid var(--line);padding-bottom:3px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:4px 8px 4px 0;vertical-align:top;border-bottom:1px solid var(--line)}
+th{font:500 11px var(--f-mono);letter-spacing:.06em;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+td.num,th.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td .sm{display:block;font-size:12px;color:var(--muted)}
+.bad-t{color:var(--bad)} .ok-t{color:var(--ok)}
+ul.sp{list-style:none;margin:0;padding:0;columns:2 170px;column-gap:16px;font-size:13px}
+ul.sp li{padding:1px 0;break-inside:avoid}
+ul.sp .iq{font:500 11px var(--f-mono);color:var(--muted)}
+details{margin-top:14px;border-top:1px solid var(--line);padding-top:8px}
+summary{cursor:pointer;font:600 12px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.toast{font-size:13px;color:var(--ok);min-height:1.2em}
+.help{font-size:12.5px;color:var(--muted)}
+@page{margin:.4in}
+@media print{
+  :root,:root[data-theme="dark"]{--bg:#fff;--panel:#fff;--ink:#000;--muted:#444;--line:#999;--accent:#000;--accent-soft:#eee;--warn:#000;--warn-soft:#eee;--bad:#000;--bad-soft:#eee;--ok:#000;color-scheme:light}
+  body{padding:0}
+  header.top,.steps,details,.btnrow,#epRow button,#epRow .help,.noprint{display:none!important}
+  .grid{display:block}
+  aside.sheet{position:static;box-shadow:none;border:0;padding:0}
+  .pill{border:1px solid #000;background:#fff}
+  textarea{border:0;resize:none;padding:0}
+  tr,li{break-inside:avoid}
+  tr.alt{display:none!important}
+  :root,:root[data-theme="dark"]{--ink:#14161f;--muted:#3b3f4f;--line:#b4bbd8;--accent:#1f2a8a;--accent-soft:#fff}
+  body{font-family:Georgia,"Times New Roman",serif;font-size:11pt}
+  aside.sheet{display:flex;flex-direction:column;min-height:9.6in;border:3px double var(--accent);padding:.22in;background:#fff}
+  .sheet .nameline{border-bottom:2px solid var(--accent)}
+  .sheet #name{font-family:Georgia,serif;font-weight:700;color:var(--accent);font-size:26pt}
+  .sheet .who{font-family:Georgia,serif;font-style:italic;font-size:10pt}
+  .top{display:grid;grid-template-columns:minmax(0,28%) minmax(0,1fr);gap:.2in;margin:.15in 0}
+  .stats{grid-template-columns:1fr;gap:.08in;margin:0}
+  .stat{border:1.5px solid var(--accent);background:#fff;text-align:center;padding:.05in}
+  .stat .k{color:var(--accent);font-family:Arial,Helvetica,sans-serif}
+  .stat .v{font-family:Arial,Helvetica,sans-serif;font-weight:700;font-size:20pt}
+  .figure{display:block;border:2px solid var(--accent);position:relative;min-height:3.3in}
+  .figure span{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-style:italic;font-size:8pt;color:var(--accent)}
+  .sheet h3{font-family:Georgia,serif;font-size:12pt;font-weight:700;letter-spacing:0;text-transform:none;color:var(--accent);border-bottom:2px solid var(--accent)}
+  th{font-family:Georgia,serif;color:var(--accent)}
+  textarea#notes{flex:1;min-height:1.4in;height:auto;line-height:24px;font-family:Georgia,serif;background:repeating-linear-gradient(transparent,transparent 23px,var(--line) 23px,var(--line) 24px) local}
+  textarea::placeholder{color:transparent}
+  .top{display:none!important}
+  .ptitle{display:block;font:700 22pt Georgia,serif;color:var(--accent);line-height:1.1}
+  .pname{display:inline;font:700 12pt Georgia,serif;color:var(--accent);margin-right:.1in}
+  .sheet .nameline{align-items:baseline;margin-top:.04in}
+  .sheet #name{font-size:16pt}
+  .printtop{display:grid;grid-template-columns:1.45in 2.9in minmax(0,1fr);gap:.15in;margin:.12in 0 .04in;align-items:stretch}
+  .pcol{display:grid;min-width:0}
+  .pleft{grid-template-rows:repeat(4,1fr)}
+  .pmid{grid-template-rows:1.05fr .6fr 1.05fr .6fr;border-left:2px solid var(--accent);padding-left:.12in}
+  .prow{display:grid;grid-template-columns:.8in 1fr;align-items:stretch;gap:.06in;margin:.03in 0}
+  .pleft .prow{grid-template-columns:.4in 1fr;margin:0}
+  .plab{font:700 13pt Georgia,serif;color:var(--accent);align-self:center}
+  .pbox{border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font:700 26pt Arial,Helvetica,sans-serif;color:var(--ink)}
+  .pleft .prow+.prow .pbox{border-top-width:0}
+  .pfig{border:2px solid var(--accent);aspect-ratio:4/5;position:relative;align-self:start;width:100%}
+  .pfig span{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-style:italic;font-size:8pt;color:var(--accent)}
+  aside.sheet{min-height:10.1in;padding:.15in .22in}
+  .sheet .who{margin-top:2px}
+  .top{margin:.1in 0 .05in}
+  .stat{padding:.02in}
+  .stat .k{font-size:8pt}
+  .stat .v{font-size:17pt;line-height:1.15}
+  .figure{min-height:2.7in}
+  .sheet h3{margin:.06in 0 .03in;padding-bottom:1px}
+  th,td{padding-top:1px;padding-bottom:1px}
+  ul.sp{columns:3 130px}
+  textarea#notes{min-height:.25in}
+  #epRow{margin:0}
+  #epRow input{border:0;border-bottom:1px solid var(--accent);border-radius:0;background:transparent;font-size:12pt;width:80px}
+}
+@media (prefers-reduced-motion:no-preference){.spell,button{transition:border-color .12s,background .12s}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Wizard</h1>
+    <div class="sub">Character builder for The Fantasy Trip: Wizard and Melee. Original Wizard spell table and Melee gear. Advanced Wizard spells are not included.</div>
+  </header>
+
+  <div class="grid">
+    <div class="steps">
+      <section class="step" id="s-who"></section>
+      <section class="step" id="s-attr"></section>
+      <section class="step" id="s-spells"></section>
+      <section class="step" id="s-gear"></section>
+    </div>
+
+    <aside class="sheet" aria-label="Character sheet">
+      <div class="ptitle" id="ptitle"></div>
+      <div class="nameline"><span class="pname">Name</span><input id="name" type="text" placeholder="Character name" aria-label="Character name" maxlength="60"></div>
+      <div class="who" id="who"></div>
+      <div id="sheet"></div>
+      <h3>Experience points</h3>
+      <div class="row" id="epRow"></div>
+      <h3>Notes</h3>
+      <textarea id="notes" rows="3" aria-label="Notes" placeholder="Pets, magic items, background"></textarea>
+      <div class="btnrow noprint"><button id="printBtn" class="primary">Print or save as PDF</button> <a href="arena.html" style="margin-left:12px;white-space:nowrap">Melee Arena &rarr;</a> <a href="sim.html" style="margin-left:12px;white-space:nowrap">Fight simulator &rarr;</a> <a href="index.html" style="margin-left:12px;white-space:nowrap">Menu</a></div>
+      <details>
+        <summary>Save and load</summary>
+        <p class="help">The page remembers your last character in this browser. To keep it elsewhere, copy the text below and paste it back later.</p>
+        <textarea id="json" rows="5" aria-label="Character data" spellcheck="false"></textarea>
+        <div class="btnrow">
+          <button id="copyJson">Copy data</button>
+          <button id="loadJson">Load from box</button>
+          <button id="copySheet">Copy sheet as text</button>
+        </div>
+        <div class="toast" id="toast" role="status"></div>
+      </details>
+    </aside>
+  </div>
+</div>
+
+<script src="rules.js"></script>
+<script>
+"use strict";
+/* ---------- Rules data (old Wizard + Melee) ---------- */
+const {RACES,ARMOR,W,SHIELDS,RATE}=RULES;
+
+/* [iq, name, type, cost (number or "var"), upkeep, summary] */
+const SPELLS = [
+ [8,"Staff","S",5,"","Turns a piece of wood into your staff, a one-die weapon that costs no ST. Knowing it means you start the game holding one. Cost 5 only if cast mid-game."],
+ [8,"Magic Fist","M","var","","Missile. Roll 1 die per ST spent, then subtract 2 per die."],
+ [8,"Blur","T",1,"+1/turn","Attacks and spells against the subject are at -4 DX."],
+ [8,"Slow Movement","T",2,"","Halves the victim's MA for 4 turns. Slows add time, not effect."],
+ [8,"Drop Weapon","T",1,"","Victim drops what is in one hand. Costs 2 if victim's ST is 20+."],
+ [8,"Image","C",1,"","Creates any one-hex image."],
+ [9,"Clumsiness","T","var","","-2 DX per ST spent, for 3 turns (1 turn if victim ST 30+)."],
+ [9,"Confusion","T","var","","-2 IQ per ST spent, for 3 turns."],
+ [9,"Avert","T",2,"+1/turn","Victim must end each move at least 2 hexes farther from you."],
+ [9,"Aid","T","var","","+1 to ST, DX or IQ per ST spent, for 2 turns."],
+ [9,"Summon Wolf","C",2,"+1/turn","Wolf: ST 10, DX 14, IQ 6, MA 12, bite 1+1."],
+ [9,"Reveal Magic","S",1,"","Shows reverse missiles, spell shields, stone and iron flesh, shock shields, slippery floors."],
+ [9,"Fire","C",1,"","One hex of flame. 2 hits passing through, 4 hits and -2 DX if you stop in it."],
+ [10,"Trip","T",2,"","Knocks victim down, no damage. Costs 4 if victim's ST is 30+."],
+ [10,"Speed Movement","T",2,"","Doubles the target's MA for 4 turns."],
+ [10,"Summon Myrmidon","C",2,"+1/turn","Warrior: ST 12, DX 12, IQ 8, MA 10, broadsword, no armor."],
+ [10,"Dazzle","S",3,"","Everything with eyes within 5 megahexes (not you) is at -3 DX for 3 turns."],
+ [10,"Shadow","C",1,"","One hex of black shadow. Attacking from or into it is -6 or -4 DX."],
+ [10,"Shock Shield","T",2,"+1/turn","Does 1 die to every creature in the subject's hex each turn."],
+ [11,"Sleep","T",3,"","Victim sleeps until hit or shaken awake. Not on ST 20+."],
+ [11,"Summon Bear","C",4,"+1/turn","Bear: ST 30, DX 11, IQ 6, MA 8, bite 2+2."],
+ [11,"Control Animal","T",2,"+1/turn","Controls one real animal. Saving roll vs IQ on 3 dice."],
+ [11,"Illusion","C",2,"","Creates any one-hex illusion."],
+ [11,"Reverse Missiles","T",2,"+1/turn","Missiles aimed at the subject hit their sender instead."],
+ [11,"Rope","C",2,"","Entangles victim: MA halved, DX -2, one worse each turn. Not on ST 20+."],
+ [11,"Create Wall","C",2,"","Solid wall in one hex. Fails if a figure is there."],
+ [11,"Destroy Creation","T",1,"","Removes one thing made by a Creation spell."],
+ [12,"Freeze","T",4,"","Victim is frozen for 2 to 12 turns. Not on ST 30+."],
+ [12,"Fireball","M","var","","Missile. 1 die per ST spent, subtract 1 per die."],
+ [12,"Invisibility","T",3,"+1/turn","Subject is invisible. Attacks on it are at -6 DX."],
+ [12,"Blast","S",2,"","1 die damage to everyone in your hex and adjacent, except you."],
+ [12,"Mage Sight","T",2,"+1/turn","Subject sees through blur, invisibility, shadow and darkness."],
+ [12,"Break Weapon","T",3,"","Shatters one weapon, shield or staff in a foe's hand."],
+ [12,"3-Hex Fire","C",2,"","Fire over up to 3 connected hexes."],
+ [12,"3-Hex Shadow","C",2,"","Shadow over up to 3 connected hexes."],
+ [13,"Flight","T",3,"+1/turn","Subject flies at MA 12. Attacks on a flier are at -4 DX."],
+ [13,"Summon Gargoyle","C",4,"+1/turn","Gargoyle: ST 20, DX 11, IQ 8, MA 8 ground / 16 air, fist 2 dice."],
+ [13,"Control Person","T",3,"+1/turn","Controls one human or humanoid. Saving roll vs IQ on 3 dice."],
+ [13,"Stone Flesh","T",2,"+1/turn","Subject's body stops 4 hits per attack."],
+ [13,"Slippery Floor","T",3,"","One megahex of slick floor. Saving roll vs DX or fall."],
+ [13,"Stop","T",3,"","Victim's MA is 0 for 4 turns."],
+ [13,"4-Hex Image","C",2,"","Image up to 4 hexes in size."],
+ [13,"3-Hex Wall","C",4,"","Wall over up to 3 connected hexes."],
+ [14,"Lightning","M","var","","Missile. 1 die per ST spent, no subtraction. Blasts through created walls."],
+ [14,"Summon Giant","C",4,"+1/turn","Giant: ST 30, DX 9, IQ 8, MA 8, club 3+3."],
+ [14,"4-Hex Illusion","C",3,"","Illusion up to 4 hexes in size."],
+ [14,"Remove Thrown Spell","T",2,"","Cancels any Thrown-type spell on a subject."],
+ [14,"Dispel Illusions","S",5,"","Removes all illusions within 5 megahexes."],
+ [14,"Spell Shield","T",3,"+1/turn","Blocks Special, Missile and Thrown spells cast on the subject."],
+ [15,"Iron Flesh","T",3,"+1/turn","Subject's body stops 6 hits per attack."],
+ [15,"Teleport","S","var","","Blinks you to another hex. 1 ST per megahex moved."],
+ [15,"Summon Small Dragon","C",5,"+1/turn","4-hex dragon: ST 30, DX 13, IQ 16, breath 2 dice, claw 2-2."],
+ [15,"Giant Rope","C",5,"","Rope for creatures of ST 20+, or two ropes on weaker ones."],
+ [15,"7-Hex Shadow","C",3,"","Shadow over up to 7 connected hexes."],
+ [15,"7-Hex Image","C",4,"","Image up to 7 hexes in size."],
+ [15,"Megahex Avert","T",3,"+1/turn","Avert on everyone in a megahex."],
+ [16,"7-Hex Illusion","C",5,"","Illusion up to 7 hexes in size."],
+ [16,"Summon Dragon","C",5,"+2/turn","7-hex dragon: ST 60, DX 14, IQ 20, breath 3 dice, claw 2 dice."],
+ [16,"Death Spell","T","var","","Weaker of you and the victim loses ST equal to the lower ST; both lose it."],
+ [16,"7-Hex Fire","C",4,"","Fire over up to 7 connected hexes."],
+ [16,"7-Hex Wall","C",6,"","Wall over up to 7 connected hexes."],
+ [16,"Megahex Sleep","S",8,"","Sleeps every figure under ST 20 in a megahex, or one figure up to ST 50."]
+].map(a=>({iq:a[0],name:a[1],type:a[2],cost:a[3],up:a[4],txt:a[5]}));
+const SPELL_BY = Object.fromEntries(SPELLS.map(s=>[s.name,s]));
+const minCost = s => s.cost==="var" ? 1 : s.cost;
+const costTxt = s => (s.cost==="var" ? "ST: var." : "ST "+s.cost) + (s.up?" "+s.up:"");
+
+/* ---------- State ---------- */
+const KEY="wizard-builder-v1";
+const EXAMPLE = {name:"Yzor (example)",cls:"wizard",race:"human",total:32,st:9,dx:12,iq:11,
+  spells:["Staff","Magic Fist","Blur","Slow Movement","Drop Weapon","Image","Dazzle","Illusion","Sleep","Fire","Rope"],
+  a:"none",b:"none",s1:"none",d1:"dagger",d2:"none",armor:"none",ep:0,notes:"",silver:false,armorSrc:"melee"};
+let S = JSON.parse(JSON.stringify(EXAMPLE));
+
+/* Right hand (a): any weapon except the main-gauche. Left hand (b): shield, main-gauche or a one-handed weapon. */
+const okA=id=>id==="none"||(W[id]&&!W[id].left&&id!=="staff");
+const okB=id=>id==="none"||!!SHIELDS[id]||(W[id]&&id!=="staff"&&!W[id].two);
+const okH=id=>id==="none"||id==="dagger"||id==="mg";
+const okS=id=>id==="none"||!!SHIELDS[id]||(W[id]&&id!=="staff");
+function normalize(o){
+  const r = Object.assign({}, EXAMPLE, o||{});
+  if(!RACES[r.race]) r.race="human";
+  if(!["wizard","fighter"].includes(r.cls)) r.cls="wizard";
+  const R=RACES[r.race];
+  r.st=Math.max(R.st,Math.round(+r.st||R.st)); r.dx=Math.max(R.dx,Math.round(+r.dx||R.dx)); r.iq=Math.max(R.iq,Math.round(+r.iq||R.iq));
+  const base=R.st+R.dx+R.iq+R.extra;
+  r.total=Math.max(base,r.st+r.dx+r.iq,Math.round(+r.total||base));
+  if(r.st+r.dx+r.iq>r.total){r.total=r.st+r.dx+r.iq}
+  r.ep=Math.max(0,Math.round(+r.ep||0));
+  r.name=String(r.name||"").slice(0,60); r.notes=String(r.notes||"").slice(0,2000);
+  r.silver=!!r.silver; r.armorSrc=r.armorSrc==="melee"?"melee":"wizard";
+  if(!ARMOR[r.armor]) r.armor="none";
+  if(o && o.left && o.left!=="none" && (!o.b||o.b==="none")) r.b=o.left;
+  delete r.left;
+  if(!okA(r.a)) r.a="none";
+  if(!okB(r.b)) r.b="none";
+  if(o && o.s2 && o.s2!=="none" && r.s1==="none") r.s1=o.s2;
+  delete r.s2;
+  if(!okS(r.s1)||r.s1==="mg") r.s1="none";
+  for(const k of ["d1","d2"]) if(!["none","dagger","mg"].includes(r[k])) r[k]=(k==="d1"?"dagger":"none");
+  r.spells=Array.isArray(r.spells)?r.spells.filter((n,i,a)=>SPELL_BY[n]&&a.indexOf(n)===i):[];
+  enforce(r);
+  return r;
+}
+/* keeps spells, weapons and classes consistent with the attributes */
+function enforce(r){
+  const notes=[];
+  if(r.cls==="fighter"){ if(r.spells.length) notes.push("Fighters do not know spells. Spells cleared."); r.spells=[]; }
+  else {
+    const before=r.spells.length;
+    r.spells=r.spells.filter(n=>SPELL_BY[n].iq<=r.iq);
+    if(r.spells.length>r.iq) r.spells=r.spells.slice(0,r.iq);
+    if(r.spells.length<before) notes.push("Some spells were removed because they are above IQ "+r.iq+" or over the limit of "+r.iq+".");
+  }
+  for(const k of ["a","b","s1"]){
+    const w=W[r[k]]; if(w && w.st>r.st){ notes.push(w.n+" needs ST "+w.st+". Removed."); r[k]="none"; }
+  }
+  const A2=(r.cls==="wizard"&&r.spells.includes("Staff"))?"staff":r.a;
+  if(W[A2]&&W[A2].two&&r.b!=="none"&&!SHIELDS[r.b]){ r.b="none"; notes.push("A two-handed weapon fills both hands. Left hand item removed."); }
+  let nsh=0, nmg=0;
+  for(const k of ["b","s1","d1","d2"]){
+    if(SHIELDS[r[k]]){ if(++nsh>1){ r[k]="none"; notes.push("Only one shield is allowed. Extra shield removed."); } }
+    else if(r[k]==="mg"){ if(++nmg>1){ r[k]=(k==="d1"?"dagger":"none"); notes.push("Only one main-gauche is allowed. Extra one removed."); } }
+  }
+  const carried=[A2,r.b,r.s1,r.d1,r.d2].filter(x=>x!=="none");
+  const cnt=carried.length-(carried.some(x=>x==="dagger"||x==="mg")?1:0);
+  if(cnt>2) notes.push("Carrying "+cnt+" weapons and shields. The limit is two, plus one free dagger. Extra daggers count as weapons.");
+  r._notes=notes;
+}
+function save(){ try{ const c=Object.assign({},S); delete c._notes; localStorage.setItem(KEY,JSON.stringify(c)); }catch(e){} }
+function load(){ try{ const t=localStorage.getItem(KEY); if(t) S=normalize(JSON.parse(t)); }catch(e){} }
+
+/* ---------- Helpers ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sgn=n=>n>0?"+"+n:n<0?"−"+Math.abs(n):"0";
+const fmtDice=(d,m)=>d+(m>0?"+"+m:m<0?"−"+(-m):"");
+const hasStaff=()=>S.cls==="wizard"&&S.spells.includes("Staff");
+const slotA=()=>hasStaff()?"staff":S.a;
+/* everything the figure carries, with where it starts. One dagger or main-gauche is carried free, sheathed at the side. */
+function pool(){
+  const p=[]; const add=(id,loc)=>{ if(id&&id!=="none") p.push({id,loc}); };
+  add(slotA(),"Right hand"); add(S.b,"Left hand"); add(S.s1,"Slung"); add(S.d1,"Sheathed"); add(S.d2,"Sheathed");
+  if(S.d1!=="none") p.find(x=>x.loc==="Sheathed").free=true;
+  return p;
+}
+const itemName=id=>W[id]?W[id].n:SHIELDS[id]?SHIELDS[id].n:"";
+const armorPen=()=>ARMOR[S.armor].pen[S.armorSrc==="melee"?"m":"w"];
+const baseMA=()=>S.race==="elf"?12:10;
+function ma(){
+  let m=ARMOR[S.armor].ma;
+  if(S.race==="elf"){ if(S.armor==="none")m=12; else if(S.armor==="leather")m=10; }
+  return m;
+}
+function damageText(id){
+  const w=W[id]; let d=w.d,m=w.m,extra="";
+  if(S.race==="dwarf"&&/hammer|ax/i.test(w.n)) m+=1;
+  if(S.race==="hobbit"&&w.miss) m+=1;
+  if(S.race==="hobbit"&&w.th&&!w.miss) extra=" (+1 thrown)";
+  return fmtDice(d,m)+extra;
+}
+
+/* ---------- Ready configurations ---------- */
+function configs(){
+  const P=pool(), out=[], seen=new Set();
+  const startIds=P.filter(x=>x.loc==="Right hand"||x.loc==="Left hand").map(x=>x.id).sort().join("|");
+  const isTwo=x=>!!(W[x.id]&&W[x.id].two);
+  const rightOK=x=>!SHIELDS[x.id]&&x.id!=="mg";
+  const leftOK=x=>!isTwo(x);
+  /* every legal way to hold things: right hand weapon, left hand shield / main-gauche / one-handed weapon */
+  const combos=[[]];
+  P.forEach((x,i)=>{ if(rightOK(x)) combos.push([i]); if(leftOK(x)) combos.push([i]); });
+  P.forEach((x,i)=>P.forEach((y,j)=>{ if(i!==j&&rightOK(x)&&!isTwo(x)&&leftOK(y)) combos.push([i,j]); }));
+  for(const c of combos){
+    const rdy=c.map(i=>P[i]);
+    const sh=rdy.filter(x=>SHIELDS[x.id]);
+    const wp=rdy.filter(x=>!SHIELDS[x.id]);
+    const label=rdy.length?rdy.map(x=>itemName(x.id)).join(" + "):"Nothing ready";
+    const start=rdy.map(x=>x.id).sort().join("|")===startIds;
+    const variants=[{dual:false}];
+    if(wp.length>=2) variants.push({dual:true});
+    for(const v of variants){
+      const row=evalConfig(rdy,sh,wp,v.dual);
+      row.label=label+(v.dual?" (attack with both)":(wp.length>=2&&wp.some(x=>x.id==="mg")?" (attack with the weapon, parry with main-gauche)":""));
+      row.start=start&&!v.dual;
+      if(!seen.has(row.label)){seen.add(row.label);out.push(row);}
+    }
+  }
+  out.sort((a,b)=>(b.start?1:0)-(a.start?1:0));
+  return out;
+}
+function evalConfig(rdy,sh,wp,dual){
+  const parts=[]; let adj=S.dx;
+  const add=(n,why)=>{ if(n){adj+=n;parts.push(why+" "+sgn(n));} };
+  add(-armorPen(),ARMOR[S.armor].n.toLowerCase().replace(" armor",""));
+  sh.forEach(x=>add(-SHIELDS[x.id].pen,SHIELDS[x.id].n.toLowerCase()));
+  const mg=wp.some(x=>x.id==="mg");
+  if(dual) add(-4,"two attacks");
+  else if(mg) add(-2,"main-gauche parry, one attack");
+  if(S.cls==="wizard"){
+    if(wp.some(x=>x.id!=="staff"&&x.id!=="dagger"&&x.id!=="mg")) add(-4,"wizard with weapon");
+    if(!S.silver && (S.armor!=="none" || wp.some(x=>x.id!=="staff"))) add(-4,"iron or steel");
+  }
+  let stops=ARMOR[S.armor].stops + sh.reduce((t,x)=>t+SHIELDS[x.id].stops,0);
+  const stopsMelee=stops+(mg?1:0);
+  const shots=wp.map(x=>W[x.id]).filter(w=>w.rate).map(w=>{
+    const ok=adj>=(RATE[Object.keys(W).find(k=>W[k]===w)]);
+    return w.n+": "+w.rate+(ok?" (met)":" (not met)");
+  });
+  const cant=S.cls==="wizard" && (sh.length>0 || wp.some(x=>x.id!=="staff"));
+  return {adj,parts,stops,stopsMelee,mg,cant,shots,cls:S.cls};
+}
+
+/* ---------- Render: steps ---------- */
+function renderWho(){
+  const R=RACES[S.race];
+  $("s-who").innerHTML=`<h2><span class="n">1</span>Race and class</h2>
+  <div class="row">
+    <label class="f">Race<select id="race">${Object.entries(RACES).map(([k,r])=>`<option value="${k}"${k===S.race?" selected":""}>${r.n}</option>`).join("")}</select></label>
+    <div><div class="help" style="margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;font-size:12px">Class</div>
+      <div class="seg" role="group" aria-label="Class">
+        <button data-cls="wizard" aria-pressed="${S.cls==="wizard"}">Wizard</button>
+        <button data-cls="fighter" aria-pressed="${S.cls==="fighter"}">Fighter</button></div></div>
+  </div>
+  <p class="note"><b>${R.n}:</b> ST ${R.st}, DX ${R.dx}, IQ ${R.iq} plus ${R.extra} points = ${R.st+R.dx+R.iq+R.extra}. ${esc(R.note)}
+  ${S.cls==="fighter"?" Fighters know no spells and cannot carry a magical staff. IQ still resists illusions and Control Person.":" A wizard knows a number of spells equal to IQ."}</p>`;
+}
+function renderAttr(){
+  const R=RACES[S.race], used=S.st+S.dx+S.iq, rem=S.total-used, base=R.st+R.dx+R.iq+R.extra;
+  const box=(k,lab,min)=>`<div class="attr"><div class="lab">${lab}</div>
+    <div class="ctl"><button data-dec="${k}" aria-label="Lower ${lab}"${S[k]<=min?" disabled":""}>−</button>
+    <span class="val" id="v-${k}">${S[k]}</span>
+    <button data-inc="${k}" aria-label="Raise ${lab}"${rem<=0?" disabled":""}>+</button></div>
+    <div class="min">minimum ${min}</div></div>`;
+  $("s-attr").innerHTML=`<h2><span class="n">2</span>Attributes<span class="count">${used} of ${S.total} points</span></h2>
+  <div class="attrs">${box("st","ST",R.st)}${box("dx","DX",R.dx)}${box("iq","IQ",R.iq)}</div>
+  <div class="pts"><span>Points left: <b class="${rem===0?"ok-t":""}">${rem}</b></span>
+    <label class="f" style="flex-direction:row;align-items:center;gap:8px">Total points
+    <input id="total" type="number" min="${Math.max(base,used)}" step="1" value="${S.total}" style="width:84px"></label>
+    ${S.total>base?`<span class="pill warn">experienced figure</span>`:`<span class="pill">beginning figure</span>`}</div>
+  <p class="note">Beginning figures start at ${base}. Experienced figures may start with any total. IQ sets how many spells you know and which levels you can pick from. ST cannot be changed after the game starts except by experience.</p>
+  ${(S._notes||[]).map(t=>`<div class="alert">${esc(t)}</div>`).join("")}`;
+}
+function spellAfford(s){ return minCost(s) > S.st-1; }
+function renderSpells(){
+  const el=$("s-spells");
+  if(S.cls==="fighter"){
+    el.innerHTML=`<h2><span class="n">3</span>Spells</h2><p class="note">Fighters do not know spells. Switch the class to Wizard to choose spells.</p>`; return;
+  }
+  const full=S.spells.length>=S.iq;
+  let html=`<h2><span class="n">3</span>Spells<span class="count">${S.spells.length} of ${S.iq}</span></h2>
+  <p class="note" style="margin-top:0">Pick up to ${S.iq} spells from levels 8 to ${S.iq}. Types: S special, M missile, T thrown, C creation. Spells in red cost too much to cast at your full ST of ${S.st}; a wizard cannot drop below 1 ST.</p>`;
+  for(let iq=8;iq<=16;iq++){
+    const list=SPELLS.filter(s=>s.iq===iq), locked=iq>S.iq;
+    html+=`<div class="spellgroup${locked?" locked":""}"><h3>IQ ${iq}${locked?` <span class="help">locked until IQ ${iq}</span>`:""}</h3><div class="spells">`+
+    list.map(s=>{
+      const on=S.spells.includes(s.name), dis=locked||(!on&&full), hi=spellAfford(s);
+      return `<label class="spell${on?" on":""}${dis?" dis":""}"><input type="checkbox" data-spell="${esc(s.name)}"${on?" checked":""}${dis?" disabled":""}>
+        <span class="nm">${esc(s.name)}<span class="tp">${s.type}</span><span class="cs${hi?" hi":""}">${costTxt(s)}</span></span>
+        <span class="ds">${esc(s.txt)}</span></label>`;
+    }).join("")+`</div></div>`;
+  }
+  el.innerHTML=html;
+}
+function opt(id,label,sel,dis){return `<option value="${id}"${sel?" selected":""}${dis?" disabled":""}>${esc(label)}</option>`;}
+function gearOptions(slot){
+  const cur=S[slot], hand=slot==="a", left=slot==="b";
+  const shieldUsed=["b","s1"].filter(k=>k!==slot).some(k=>SHIELDS[S[k]]);
+  const mgUsed=["b","d1","d2"].filter(k=>k!==slot).some(k=>S[k]==="mg");
+  const twoInRight=left&&W[slotA()]&&W[slotA()].two;
+  let h=opt("none","— empty —",cur==="none");
+  if(!hand) h+=`<optgroup label="Shields">`+Object.entries(SHIELDS).map(([k,s])=>opt(k,`${s.n} (stops ${s.stops}${s.pen?`, DX −${s.pen}`:""})`,cur===k,shieldUsed)).join("")+`</optgroup>`;
+  if(twoInRight) return h;
+  const groups={};
+  Object.entries(W).forEach(([k,w])=>{ if(w.grp==="x"||(left&&w.two)) return; (groups[w.grp]=groups[w.grp]||[]).push([k,w]); });
+  if(left) groups["Left hand weapon"]=[["mg",W.mg]];
+  for(const g in groups){
+    h+=`<optgroup label="${g}">`+groups[g].map(([k,w])=>{
+      const bad=w.st>S.st;
+      return opt(k,`${w.n}  ${fmtDice(w.d,w.m)}${w.two?" †":""}${w.st?`  ST ${w.st}`:""}${bad?" (too weak)":""}`,cur===k,bad||(k==="mg"&&mgUsed));
+    }).join("")+`</optgroup>`;
+  }
+  return h;
+}
+function daggerOptions(slot){
+  const cur=S[slot], mgUsed=["b","d1","d2"].filter(k=>k!==slot).some(k=>S[k]==="mg");
+  return opt("none","— none —",cur==="none")+opt("dagger","Dagger 1−1, may be thrown",cur==="dagger")+opt("mg","Main-gauche 1−1, parries 1",cur==="mg",mgUsed);
+}
+function renderGear(){
+  const A=hasStaff();
+  $("s-gear").innerHTML=`<h2><span class="n">4</span>Armor and weapons</h2>
+  <div class="gear">
+    <label class="f">Armor<select id="armor">${Object.entries(ARMOR).map(([k,a])=>`<option value="${k}"${k===S.armor?" selected":""}>${a.n} (stops ${a.stops}, DX −${a.pen[S.armorSrc==="melee"?"m":"w"]})</option>`).join("")}</select></label>
+    <label class="f">Right hand<select id="slotA"${A?" disabled":""}>${A?`<option>Staff (from Staff spell)</option>`:gearOptions("a")}</select></label>
+    <label class="f">Left hand<select id="slotB">${gearOptions("b")}</select></label>
+    <label class="f">Slung on back<select id="slotS1">${gearOptions("s1")}</select></label>
+    <label class="f">Dagger at side (carried free)<select id="slotD1">${daggerOptions("d1")}</select></label>
+    <label class="f">Second item at side (counts as a weapon)<select id="slotD2">${daggerOptions("d2")}</select></label>
+  </div>
+  <p class="note">The right and left hand are what is ready when the game starts. Anything slung on the back or sheathed at the side can be readied later, for example a bow first, then the main-gauche and a dagger after firing. A figure carries two weapons plus a dagger, and a shield counts as one weapon. One dagger or main-gauche is carried free. Any additional dagger counts as one of the two weapons.</p>
+  <p class="note">The right hand holds a weapon. A two-handed weapon (†) fills both hands, so a shield has to be slung. The left hand holds nothing, a shield, a main-gauche, or a one-handed weapon as a second weapon. When both hands attack in the same turn, both attacks are at −4 DX. The main-gauche and shields cannot go in the right hand. Weapons need basic ST at or above the number shown.${A?" Your staff is your right-hand weapon.":""}</p>${(S._notes||[]).filter(t=>/Carrying|shield|main-gauche|hands/.test(t)).map(t=>`<div class="alert">${esc(t)}</div>`).join("")}
+  <div class="row" style="margin-top:10px">
+    ${S.cls==="wizard"?`<label class="f" style="flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink)"><input type="checkbox" id="silver"${S.silver?" checked":""}> Wizard's gear is silver, not iron or steel</label>`:""}
+  </div>
+  <p class="note">Armor DX penalties: leather −2, chainmail −3, plate −6. A wizard whose weapon or armor is iron or steel takes −4 DX; the rules do not say whether this stacks with the −4 for carrying a weapon, so both are applied.</p>`;
+}
+
+/* ---------- Render: sheet ---------- */
+function renderSheet(){
+  const R=RACES[S.race];
+  $("ptitle").textContent=(S.cls==="wizard"?"Wizard":"Fighter")+" Character Sheet";
+  $("who").textContent=`${R.n} ${S.cls==="wizard"?"wizard":"fighter"} · ${S.total} points`;
+  const cfg=configs();
+  const A=slotA();
+  const P=pool();
+  const wrows=P.filter(x=>W[x.id]).map(x=>{
+    const id=x.id, w=W[id];
+    const bits=[x.loc==="Slung"?"slung on back":x.loc==="Sheathed"?(x.free?"sheathed at side, carried free":"sheathed at side"):x.loc.toLowerCase()+", ready"]; if(w.two)bits.push("two-handed"); if(w.th)bits.push("may be thrown"); if(w.pole)bits.push("pole weapon, double damage on charge"); if(w.rate)bits.push(w.rate);
+    if(id==="staff")bits.push("no ST cost to strike");
+    if(w.note)bits.push(w.note);
+    return `<tr><td>${esc(w.n)}${bits.length?`<span class="sm">${esc(bits.join("; "))}</span>`:""}</td><td class="num">${damageText(id)}</td><td class="num">${w.st||"—"}</td></tr>`;
+  });
+  const sh=P.filter(x=>SHIELDS[x.id]).map(x=>Object.assign({loc:x.loc},SHIELDS[x.id]));
+  const spellsByIq=S.spells.map(n=>SPELL_BY[n]).sort((a,b)=>a.iq-b.iq||a.name.localeCompare(b.name));
+  $("sheet").innerHTML=`
+  <div class="top"><div class="stats">
+    <div class="stat"><div class="k">ST</div><div class="v">${S.st}</div></div>
+    <div class="stat"><div class="k">DX</div><div class="v">${S.dx}</div></div>
+    <div class="stat"><div class="k">IQ</div><div class="v">${S.iq}</div></div>
+    <div class="stat"><div class="k">adjDX</div><div class="v">${(cfg.find(c=>c.start)||cfg[0]).adj}</div></div>
+    <div class="stat"><div class="k">MA</div><div class="v">${ma()}</div></div>
+  </div><div class="figure"><span>Figure</span></div></div>
+  <div class="printtop">
+    <div class="pcol pleft">${[["ST",S.st],["DX",S.dx],["IQ",S.iq],["MA",baseMA()]].map(([k,v])=>`<div class="prow"><span class="plab">${k}</span><span class="pbox">${v}</span></div>`).join("")}</div>
+    <div class="pcol pmid">
+      <div class="prow"><span class="plab">Hits</span><span class="pbox"></span></div>
+      <div class="prow"><span class="plab">adj DX</span><span class="pbox">${(cfg.find(c=>c.start)||cfg[0]).adj}</span></div>
+      <div class="prow"><span class="plab">Fatigue</span><span class="pbox"></span></div>
+      <div class="prow"><span class="plab">adj MA</span><span class="pbox">${ma()}</span></div>
+    </div>
+    <div class="pfig"><span>Figure</span></div>
+  </div>
+  ${S.race==="hobbit"?`<p class="note" style="margin:0">Hobbit: +3 DX on top of the numbers below with missile spells, thrown weapons and missile weapons.</p>`:""}
+  <h3>Armor</h3>
+  <div style="font-size:14px">${ARMOR[S.armor].n}${ARMOR[S.armor].stops?`: stops ${ARMOR[S.armor].stops} hits per attack, DX −${armorPen()}`:""}${sh.length?`<br>${sh.map(s=>`${s.n} (${s.loc==="Slung"?"slung":"ready at start"}): stops ${s.stops} from the front when ready${s.pen?`, DX −${s.pen}`:""}; slung, it stops nothing from the front but covers the rear hex`).join("<br>")}`:""}</div>
+  <h3>Adjusted DX by what is ready</h3>
+  <div class="help noprint" style="margin-bottom:6px">Every way to hold your gear. The first row is how you start.</div>
+  <div class="scroll"><table><thead><tr><th>Ready</th><th class="num">adjDX</th><th class="num">Stops</th></tr></thead><tbody>
+  ${cfg.map(c=>`<tr${c.start?"":' class="alt"'}><td>${esc(c.label)}${c.start?` <span class="pill">starts ready</span>`:""}${c.cant?`<span class="sm bad-t">Cannot cast spells like this</span>`:""}${c.parts.length?`<span class="sm">${esc(c.parts.join(", "))}</span>`:""}${c.shots.map(t=>`<span class="sm">${esc(t)}</span>`).join("")}</td>
+   <td class="num">${c.adj}</td><td class="num">${c.stops}${c.mg?` (${c.stopsMelee} vs melee)`:""}</td></tr>`).join("")}
+  </tbody></table></div>
+  ${wrows.length?`<h3>Weapons</h3><div class="scroll"><table><thead><tr><th>Weapon</th><th class="num">Damage</th><th class="num">Min ST</th></tr></thead><tbody>${wrows.join("")}</tbody></table></div>`:""}
+  <h3>Spells${S.cls==="wizard"?` (${S.spells.length} of ${S.iq})`:""}</h3>
+  ${S.cls==="wizard"?(spellsByIq.length?`<ul class="sp">${spellsByIq.map(s=>`<li><span class="iq">${s.iq}</span> ${esc(s.name)} <span class="iq">${s.type} · ${s.cost==="var"?"var.":s.cost}${s.up?" "+s.up:""}</span></li>`).join("")}</ul>`:`<div class="help">No spells chosen.</div>`):`<div class="help">Fighter: no spells.</div>`}
+  ${hasStaff()?`<div class="help noprint" style="margin-top:6px">Starts with a staff, free. It counts as one of two weapons.</div>`:""}`;
+  const ep=S.ep;
+  $("epRow").innerHTML=`<label class="f" style="flex-direction:row;align-items:center;gap:8px">EP<input id="ep" type="number" min="0" step="10" value="${ep}" style="width:90px"></label>
+   <button id="trade"${ep<100?" disabled":""}>Trade 100 EP for 1 point</button>
+   <span class="help">Each trade adds one point to the total, to spend on ST, DX or IQ.</span>`;
+  $("json").value=JSON.stringify(exportObj());
+}
+function exportObj(){ const c=Object.assign({},S); delete c._notes; return c; }
+function sheetText(){
+  const L=[]; L.push((S.name||"Unnamed")+" — "+RACES[S.race].n+" "+S.cls);
+  L.push(`ST ${S.st}  DX ${S.dx}  IQ ${S.iq}  MA ${ma()}  (${S.total} points)`);
+  L.push("Armor: "+ARMOR[S.armor].n);
+  const P=pool(), nm=f=>P.filter(f).map(x=>itemName(x.id)).join(", ")||"nothing";
+  L.push("Ready at start: "+nm(x=>x.loc.endsWith("hand")));
+  L.push("Slung on back: "+nm(x=>x.loc==="Slung"));
+  L.push("Sheathed at side: "+nm(x=>x.loc==="Sheathed"));
+  configs().forEach(c=>L.push(`  ${c.label}: adjDX ${c.adj}, stops ${c.stops}${c.mg?` (${c.stopsMelee} vs melee)`:""}${c.cant?", cannot cast":""}`));
+  if(S.cls==="wizard") L.push("Spells ("+S.spells.length+"/"+S.iq+"): "+S.spells.map(n=>n).join(", "));
+  L.push("EP: "+S.ep); if(S.notes) L.push("Notes: "+S.notes);
+  return L.join("\n");
+}
+function renderAll(){ renderWho(); renderAttr(); renderSpells(); renderGear(); renderSheet(); save(); }
+
+/* ---------- Events ---------- */
+function toast(t){ $("toast").textContent=t; setTimeout(()=>{ if($("toast").textContent===t) $("toast").textContent=""; },3000); }
+function commit(){ S._notes=[]; enforce(S); renderAll(); }
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button, input[data-spell]"); if(!t) return;
+  if(t.dataset.cls){ S.cls=t.dataset.cls; commit(); return; }
+  if(t.dataset.inc){ const k=t.dataset.inc; if(S.st+S.dx+S.iq<S.total){ S[k]++; commit(); } return; }
+  if(t.dataset.dec){ const k=t.dataset.dec; if(S[k]>RACES[S.race][k]){ S[k]--; commit(); } return; }
+  if(t.id==="trade"){ if(S.ep>=100){ S.ep-=100; S.total++; commit(); } return; }
+  if(t.id==="copyJson"){ copy($("json").value,"Data copied."); return; }
+  if(t.id==="copySheet"){ copy(sheetText(),"Sheet copied."); return; }
+  if(t.id==="loadJson"){ try{ S=normalize(JSON.parse($("json").value)); $("name").value=S.name; $("notes").value=S.notes; renderAll(); toast("Loaded."); }catch(err){ toast("That text is not valid character data."); } return; }
+});
+function copy(text,msg){
+  const fallback=()=>{ const ta=$("json"); ta.value=text; ta.focus(); ta.select(); toast("Select and copy the text in the box."); };
+  try{ navigator.clipboard.writeText(text).then(()=>toast(msg),fallback); }catch(e){ fallback(); }
+}
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset&&t.dataset.spell){
+    const n=t.dataset.spell, i=S.spells.indexOf(n);
+    if(i>=0) S.spells.splice(i,1); else if(S.spells.length<S.iq) S.spells.push(n);
+    commit(); return;
+  }
+  switch(t.id){
+    case "race": { const R=RACES[t.value]; S.race=t.value; S.st=R.st; S.dx=R.dx; S.iq=R.iq; S.total=R.st+R.dx+R.iq+R.extra; commit(); break; }
+    case "total": { const R=RACES[S.race]; const min=Math.max(R.st+R.dx+R.iq+R.extra, S.st+S.dx+S.iq); S.total=Math.max(min,Math.round(+t.value||min)); commit(); break; }
+    case "armor": S.armor=t.value; commit(); break;
+    case "slotA": S.a=t.value; commit(); break;
+    case "slotB": S.b=t.value; commit(); break;
+    case "slotS1": S.s1=t.value; commit(); break;
+    case "slotD1": S.d1=t.value; commit(); break;
+    case "slotD2": S.d2=t.value; commit(); break;
+    case "armorSrc": S.armorSrc=t.value; commit(); break;
+    case "silver": S.silver=t.checked; commit(); break;
+    case "ep": S.ep=Math.max(0,Math.round(+t.value||0)); renderSheet(); save(); break;
+  }
+});
+$("name").addEventListener("input",e=>{ S.name=e.target.value; save(); });
+$("notes").addEventListener("input",e=>{ S.notes=e.target.value; save(); });
+
+/* ---------- Start ---------- */
+load();
+$("name").value=S.name; $("notes").value=S.notes;
+S._notes=[]; renderAll();
+document.getElementById('printBtn').addEventListener('click',()=>window.print());
+</script>
+
+</head>
+</html>
