@@ -81,6 +81,21 @@ JS=r'''
  /* --- armor tables as in Melee --- */
  ok("Armor: leather −2/stops 2/MA 8; chain −3/3/6; plate −5/5/MA 6, cloth −1, half-plate −4",ARMOR.leather.pen===2&&ARMOR.leather.stops===2&&ARMOR.leather.ma===8&&ARMOR.chain.pen===3&&ARMOR.chain.stops===3&&ARMOR.chain.ma===6&&ARMOR.plate.pen===5&&ARMOR.plate.stops===5&&ARMOR.plate.ma===6&&ARMOR.cloth.pen===1&&ARMOR.halfplate.pen===4,JSON.stringify(ARMOR.plate));
  rollN=saved; G=null; me=null;
+ /* --- missile and thrown weapons (Melee p. 9-10, 15-16) --- */
+ const step=(h,d,n)=>{let c=h;for(let i=0;i<n;i++){c=nbr(c,d);if(!c)return null;}return c;};
+ const A3=P.find(h=>step(h,2,3)&&step(h,1,3)&&step(h,3,3)&&step(h,5,3)&&nbr(h,0)&&nbr(h,4)&&nbr(h,2)); const g2=P.filter(h=>h.g===2)[0], g14=P.filter(h=>h.g===14)[0];
+ ok("Megahex distance: hexes in one megahex are 0 apart, the two ends of the map are 6",P.every(h=>mhDist(h,P.find(x=>x.g===h.g))===0)&&mhDist(g2,g14)===6,mhDist(g2,g14));
+ ok("Missile range: 0-2 MH no penalty, 3-4 MH -1, 5-6 MH -2",mhPen(0)===0&&mhPen(2)===0&&mhPen(3)===-1&&mhPen(4)===-1&&mhPen(5)===-2&&mhPen(6)===-2);
+ const sh=unit(mkF({st:12,dx:12,a:"lbow"}),A3,2), tg=unit(mkF({}),step(A3,2,3),0);
+ ok("In front of an archer: straight ahead and the front-side directions, not the sides or rear",inFront(sh,tg)&&inFront(sh,step(A3,1,3))&&inFront(sh,step(A3,3,3))&&!inFront(sh,step(A3,5,3))&&!inFront(sh,nbr(A3,0))&&!inFront(sh,nbr(A3,4)));
+ const sh2=unit(mkF({st:12,dx:12,a:"javelin"}),A3,2); fresh(sh2,tg);
+ ok("Thrown weapon: -1 DX for every hex of distance (3 hexes = DX 9)",shotDX(sh2,tg,"javelin","thrown")===9,shotDX(sh2,tg,"javelin","thrown"));
+ ok("Missile attacks get no facing bonus even from behind the target",(()=>{tg.f=faceToward(tg,sh2); const front=shotDX(sh2,tg,"lbow","missile"); tg.f=(tg.f+3)%6; return shotDX(sh2,tg,"lbow","missile")===front;})());
+ ok("Options: fire when disengaged, not when out of front; throw offered with a javelin",(()=>{ const u=unit(mkF({st:12,dx:12,a:"lbow"}),A3,2), o2=unit(mkF({}),step(A3,2,3),0); fresh(u,o2); u.moved=0; u.engStart=false; const t=options(u,o2).map(x=>x.t); u.f=5; const t2=options(u,o2).map(x=>x.t); return t.includes("fire")&&!t2.includes("fire")&&t.includes("dodge");})());
+ ok("Crossbow cooling down cannot fire; engaged archer gets one last shot only",(()=>{ const u=unit(mkF({st:14,dx:14,a:"lxbow"}),A3,2), o2=unit(mkF({}),step(A3,2,3),0); fresh(u,o2); u.moved=0; u.engStart=false; u.cool=1; const a1=options(u,o2).some(x=>x.t==="fire"); u.cool=0; const a2=options(u,o2).some(x=>x.t==="fire"); const o3=unit(mkF({}),nbr(A3,2),0); o3.f=faceToward(o3,u); fresh(u,o3); u.engStart=true; const a3=options(u,o3).map(x=>x.t); u.usedLast=true; const a4=options(u,o3).some(x=>x.t==="last"); return !a1&&a2&&a3.includes("last")&&!a3.includes("fire")&&!a4;})());
+ ok("Main-gauche does not parry missile or thrown weapons",(()=>{ const m2=unit(mkF({st:12,dx:12,a:"shortsw",b:"mg"}),A3,0), a2=unit(mkF({}),step(A3,2,3),0); face(m2,a2); return stopsFor(m2,a2,"dagger")===1&&stopsFor(m2,a2,"dagger","thrown")===0&&stopsFor(m2,a2,"lbow","missile")===0;})());
+ ok("A3 thrown dagger leaves the hand and lands in the target hex; a hit by it does not allow a forced retreat",(()=>{ const u=unit(mkF({st:12,dx:14,a:"dagger"}),A3,2), o2=unit(mkF({}),step(A3,2,2),0); fresh(u,o2); u.right="dagger"; dice([2,2,2],[6]); doAttack(u,o2,"dagger","single","thrown"); return u.right==="none"&&G.floor.some(f=>f.q===o2.q&&f.r===o2.r&&f.id==="dagger")&&o2.tookHit&&!u.dealt;})());
+ ok("A3 figure that dodges is attacked on four dice: 21 on a missile shot drops the bow",(()=>{ const u=unit(mkF({st:12,dx:14,a:"lbow"}),A3,2), o2=unit(mkF({}),step(A3,2,3),0); fresh(u,o2); o2.dodging=true; u.right="lbow"; dice([6,5,5,5]); doAttack(u,o2,"lbow","single","missile"); return u.right==="none"&&G.floor.length===1;})());
  return R;
 }'''
 with sync_playwright() as p:
