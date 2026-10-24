@@ -9,7 +9,7 @@ const RACES = {
   dwarf:    {n:"Dwarf",     st:10, dx:6,  iq:8,  extra:8, meleeTotal:24, note:"Min ST 10, DX 6 (24)."},
   hobbit:   {n:"Halfling",  st:4,  dx:12, iq:8,  extra:6, meleeTotal:22, note:"Min ST 4, DX 12 (22). +2 DX when throwing; may throw any weapon the turn it is readied."},
   goblin:   {n:"Goblin",    st:6,  dx:8,  iq:10, extra:8, meleeTotal:22, note:"Min ST 6, DX 8 (22)."},
-  hobgoblin:{n:"Hobgoblin", st:7,  dx:6,  iq:6,  extra:7, meleeTotal:20, note:"Min ST 7, DX 6 (20)."}
+  hobgoblin:{n:"Hobgoblin", st:7,  dx:6,  iq:7,  extra:8, meleeTotal:20, note:"Min ST 7, DX 6, IQ 7; total 28 in Wizard, 20 in Melee."}
 };
 /* pen = DX penalty. pen.w and pen.m are the same now; the builder's old two-source switch is retired. */
 const ARMOR = {
