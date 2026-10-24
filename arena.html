@@ -277,7 +277,7 @@ function startFight(){
   nextTurn(); ui(); drawMap();
 }
 function nextTurn(){
-  for(const u of [G.me,G.foe]){ if(u.hits>=5)u.wound2=true; u.hits=0; if(u.cool>0)u.cool--; u.dodging=false; if(!isEngaged(u,u===G.me?G.foe:G.me))u.usedLast=false; u.dealt=u.tookHit=u.defending=false; u.act=null; u.standUp=false; u.moved=0; u.engStart=false; }
+  for(const u of [G.me,G.foe]){ if(u.hits>=5)u.wound2=true; u.hits=0; if(u.cool>0)u.cool--; u.dodging=false; if(!isEngaged(u,u===G.me?G.foe:G.me))u.usedLast=false; u.from={q:u.q,r:u.r}; u.extra=0; u.poleVs=false; u.pri=false; u.dealt=u.tookHit=u.defending=false; u.act=null; u.standUp=false; u.moved=0; u.engStart=false; }
   G.turn++; let a,b; do{a=d6();b=d6();}while(a===b);
   lg(`— Turn ${G.turn}. Initiative: you ${a}, ${foe.name} ${b}.`);
   if(G.me.wound2) lg("You took 5 or more hits: DX −2 for your next attack.");
@@ -301,6 +301,7 @@ function aiMove(){
   if(MWid(a)&&!eng){   /* an archer holds its ground, steps back if the enemy gets within 2 hexes, and never walks into the enemy's front */
     for(const h of R.values()){ if(h.c>1)continue; const s=Math.min(dist(h,b),4)*2-(relOf(b,h)==="front"?9:0)+(h.c===0?0.4:0)+Math.random()*0.3; if(!best||s>best.s) best={h,s}; }
   } else if(MWid(a)&&eng){ best={h:R.get(key(a.q,a.r))||a,s:0}; }
+  else if(poleOf(a)&&!eng&&dist(a,b)<=MA(foe)+3&&Math.random()<.75){ best={h:R.get(key(a.q,a.r))||a,s:0}; }   /* a pole-weapon user braces and lets the enemy come */
   else for(const h of R.values()){
     const d=dist(h,b); let s=d*10;
     if(d===1){ const r=relOf(b,h); s=r==="rear"?0:r==="side"?2:5; if(!eng&&h.c>MA(foe)/2) s+=6; }
@@ -321,6 +322,7 @@ function adjDXu(u,mode,tgt){
   const wp=[u.right,u.left].filter(isW);
   if(p.cls==="wizard"){ if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4 }
   if(u.wound2) a-=2;
+  if(u.poleVs) a+=2;   /* pole weapon, standing still, against a charge */
   if(u.hp<=3) a-=3;
   if(tgt){ const r=relOf(tgt,u); if(r==="side")a+=2; else if(r==="rear")a+=4; }
   return a;
@@ -332,12 +334,33 @@ function stopsFor(d,a,wid,kind){
   if(d.left==="mg"&&r==="front"&&!kind&&wid&&W[wid]&&!W[wid].two&&!W[wid].miss) s+=1;   /* parries one-handed non-missile weapons only */
   return s;
 }
-function dmgRoll(u,id){ const w=W[id]; let m=w.m; const dice=rollN(w.d); return {dice,m,total:Math.max(0,sum(dice)+m)}; }
+function dmgRoll(u,id){ const w=W[id]; let m=w.m; const dice=rollN(w.d+(u.extra?1:0)); return {dice,m,total:Math.max(0,sum(dice)+m)}; }
+/* ---- pole weapons and shield-rush (Melee 2018 p. 12-13) ---- */
+const ATK=["attack","dual","rush"];
+const poleOf=u=>[u.right,u.left].find(k=>W[k]&&W[k].pole&&!SHIELDS[k])||null;
+function straight3(u){ const n=u.moved, f=u.from; if(!f||n<3) return false; const dq=u.q-f.q, dr=u.r-f.r; return dist(f,u)===n&&DIRS.some(d=>d[0]*n===dq&&d[1]*n===dr); }
+/* a jab reaches the straight-ahead hex two away and the two hexes beside it (never a javelin) */
+function inJab(u,o){ if(u.down) return false; const f=u.f, A=DIRS[f], B=DIRS[(f+1)%6], C=DIRS[(f+5)%6];
+  return [[2*A[0],2*A[1]],[A[0]+B[0],A[1]+B[1]],[A[0]+C[0],A[1]+C[1]]].some(c=>u.q+c[0]===o.q&&u.r+c[1]===o.r); }
+const chargedBy=(c,v)=>ATK.includes(c.act.t)&&!c.engStart&&c.moved>0&&dist(c,v)===1;
+function doRush(a,d){
+  const dx=adjDXu(a,"single",d), n=d.defending?4:3, dice=rollN(n), t=sum(dice);
+  const hit=n===3?(t<=5?true:t>=16?false:t<=dx):(t===4||t===5?true:t>=20?false:t<=dx);
+  const head=`${sub(a)} ${vb(a,"shield-rush","shield-rushes")} ${d===G.me?"you":sub(d)} with the ${iname(a.left).toLowerCase()} (needs ${dx} or less on ${n}d6, rolled ${t})`;
+  if(!hit){ lg(head+": miss. Nothing happens."); return; }
+  if(d.p.st>2*a.p.st){ lg(head+": hit, but the target has more than twice the ST, so the rush has no effect."); return; }
+  const k=a.p.st>=d.p.st?3:2, sdx=adjDXu(d,"single",null), s=sum(rollN(k)), fall=(k===3&&s>=16)||(k===2&&s===12)||s>sdx;
+  lg(`${head}: HIT. ${sub(d)} must roll ${sdx} or less on ${k}d6 to stay up, ${vb(d,"rolling","rolls")} ${s}: ${fall?vb(d,"you fall down!","it falls down!"):"it stays on its feet."}`);
+  if(fall&&d.hp>0) d.down=true;
+}
 function options(u,o){
   const L=[]; if(u.standUp) return L;
   const eng=u.engStart, half=u.moved<=MA(u.p)/2, inF=relOf(u,o)==="front"&&!u.down;
   const wR=isW(u.right)?u.right:null, wL=(isW(u.left)&&!SHIELDS[u.left])?u.left:null;
-  if(inF&&(eng||half)&&(wR||wL)){ L.push({t:"attack",label:"Attack with "+iname(wR||wL)}); if(wR&&u.left==="mg") L.push({t:"dual",label:"Attack with "+iname(wR)+" and also with the main-gauche (−4 DX on that attack)"}); }
+  const pw=poleOf(u), chg=!eng&&u.moved>0&&dist(u,o)===1;
+  if(!eng&&half&&pw&&pw!=="javelin"&&inJab(u,o)) L.push({t:"jab",wid:pw,label:`Jab with ${iname(pw)} at the target two hexes away (needs ${adjDXu(u,"single",null)} or less)`});
+  if(inF&&(eng||half)&&SHIELDS[u.left]&&u.p.cls!=="wizard") L.push({t:"rush",label:`Shield-rush with the ${iname(u.left).toLowerCase()} (no weapon attack; if it hits, the target saves vs DX on ${u.p.st>=o.p.st?3:2} dice or falls)`});
+  if(inF&&(eng||half)&&(wR||wL)){ L.push({t:"attack",label:"Attack with "+iname(wR||wL)+(chg?(pw&&straight3(u)?" (pole-weapon charge: one extra die of damage)":pw?" (pole-weapon charge: strikes first)":" (charge)"):"")}); if(wR&&u.left==="mg") L.push({t:"dual",label:"Attack with "+iname(wR)+" and also with the main-gauche (−4 DX on that attack)"}); }
   /* missile and thrown weapons: the target must be in front of you (Melee p. 9-10, 15-16) */
   if(!u.down&&inFront(u,o)){
     const mw=MWid(u), mh=mhDist(u,o), hx=dist(u,o);
@@ -371,6 +394,7 @@ function aiAct(){
   const u=G.foe,o=G.me; if(u.standUp) return {t:"none"};
   const L=options(u,o), has=t=>L.find(x=>x.t===t);
   const shot=has("fire")||has("last"); if(shot) return shot;
+  if(has("jab")) return has("jab");
   if(MWid(u)&&!u.engStart) return {t:"none"};   /* an archer waiting for its crossbow, or with no target in front */
   const armed=isW(u.right)||(isW(u.left)&&!SHIELDS[u.left]);
   if(!armed){ const rd=L.filter(x=>x.t==="ready"); const weap=rd.filter(x=>isW(x.it.id));
@@ -380,6 +404,7 @@ function aiAct(){
     if(fr.length) return {t:"disengage",dest:fr[0].h};
   }
   if(has("defend")){ const edx=adjDXu(o,"single",u), mdx=adjDXu(u,"single",o); const bad=(edx-mdx>=3&&u.hp<=Math.max(6,u.p.st*.6))||u.hp<=5; if(bad&&Math.random()<.4) return has("defend"); }
+  if(has("rush")&&u.p.st>=o.p.st&&Math.random()<.3) return has("rush");
   if(has("dual")&&adjDXu(u,"mg",o)>=10) return has("dual");
   return has("attack")||{t:"none"};
 }
@@ -392,12 +417,12 @@ function doAttack(a,d,wid,mode,kind){
   let dx=adjDXu(a,mode,kind?null:d);
   if(kind==="thrown") dx-=dist(a,d); else if(kind==="missile") dx+=mhPen(mhDist(a,d));
   if(a.wound2){ a.wound2=false; }   /* the -2 DX from 5+ hits lasts for the next attack only */
-  const defend=kind?d.dodging:d.defending, n=defend?4:3, dice=rollN(n), t=sum(dice);
+  const defend=(kind==="missile"||kind==="thrown")?d.dodging:d.defending, n=defend?4:3, dice=rollN(n), t=sum(dice);
   let hit,mult=1,fumble=null;
   if(!defend){ if(t===3){hit=true;mult=3;} else if(t===4){hit=true;mult=2;} else if(t===5)hit=true; else if(t===16)hit=false; else if(t===17){hit=false;fumble="drop";} else if(t===18){hit=false;fumble="break";} else hit=t<=dx; }
   else { if(t===4){hit=true;mult=3;} else if(t===5){hit=true;mult=2;} else if(t>=23){hit=false;fumble="break";} else if(t>=21){hit=false;fumble="drop";} else if(t>=20)hit=false; else hit=t<=dx; }
   if(kind==="thrown"){ if(a.right===wid)a.right="none"; else if(a.left===wid)a.left="none"; if(fumble!=="break") G.floor.push({q:d.q,r:d.r,id:wid}); }
-  const tn=d===G.me?"you":sub(d), verb=kind==="missile"?`${vb(a,"fire","fires")} ${iname(wid).toLowerCase()} at ${tn} (`:kind==="thrown"?`${vb(a,"throw","throws")} ${iname(wid).toLowerCase()} at ${tn} (`:`${vb(a,"attack","attacks")} ${tn} with ${iname(wid)} (`;
+  const tn=d===G.me?"you":sub(d), verb=kind==="missile"?`${vb(a,"fire","fires")} ${iname(wid).toLowerCase()} at ${tn} (`:kind==="thrown"?`${vb(a,"throw","throws")} ${iname(wid).toLowerCase()} at ${tn} (`:kind==="jab"?`${vb(a,"jab","jabs")} ${tn} with ${iname(wid)} (`:`${vb(a,"attack","attacks")} ${tn} with ${iname(wid)} (`;
   const head=`${sub(a)} ${verb}needs ${dx} or less on ${n}d6, rolled ${t}${mult===3?": triple damage":mult===2?": double damage":""})`;
   if(!hit){
     let extra=""; 
@@ -408,7 +433,7 @@ function doAttack(a,d,wid,mode,kind){
   const r=dmgRoll(a,wid), full=r.total*mult, st=stopsFor(d,a,wid,kind), hits=Math.max(0,full-st);
   lg(`${head}: HIT. ${iname(wid)} ${dice_txt(r)}${mult>1?" ×"+mult+" = "+full:""}; armor and shield stop ${Math.min(st,full)}. ${hits?vb(d,"You take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
   if(hits>0){
-    d.hp-=hits; d.hits+=hits; d.tookHit=true; if(!kind)a.dealt=true;   /* missile and thrown hits do not allow a forced retreat */
+    d.hp-=hits; d.hits+=hits; d.tookHit=true; if(!kind||kind==="jab")a.dealt=true;   /* missile and thrown hits do not allow a forced retreat */
     lg(`${vb(d,"Your","its")} ST is now ${Math.max(d.hp,0)}${d===G.me?"":" ("+d.p.name+")"}.`);
     if(d.hits>=8&&d.hp>0&&!d.down){ d.down=true; lg(`${sub(d)} ${vb(d,"are","is")} knocked down by ${d.hits} hits!`); }
   }
@@ -428,10 +453,17 @@ function endCheck(){
 function resolveTurn(pa){
   G.me.act=pa; G.foe.act=aiAct(); G.phase="resolve";
   const U=[G.me,G.foe]; U.forEach(u=>{ u.defending=u.act.t==="defend"; u.dodging=u.act.t==="dodge"; });
-  const N2={attack:"attack",dual:"attack with a weapon and the main-gauche",defend:"defend",dodge:"dodge",fire:"fire a missile weapon",last:"fire one last shot",throw:"throw a weapon",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
-  const N3={attack:"attacks",dual:"attacks with a weapon and the main-gauche",defend:"defends",dodge:"dodges",fire:"fires a missile weapon",last:"fires one last shot",throw:"throws a weapon",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
+  const N2={jab:"jab with a pole weapon",rush:"shield-rush",attack:"attack",dual:"attack with a weapon and the main-gauche",defend:"defend",dodge:"dodge",fire:"fire a missile weapon",last:"fire one last shot",throw:"throw a weapon",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
+  const N3={jab:"jabs with a pole weapon",rush:"shield-rushes",attack:"attacks",dual:"attacks with a weapon and the main-gauche",defend:"defends",dodge:"dodges",fire:"fires a missile weapon",last:"fires one last shot",throw:"throws a weapon",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
   U.forEach(u=>lg(`${sub(u)} ${u===G.me?"choose to "+N2[u.act.t]:"chooses to "+N2[u.act.t]}.`));
-  const ent=U.map(u=>({u,dx:adjDXu(u,"single",["fire","last","throw"].includes(u.act.t)?null:other(u)),tie:Math.random()})).sort((a,b)=>b.dx-a.dx||a.tie-b.tie);
+  U.forEach(u=>{ const o=other(u); u.extra=0; u.poleVs=false; u.pri=false;
+    if(ATK.includes(u.act.t)&&u.act.t!=="rush"){ const w=isW(u.right)?u.right:(isW(u.left)&&!SHIELDS[u.left]?u.left:null);
+      if(w&&W[w].pole){ const charging=chargedBy(u,o), ch=charging&&straight3(u), vs=u.act.t==="attack"&&u.moved===0&&chargedBy(o,u);
+        if(ch||vs) u.extra=1; if(vs) u.poleVs=true; u.pri=charging||vs;
+        if(ch) lg(`${sub(u)} ${vb(u,"charge","charges")} ${u.moved} hexes in a straight line with a pole weapon: one extra die of damage.`);
+        if(vs) lg(`${sub(u)} ${vb(u,"brace","braces")} the pole weapon against the charge: +2 DX, one extra die of damage, and it strikes first.`);
+        else if(charging) lg(`${sub(u)} ${vb(u,"strike","strikes")} first with the pole weapon.`); } } });
+  const ent=U.map(u=>({u,pri:u.pri?1:0,dx:adjDXu(u,"single",["fire","last","throw","jab"].includes(u.act.t)?null:other(u)),tie:Math.random()})).sort((a,b)=>b.pri-a.pri||b.dx-a.dx||a.tie-b.tie);
   for(const pass of [1,2]) for(const e of ent){
     if(G.phase==="over")break; const u=e.u,o=other(u),t=u.act.t;
     if(u.down||u.hp<=0)continue;
@@ -439,6 +471,8 @@ function resolveTurn(pa){
       if(t==="attack"){ const w=isW(u.right)?u.right:(isW(u.left)&&!SHIELDS[u.left]?u.left:null);
         if(w&&relOf(u,o)==="front") doAttack(u,o,w,"single"); else lg(`${sub(u)} ${vb(u,"have","has")} no target in front.`); }
       else if(t==="dual"){ if(isW(u.right)&&relOf(u,o)==="front") doAttack(u,o,u.right,"single"); }
+      else if(t==="jab"){ const wid=u.act.wid; if((u.right===wid||u.left===wid)&&inJab(u,o)&&dist(u,o)===2) doAttack(u,o,wid,"single","jab"); else lg(`${sub(u)} ${vb(u,"have","has")} nothing in reach to jab.`); }
+      else if(t==="rush"){ if(SHIELDS[u.left]&&relOf(u,o)==="front") doRush(u,o); else lg(`${sub(u)} ${vb(u,"have","has")} no target for a shield-rush.`); }
       else if(t==="fire"||t==="last"){ const wid=u.act.wid;
         if(u.right===wid||u.left===wid){ if(inFront(u,o)&&u.cool===0){
           const dx0=adjDXu(u,"single",null); u.act.dbl=isBow(wid)&&dx0>=RULES.RATE[wid];
