@@ -11,6 +11,7 @@ h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 6px}
  .grid>.card{order:-1;position:sticky;top:0;z-index:5;margin-bottom:8px}
  .grid>.card svg{max-height:40vh}.grid>.card .mapcap{display:none}}
 @media(min-width:761px){.grid>.card{position:sticky;top:8px;align-self:start}.grid>.card svg{max-height:calc(100vh - 170px)}}
+.chip{display:inline-block;font-size:12px;padding:0 6px;border-radius:8px;border:1px solid var(--line);margin-left:4px}.ent{padding:6px 0;border-top:1px solid var(--line)}.ent:first-child{border-top:0}select,input[type=number]{font:inherit;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
 details.setup>summary{cursor:pointer;font-weight:600;margin-bottom:8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
 button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
@@ -32,7 +33,10 @@ svg{width:100%;height:auto;max-height:80vh}
   <details><summary class="mut">Or paste a fighter (copy it from the builder)</summary><textarea id="paste" placeholder="paste JSON here"></textarea><div class="row"><button id="bPaste">Use pasted fighter</button></div></details>
   <div id="msg" class="mut"></div><div id="me"></div></div>
  <div class="card"><h2>Opponent</h2>
-  <div class="row"><button id="bFoe">New opponent</button></div><div id="foe"></div></div>
+  <div class="row"><select id="foeSel"></select><button id="bFoe">New opponent</button></div><div id="foeCfg"></div><div id="foe"></div></div>
+ <div class="card"><h2>Your roster</h2><div class="mut" style="margin-bottom:4px">Every fighter you take into the arena is kept here with its record, so you can pause one and play another.</div><div id="roster"></div>
+  <div class="row"><button id="bExp">Export roster</button><button id="bImp">Import roster</button></div><textarea id="rx" style="display:none" placeholder="paste an exported roster here"></textarea><div class="row"><button id="bRxGo" style="display:none">Import pasted roster</button></div></div>
+ <div class="card"><h2>Hall of fame</h2><div class="mut" style="margin-bottom:4px">Fighters who won 16 fights and retired. This list is kept permanently, even if you erase a record.</div><div id="hof"></div></div>
  </details>
  <div class="card"><h2>Fight</h2><div id="ctl" class="mut">Load a fighter first.</div></div>
 </div>
@@ -139,14 +143,14 @@ function card(f,cls){
   <tr><td>Other gear</td><td>${[f.slung!=="none"?iname(f.slung)+" (slung)":"",...f.dag.map(k=>iname(k)+" (sheathed)")].filter(Boolean).join(", ")||"none"}</td></tr></table>`;
 }
 let me=null, foe=null, myStart=null;
-function setMe(f,msg){ G=null; me=applyRecord(f); $("msg").textContent=msg||""; renderMe(); newFoe(); }
-function newFoe(){ if(!me)return; G=null; $("setup").open=true; foe=makeOpponent(me.st+me.dx); $("foe").innerHTML=card(foe,"foe"); ui(); drawMap(); }
+function setMe(f,msg){ if(G&&G.phase!=="over"&&!confirm("Leave the fight in progress? Nothing from it is recorded.")) return; G=null; me=applyRecord(f); try{localStorage.setItem("melee-arena-last",recKey(me));}catch(e){} $("msg").textContent=msg||""; renderMe(); newFoe(); renderRoster(); }
+function newFoe(){ if(!me)return; G=null; $("setup").open=true; foe=buildFoe(); $("foe").innerHTML=card(foe,"foe")+foeNote(); ui(); drawMap(); }
 $("bLoad").onclick=()=>{ let t=null; try{t=localStorage.getItem(KEY);}catch(e){}
   if(!t){$("msg").textContent="No saved fighter found here. Open the builder on this same site first, or paste one below.";return;}
   try{ setMe(fromBuilder(JSON.parse(t)),"Loaded from the builder."); }catch(e){ $("msg").textContent="Could not read the saved fighter."; } };
 $("bPaste").onclick=()=>{ try{ setMe(fromBuilder(JSON.parse($("paste").value)),"Loaded pasted fighter."); }catch(e){ $("msg").textContent="That does not look like a builder fighter."; } };
 $("bEx").onclick=()=>setMe(fromBuilder({name:"Flavius (example)",race:"human",cls:"fighter",st:11,dx:12,iq:9,a:"broad",b:"small",armor:"leather",d1:"dagger"}),"Example fighter.");
-$("bFoe").onclick=newFoe;
+$("bFoe").onclick=()=>{ if(G&&G.phase!=="over"&&!confirm("Leave the fight in progress? Nothing from it is recorded.")) return; newFoe(); };
 
 /* ---- board geometry: pointy-top, turned so the entrances are at top and bottom ---- */
 const DIRS=[[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];   /* six neighbours; a facing is an index into this */
@@ -195,7 +199,8 @@ function saveRec(){ try{ localStorage.setItem(RKEY,JSON.stringify(REC)); }catch(
 const recKey=f=>f.name.trim().toLowerCase();
 function applyRecord(f){
   const k=recKey(f); let r=REC[k];
-  if(!r){ r={name:f.name,st:f.st,dx:f.dx,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false}; REC[k]=r; saveRec(); }
+  if(!r){ r={name:f.name,st:f.st,dx:f.dx,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false,src:f.src||null}; REC[k]=r; saveRec(); }
+  if(!r.src&&f.src){ r.src=f.src; saveRec(); }
   f.st=r.st; f.dx=r.dx; f.rec=r; return f;
 }
 function recBlock(){
@@ -206,27 +211,29 @@ function recBlock(){
   if(r.retired) h+=`<br><b class="me">Retired champion!</b> Started at ${r.total0}, now ${r.total0+r.pts} (+8). Carry this total into Advanced Melee.`;
   if(r.pend>0) h+=`<div style="margin:6px 0"><b>You earned an attribute point.</b> ${r.pend} to spend${r.must?" (you hold a banked point too, so you must spend both)":""}:<br>
     <button data-sp="st">+1 ST</button><button data-sp="dx">+1 DX</button>${r.pend===1&&!r.must&&r.wins<16?'<button data-sp="bank">Bank it for later</button>':''}</div>`;
-  h+=`<div class="row"><button id="bCopy">Copy updated fighter</button><button id="bReset">Reset record</button></div><textarea id="exp" style="display:none" readonly></textarea></div>`;
+  h+=`<div class="row"><button id="bSend" class="pri">Send to builder (with XP)</button><button id="bCopy">Copy updated fighter</button><button id="bReset">Reset record</button></div><textarea id="exp" style="display:none" readonly></textarea></div>`;
   return h;
 }
 function renderMe(){
   if(!me) return; $("me").innerHTML=card(me,"me")+warn(me)+recBlock();
   $("me").querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>spend(e.dataset.sp));
+  const sb=$("bSend"); if(sb) sb.onclick=()=>{ if(sendToBuilder(updated(me.rec))) $("msg").innerHTML="Sent. Open the <a href=\"builder.html\" style=\"color:var(--acc)\">character builder</a> and press its load button to see "+esc(me.name)+" with the new stats."; };
   const c=$("bCopy"); if(c) c.onclick=()=>{ const r=me.rec; const o=Object.assign({},me.src,{st:r.st,dx:r.dx,total:r.total0+r.pts,ep:r.ep,arenaWins:r.wins,arenaRetired:r.retired});
-    const t=JSON.stringify(o), ta=$("exp"); ta.style.display="block"; ta.value=t; ta.select(); try{navigator.clipboard.writeText(t);}catch(e){} $("msg").textContent="Copied. Paste it into the builder's save/load box to update your fighter."; };
+    const t=JSON.stringify(o), ta=$("exp"); ta.style.display="block"; ta.value=t; ta.select(); copyText(t); $("msg").textContent="Copied. Paste it into the builder's save/load box to update your fighter."; };
   const x=$("bReset"); if(x) x.onclick=()=>{ if(confirm("Erase the arena record for "+me.name+"? Wins, EP and gained points are lost.")){ delete REC[recKey(me)]; saveRec(); const o=me.src; setMe(fromBuilder(o),"Record erased. Starting fresh from the builder's version."); } };
 }
 function spend(k){
   const r=me.rec;
   if(k==="bank"){ r.banked=true; r.pend=0; r.must=false; }
   else { r[k]++; me[k]++; r.pts++; r.pend--; if(r.pend===0) r.must=false; }
-  if(r.pend===0&&r.wins>=16) r.retired=true;
-  saveRec(); renderMe();
+  if(r.pend===0&&r.wins>=16){ r.retired=true; hofAdd(r); }
+  saveRec(); renderMe(); renderRoster();
   if(r.pend===0){ newFoe(); } else ui();
 }
 /* called once when a fight ends */
 function settle(){
   if(G.settled) return; G.settled=true; const r=me.rec; if(!r) return;
+  if(G.exhib){ G.gain=0; lg("Exhibition fight: nothing is recorded."); return; }
   if(G.me.hp<0){ r.dead=true; r.losses++; lg("Your run ends here."); }
   else if(G.me.hp===0){ r.losses++; lg("You are unconscious at ST 0. A loss earns no EP. You heal and may fight again."); }
   else {
@@ -234,10 +241,10 @@ function settle(){
     r.wins++; r.ep+=gain; lg(`Victory: +${gain} EP${gain===100?" (the enemy was more than 3 points superior in ST+DX)":""} (${r.wins} wins).`);
     if(r.ep>=100){ r.ep-=100; if(r.banked){ r.pend=2; r.must=true; r.banked=false; } else { r.pend=1; r.must=false; }
       lg("100 EP: you earned an attribute point."); }
-    if(r.wins>=16&&r.pend===0) r.retired=true;
+    if(r.wins>=16&&r.pend===0){ r.retired=true; hofAdd(r); }
     if(r.wins>=16) lg("That is 16 wins. This fighter retires as a champion.");
   }
-  saveRec(); renderMe();
+  saveRec(); renderMe(); renderRoster();
 }
 
 /* ---- the fight ---- */
@@ -265,6 +272,7 @@ function startFight(){
   if(!me||!foe)return; const s=startHexes();
   G={me:mk(s.mine,me),foe:mk(s.theirs,foe),turn:0,phase:"",log:[],order:[],idx:0,start:null,reach:null,eng:false,moved:0,floor:[]};
   G.me.f=faceToward(G.me,G.foe); G.foe.f=faceToward(G.foe,G.me);
+  G.exhib=foeMode.k!=="random"&&(foe.st+foe.dx)<(me.st+me.dx)-3;
   $("setup").open=false;   /* fold the setup cards so the fight controls sit beside the map */
   nextTurn(); ui(); drawMap();
 }
@@ -483,6 +491,7 @@ function ui(){
   else if(G.phase==="retreat"){ t=`You hit ${esc(foe.name)} and took no hits, so you may force a retreat: click a highlighted hex on the map to push them there (on a phone, scroll to the map). Or skip it.`; b=`<button id="bSkip">Skip the retreat</button>`; }
   else if(G.phase==="advance"){ t="Move into the hex they left, or hold your ground?"; b=`<button class="pri" id="bAdv">Advance</button><button id="bStay">Stay</button>`; }
   else if(G.phase==="over"){ t=A.hp<=0?(A.hp<0?"You have fallen.":"You fall unconscious at ST 0. You live, but this fight is lost (no EP)."):`Victory! +${G.gain||50} EP.`;
+    if(G.exhib) t=(A.hp>0?"You won the exhibition.":"You lost the exhibition.")+" Nothing is recorded.";
     const q=me.rec; if(q&&q.pend>0) t+=" Spend your attribute point in the Your fighter box."; else if(q&&(q.retired||q.dead)) t+=q.dead?" Load another fighter.":" 16 wins: this champion retires."; else b=`<button class="pri" id="bNew">Next fight</button>`; b+=` <a href="index.html"><button>Back to menu</button></a>`; }
   c.innerHTML=`<div class="mut" style="margin-bottom:4px">Turn ${G.turn}</div><div>${t}</div><div class="mut" style="margin:4px 0">${st}</div><div>${b}</div><div id="log">${G.log.slice(-60).map(esc).join("<br>")}</div>`;
   const lgE=$("log"); if(lgE) lgE.scrollTop=lgE.scrollHeight;
@@ -554,5 +563,95 @@ function drawMap(){
   m.querySelectorAll("[data-dest]").forEach(e=>e.onclick=()=>{ resolveTurn({t:"disengage",dest:G.dopts.get(e.dataset.dest)}); });
   m.querySelectorAll("[data-ret]").forEach(e=>e.onclick=()=>{ doRetreat(G.ropts.get(e.dataset.ret)); });
 }
+
+function copyText(t){ try{ const pr=navigator.clipboard&&navigator.clipboard.writeText(t); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} }
+/* ---- hall of fame (permanent), roster, send to builder, opponent picker ---- */
+const HKEY="melee-hof-v1";
+let HOF=[]; try{ HOF=JSON.parse(localStorage.getItem(HKEY)||"[]")||[]; if(!Array.isArray(HOF))HOF=[]; }catch(e){ HOF=[]; }
+function saveHof(){ try{ localStorage.setItem(HKEY,JSON.stringify(HOF)); }catch(e){} }
+function updated(r){ return Object.assign({},r.src||{},{name:r.name,st:r.st,dx:r.dx,total:r.total0+r.pts,ep:r.ep,arenaWins:r.wins,arenaRetired:!!r.retired}); }
+function hofAdd(r){
+  const o=updated(r), e={id:r.name.trim().toLowerCase(),name:r.name,race:o.race||"human",cls:o.cls||"fighter",st:r.st,dx:r.dx,total0:r.total0,total:r.total0+r.pts,wins:r.wins,losses:r.losses,date:new Date().toISOString().slice(0,10),src:o};
+  const i=HOF.findIndex(x=>x.id===e.id); if(i>=0)HOF[i]=e; else HOF.push(e); saveHof(); renderHof();
+}
+function sendToBuilder(o){
+  let cur=null; try{ cur=JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){}
+  const q=cur&&cur.name&&cur.name!==o.name?`The builder currently holds "${cur.name}". Replace it with ${o.name}?`:`Send ${o.name} to the builder?`;
+  if(!confirm(q)) return false;
+  try{ localStorage.setItem(KEY,JSON.stringify(o)); return true; }catch(e){ $("msg").textContent="Could not write to the builder's storage. Use Copy updated fighter instead."; return false; }
+}
+function renderHof(){
+  const h=$("hof"); if(!h) return;
+  if(!HOF.length){ h.innerHTML='<div class="mut">Nobody yet. Win 16 fights with one fighter to enter.</div>'; return; }
+  h.innerHTML=HOF.slice().sort((a,b)=>b.date.localeCompare(a.date)).map((e,i)=>`<div class="ent"><b>${esc(e.name)}</b> <span class="chip">${esc((RACES[e.race]||RACES.human).n)}${e.cls==="wizard"?" wizard":""}</span><br><span class="mut">ST ${e.st} / DX ${e.dx} · total ${e.total0} → ${e.total} · ${e.wins} wins, ${e.losses} losses · retired ${esc(e.date)}</span><div class="row"><button data-hs="${esc(e.id)}">Send to builder</button><button data-hc="${esc(e.id)}">Copy fighter</button></div></div>`).join("");
+  h.querySelectorAll("[data-hs]").forEach(b=>b.onclick=()=>{ const e=HOF.find(x=>x.id===b.dataset.hs); if(e&&sendToBuilder(e.src)) $("msg").textContent="Sent "+e.name+" to the builder."; });
+  h.querySelectorAll("[data-hc]").forEach(b=>b.onclick=()=>{ const e=HOF.find(x=>x.id===b.dataset.hc); if(!e)return; const t=JSON.stringify(e.src); copyText(t); $("msg").textContent="Copied "+e.name+". Paste it into the builder's save/load box."; });
+}
+function statusChip(r){ return r.dead?'<span class="chip foe">dead</span>':r.retired?'<span class="chip me">retired champion</span>':r.pend>0?'<span class="chip">point to spend</span>':""; }
+function renderRoster(){
+  const el=$("roster"); if(!el) return; const ks=Object.keys(REC);
+  if(!ks.length){ el.innerHTML='<div class="mut">No saved fighters yet. Load one above and it appears here.</div>'; return; }
+  el.innerHTML=ks.map(k=>{ const r=REC[k], cur=me&&recKey(me)===k;
+    return `<div class="ent"><b>${esc(r.name)}</b>${cur?' <span class="chip">playing</span>':""} ${statusChip(r)}<br><span class="mut">ST ${r.st} / DX ${r.dx} (total ${r.st+r.dx}) · ${r.wins}/16 wins, ${r.losses} losses · EP ${r.ep}/100${r.banked?" · 1 point banked":""}</span><div class="row">${cur?"":(r.src&&!r.dead?`<button data-rl="${esc(k)}">Play this fighter</button>`:`<span class="mut">${r.dead?"Run over.":"Load once from the builder to attach its gear."}</span>`)}<button data-rd="${esc(k)}">Erase</button></div></div>`; }).join("");
+  el.querySelectorAll("[data-rl]").forEach(b=>b.onclick=()=>{ const r=REC[b.dataset.rl]; if(r&&r.src) setMe(fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx})),"Switched to "+r.name+". Your other fighters keep their records."); });
+  el.querySelectorAll("[data-rd]").forEach(b=>b.onclick=()=>{ const k=b.dataset.rd, r=REC[k]; if(!r||!confirm("Erase the record for "+r.name+"? Wins, EP and earned points are lost. The hall of fame is not affected.")) return; delete REC[k]; saveRec(); if(me&&recKey(me)===k){ me=null; G=null; $("me").innerHTML=""; $("foe").innerHTML=""; ui(); drawMap(); } renderRoster(); });
+}
+$("bExp").onclick=()=>{ const t=JSON.stringify({v:1,rec:REC,hof:HOF}), ta=$("rx"); ta.style.display="block"; $("bRxGo").style.display="none"; ta.value=t; ta.select(); copyText(t); $("msg").textContent="Roster and hall of fame copied. Save the text somewhere safe, for example in a note."; };
+$("bImp").onclick=()=>{ const ta=$("rx"); ta.style.display="block"; ta.value=""; $("bRxGo").style.display="inline-block"; ta.focus(); };
+$("bRxGo").onclick=()=>{ try{ const o=JSON.parse($("rx").value); let n=0;
+  for(const [k,r] of Object.entries(o.rec||{})){ if(r&&typeof r.name==="string"&&(!REC[k]||(r.wins||0)>REC[k].wins)){ REC[k]=r; n++; } }
+  for(const e of (o.hof||[])){ if(e&&e.id&&!HOF.some(x=>x.id===e.id)){ HOF.push(e); n++; } }
+  saveRec(); saveHof(); renderRoster(); renderHof(); $("rx").style.display="none"; $("bRxGo").style.display="none"; $("msg").textContent="Imported "+n+" entr"+(n===1?"y":"ies")+"."; }
+  catch(e){ $("msg").textContent="That does not look like an exported roster."; } };
+
+/* opponent picker: random matched (default), a preset style matched to you, a custom figure, or one of your roster fighters */
+const PRESETS={legion:{n:"Legionary",race:"human",a:"shortsw",b:"large",armor:"chain",bias:.5},barb:{n:"Barbarian",race:"human",a:"twohsw",b:"none",armor:"none",bias:.6},
+  archer:{n:"Archer",race:"human",a:"lbow",s1:"shortsw",b:"none",armor:"leather",bias:.4},duelist:{n:"Duelist",race:"elf",a:"rapier",b:"mg",armor:"cloth",bias:.3}};
+let foeMode={k:"random"};
+function matched(P,total){ const R=RACES[P.race]; let st=R.st,dx=R.dx,extra=Math.max(0,total-st-dx); const need=Math.max(0,(W[P.a]?W[P.a].st:0)-st);
+  const toST=Math.min(extra,Math.max(need,Math.round(extra*P.bias))); st+=toST; dx+=extra-toST;
+  return {name:P.n+" "+pick(["Brann","Silvo","Orsk","Tamar","Karg","Ilsa","Morn","Zed"]),race:P.race,cls:"fighter",st,dx,iq:R.iq,a:P.a,b:P.b,s1:P.s1||"none",armor:P.armor,d1:"dagger",silver:true}; }
+function buildFoe(){
+  const m=foeMode;
+  if(m.k==="preset") return fromBuilder(matched(PRESETS[m.id],me.st+me.dx));
+  if(m.k==="fixed") return fromBuilder(JSON.parse(JSON.stringify(m.o)));
+  return makeOpponent(me.st+me.dx);
+}
+function foeNote(){ const d=(foe.st+foe.dx)-(me.st+me.dx); let t;
+  if(d>3) t="This opponent is more than 3 points stronger in ST+DX than you. A win is worth 100 EP.";
+  else if(d<-3&&foeMode.k!=="random") t="This opponent is more than 3 points weaker than you. It is an exhibition: nothing is recorded.";
+  else t="An even match. A win is worth 50 EP.";
+  return `<div class="mut" style="margin-top:6px">${t}</div>`; }
+function renderFoeSel(){
+  const sel=$("foeSel"); if(!sel) return; const cur=foeMode.k==="preset"?"p:"+foeMode.id:foeMode.k==="fixed"?foeMode.src||"custom":"random";
+  sel.innerHTML=`<option value="random">Random, matched to you</option>`+Object.entries(PRESETS).map(([k,v])=>`<option value="p:${k}">${v.n} (matched to you)</option>`).join("")+`<option value="roster">One of my roster fighters…</option><option value="custom">Build a custom opponent…</option>`;
+  sel.value=["random","roster","custom"].includes(cur)||cur.startsWith("p:")?cur:"random";
+}
+function renderFoeCfg(v){
+  const c=$("foeCfg"); c.innerHTML="";
+  if(v==="roster"){ const ks=Object.keys(REC).filter(k=>REC[k].src&&(!me||k!==recKey(me)));
+    c.innerHTML=ks.length?`<div class="row"><select id="rfSel">${ks.map(k=>`<option value="${esc(k)}">${esc(REC[k].name)} (ST ${REC[k].st} / DX ${REC[k].dx})</option>`).join("")}</select><button id="rfGo" class="pri">Fight this fighter</button></div><div class="mut">You fight the fighter as it stands now, with its saved gear. Its own record is not changed.</div>`:`<div class="mut">You need at least one other saved fighter with gear.</div>`;
+    const go=$("rfGo"); if(go) go.onclick=()=>{ const r=REC[$("rfSel").value]; foeMode={k:"fixed",src:"roster",o:Object.assign({},r.src,{st:r.st,dx:r.dx,name:r.name})}; newFoe(); }; }
+  else if(v==="custom"){
+    const wl=Object.keys(W).filter(k=>k!=="mg"&&k!=="staff");
+    c.innerHTML=`<div class="row"><label>Race <select id="cRace">${Object.entries(RACES).filter(([k])=>k!=="orc").map(([k,r])=>`<option value="${k}">${r.n}</option>`).join("")}</select></label>
+    <label>ST <input type="number" id="cST" value="12" min="1" max="40" style="width:64px"></label><label>DX <input type="number" id="cDX" value="12" min="1" max="40" style="width:64px"></label></div>
+    <div class="row"><label>Armor <select id="cAr">${Object.entries(ARMOR).map(([k,a])=>`<option value="${k}">${a.n}</option>`).join("")}</select></label>
+    <label>Weapon <select id="cW">${wl.map(k=>`<option value="${k}">${W[k].n}</option>`).join("")}</select></label>
+    <label>Other hand <select id="cL"><option value="none">nothing</option><option value="small">Small shield</option><option value="large">Large shield</option><option value="mg">Main-gauche</option></select></label></div>
+    <div class="row"><button id="cGo" class="pri">Fight this opponent</button><span id="cMsg" class="mut"></span></div>`;
+    $("cW").value="shortsw"; $("cAr").value="leather";
+    $("cGo").onclick=()=>{ const race=$("cRace").value,R=RACES[race],st=+$("cST").value,dx=+$("cDX").value,a=$("cW").value;
+      if(!(st>=R.st&&dx>=R.dx)){ $("cMsg").textContent=`${R.n} needs at least ST ${R.st} and DX ${R.dx}.`; return; }
+      if(W[a].st>st){ $("cMsg").textContent=`${W[a].n} needs ST ${W[a].st}.`; return; }
+      foeMode={k:"fixed",src:"custom",o:{name:"Custom opponent",race,cls:"fighter",st,dx,iq:R.iq,a,b:$("cL").value,armor:$("cAr").value,d1:"dagger",silver:true}}; newFoe(); }; }
+}
+$("foeSel").onchange=()=>{ const v=$("foeSel").value;
+  if(v==="random"){ foeMode={k:"random"}; renderFoeCfg(""); if(me) newFoe(); }
+  else if(v.startsWith("p:")){ foeMode={k:"preset",id:v.slice(2)}; renderFoeCfg(""); if(me) newFoe(); }
+  else renderFoeCfg(v); };
+renderFoeSel(); renderHof();
+try{ const last=localStorage.getItem("melee-arena-last"), r=last&&REC[last]; if(r&&r.src&&!r.dead) setMe(fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx})),"Welcome back. Resumed "+r.name+"."); }catch(e){}
+renderRoster();
 ui(); drawMap();
 </script></body></html>
