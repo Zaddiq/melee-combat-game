@@ -109,6 +109,17 @@ JS=r'''
  ok("P8 shield-rush puts no hits on the target and a miss does nothing",(()=>{ const a=unit(mkF({st:14,dx:8,a:"shortsw",b:"large"}),A,2), d=unit(mkF({st:12,dx:12}),stepB(A,2,1),5); fresh(a,d); face(a,d); dice([6,6,5]); doRush(a,d); return d.down===false&&d.hp===12&&d.hits===0; })());
  ok("G1 two-handed weapon in hand with a shield listed in the left hand: the shield is slung on the back, hands hold only the weapon",(()=>{ const f=fromBuilder({name:"g",race:"human",cls:"fighter",st:14,dx:12,iq:8,a:"battle",b:"large",armor:"none",d1:"dagger"}); return f.right==="battle"&&f.left==="none"&&f.slung==="large"; })());
  ok("G2 reloading a fighter from the builder refreshes the saved gear in its record",(()=>{ REC={}; const o1={name:"Gear Test",race:"human",cls:"fighter",st:14,dx:12,iq:8,a:"shortsw",b:"large",armor:"leather",d1:"dagger"}; const m1=applyRecord(fromBuilder(o1)); const o2=Object.assign({},o1,{a:"battle",b:"none"}); const m2=applyRecord(fromBuilder(o2)); return m2.rec.src.a==="battle"&&m2.right==="battle"&&m1.rec===m2.rec; })());
+
+ const hp2=(aO,dO,rel)=>{ const a=unit(mkF(Object.assign({st:12,dx:12,a:"shortsw"},aO)),A,2), d=unit(mkF(Object.assign({st:12,dx:12,a:"shortsw"},dO)),stepB(A,2,1),5); fresh(a,d); a.from={q:a.q,r:a.r}; if(rel==="rear"){ d.f=2; a.f=5; } else face(a,d); return [a,d]; };
+ ok("H1 hand-to-hand: defender rolls 1-2, both drop weapons and fall in the defender's hex",(()=>{ const [a,d]=hp2({},{armor:"plate"}); dice([1],[6,6,6]); startHth(a,d); return a.hth&&d.hth&&a.q===d.q&&a.r===d.r&&a.down&&d.down&&a.right==="none"&&d.right==="none"&&G.floor.length===2; })());
+ ok("H2 defender rolls 5: keeps weapon, attacker backs up, no hand-to-hand",(()=>{ const [a,d]=hp2({},{armor:"plate"}); const b0=stepB(A,2,-1); a.from={q:b0.q,r:b0.r}; dice([5]); startHth(a,d); return !a.hth&&!d.hth&&a.q===b0.q&&a.r===b0.r&&d.right==="shortsw"; })());
+ ok("H3 defender rolls 6: automatic hit on the attacker, attacker driven back, no hand-to-hand",(()=>{ const [a,d]=hp2({},{armor:"plate"}); dice([6],[3,3]); startHth(a,d); return !a.hth&&a.hp<12&&dist(a,d)===2; })());
+ ok("H4 bare hands against a stronger enemy do 1d-4 (rear attack, no armor)",(()=>{ const [a,d]=hp2({st:10},{st:14},"rear"); dice([1],[2,2,2],[6]); startHth(a,d); return d.hp===12; })());
+ ok("H5 a ready dagger is kept in hand-to-hand and does 1d+2",(()=>{ const [a,d]=hp2({a:"dagger"},{},"rear"); dice([1],[2,2,2],[3]); startHth(a,d); return a.right==="dagger"&&d.hp===7&&G.floor.some(f=>f.id==="shortsw"); })());
+ ok("H6 break away: superior DX succeeds on 1-3, escaper stands and moves, enemy stays down",(()=>{ const [a,d]=hp2({st:12,dx:14},{},"rear"); dice([1],[6,6,6]); startHth(a,d); const dest=freeNeighbors(a)[0]; dice([3]); a.act={t:"hesc",dest}; hthResolve(a,d,"hesc"); return !a.hth&&!d.hth&&!a.down&&d.down&&same(a,dest); })());
+ ok("H7 break away with equal DX needs a 1",(()=>{ const [a,d]=hp2({},{},"rear"); dice([1],[6,6,6]); startHth(a,d); const dest=freeNeighbors(a)[0]; dice([2]); a.act={t:"hesc",dest}; hthResolve(a,d,"hesc"); return a.hth&&a.down; })());
+ ok("H8 hand-to-hand is not allowed against an equal-MA enemy facing you",(()=>{ const [a,d]=hp2({},{}); return !canHth(a,d); })());
+ ok("H9 drawing a dagger in hand-to-hand works on 1-3",(()=>{ const [a,d]=hp2({},{},"rear"); dice([1],[6,6,6]); startHth(a,d); dice([2]); hthResolve(a,d,"hdraw"); return a.right==="dagger"; })());
  return R;
 }'''
 with sync_playwright() as p:
