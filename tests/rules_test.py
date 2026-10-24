@@ -31,8 +31,8 @@ JS=r'''
  ok("facing bonuses: front +0, side +2, rear +4 for every facing",!R.some(x=>!x[1]));
  /* --- main-gauche and two weapons --- */
  const mg=unit(mkF({st:12,dx:12,a:"shortsw",b:"mg"}),A,0), t2=unit(mkF({}),B,0); face(mg,t2);
- ok("main-gauche ready: −2 DX with one attack, −4 with both",adjDXu(mg,"single",t2)===10&&adjDXu(mg,"dual",t2)===8);
- ok("main-gauche parries 1 more hit from the front only",stopsFor(mg,t2)===1);
+ ok("main-gauche ready (3E): no DX penalty on the main weapon, −4 on the separate main-gauche attack",adjDXu(mg,"single",t2)===12&&adjDXu(mg,"mg",t2)===8);
+ ok("main-gauche parries 1 hit from one-handed weapons only",stopsFor(mg,t2,"shortsw")===1&&stopsFor(mg,t2,"twohsw")===0);
  /* --- wounds by ST --- */
  const lo=unit(mkF({dx:12}),A,0); lo.hp=3; ok("ST 3 or less: DX −3",adjDXu(lo,"single",null)===9);
  /* --- Turn 6 of the example: Wulf rolls 4 (double), sword 3−1 rolls 6 -> 10, armor and shield stop 5 -> 5 hits --- */
@@ -56,15 +56,14 @@ JS=r'''
  ok("Defender: Wulf (DX 10) needs 10 or less on 4 dice — 11 misses",tryD([3,3,3,2]).fl===12);
  ok("Defender: 10 or less on four dice hits",tryD([3,3,2,2]).fl<12);
  ok("Defender: 4 is an automatic hit",tryD([1,1,1,1]).fl<12);
+ const tr4=tryD([1,1,1,1]).fl, tr5=tryD([1,1,1,2]).fl; ok("Defender: 4 is triple damage and 5 is double (same dice, 4 hurts more)",tr4<tr5,tr4+" vs "+tr5);
  ok("Defender: 20 and up always misses",tryD([5,5,5,5]).fl===12);
  ok("Defender: 21 drops the attacker's weapon",tryD([6,5,5,5]).wr==="none");
  ok("Defender: 23 breaks it",tryD([6,6,6,5]).wr==="none");
- /* --- disengaging: a slower attacker takes the difference as a DX penalty --- */
+ /* --- disengaging (3E): no DX penalty; the higher-DX figure simply strikes first --- */
  const dg=unit(mkF({dx:13}),A,0), ag=unit(mkF({dx:10,a:"broad"}),B,0); face(dg,ag); fresh(dg,ag); dg.act={t:"disengage"}; ag.act={t:"attack"};
- // ag.adjDX 10, dg 13 -> ag rolls at 10-3 = 7: a roll of 8 misses
- dice([3,3,2]); doAttack(ag,dg,"broad","single"); ok("Disengage: attacker adjDX 10 vs 13 hits only on 7 or less (8 misses)",dg.hp===12,dg.hp);
- const dg2=unit(mkF({dx:13}),A,0), ag2=unit(mkF({dx:15,a:"broad"}),B,0); face(dg2,ag2); fresh(dg2,ag2); dg2.act={t:"disengage"}; ag2.act={t:"attack"};
- dice([3,3,2],[2,2]); doAttack(ag2,dg2,"broad","single"); ok("Disengage: a faster attacker (15 vs 13) is unpenalized",dg2.hp<12,dg2.hp);
+ dice([3,3,2],[2,2]); doAttack(ag,dg,"broad","single"); ok("Disengage (3E): attacker adjDX 10 still hits on an 8 (no extra penalty)",dg.hp<12,dg.hp);
+ fresh(dg,ag); dg.hp=12; ag.wound2=true; const w0=adjDXu(ag,"single",dg); dice([6,6,2]); doAttack(ag,dg,"broad","single"); ok("Wound DX −2 lasts for one attack only",ag.wound2===false&&adjDXu(ag,"single",dg)===w0+2);
  /* --- knock down at 8 hits in one turn --- */
  const kd=unit(mkF({st:20}),A,0), ek=unit(mkF({a:"battle",st:16}),B,0); face(kd,ek); fresh(kd,ek); kd.hp=20; kd.hits=0;
  dice([1,1,1],[1,1,1]); doAttack(ek,kd,"battle","single");
