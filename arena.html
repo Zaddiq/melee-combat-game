@@ -57,7 +57,7 @@ function fromBuilder(o){
   f.left=(SHIELDS[o.b]||(W[o.b]&&!W[o.b].two&&o.b!=="staff"))?o.b:"none";
   if(f.right!=="none"&&W[f.right].two) f.left="none";
   f.slung=(SHIELDS[o.s1]||(W[o.s1]&&o.s1!=="mg"))?o.s1:"none";
-  f.dag=[o.d1,o.d2].filter(k=>k==="dagger"||k==="mg");
+  f.dag=[o.d1,o.d2].filter(k=>k==="dagger"||k==="mg").slice(0,1);   /* 3E: one dagger or main-gauche only */
   return f;
 }
 function adjDX(f){ /* starting gear, old Melee/Wizard penalties as the builder computes them */
@@ -65,17 +65,15 @@ function adjDX(f){ /* starting gear, old Melee/Wizard penalties as the builder c
   const hands=[f.right,f.left].filter(k=>k!=="none");
   const sh=hands.filter(k=>SHIELDS[k]); sh.forEach(k=>a-=SHIELDS[k].pen);
   const wp=hands.filter(k=>W[k]);
-  if(wp.includes("mg")) a-=2;
   if(f.cls==="wizard"){
     if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4;
-    if(!f.silver&&(f.armor!=="none"||wp.some(k=>k!=="staff"))) a-=4;
   }
   return a;
 }
-const MA=f=>{let m=ARMOR[f.armor].ma; if(f.race==="elf"){if(f.armor==="none")m=12;else if(f.armor==="leather")m=10;} return m;};
+const MA=f=>{let m=ARMOR[f.armor].ma; if(f.race==="elf"){ if(f.armor==="none"||f.armor==="cloth")m=12; else if(f.armor==="leather")m=10; } return m;};
 const stops=f=>ARMOR[f.armor].stops+[f.right,f.left].reduce((t,k)=>t+(SHIELDS[k]?SHIELDS[k].stops:0),0)+(f.left==="mg"?1:0);
 const iname=k=>k==="none"?"nothing":(W[k]||SHIELDS[k]).n;
-function dmg(f,k){ if(!W[k]||W[k].miss)return""; let m=W[k].m; if(f.race==="dwarf"&&/hammer|smallax|battle/.test(k))m+=1; return dice(W[k].d,m); }
+function dmg(f,k){ if(!W[k]||W[k].miss)return""; let m=W[k].m; return dice(W[k].d,m); }
 
 /* ---- opponent: same ST+DX total as the player ---- */
 function makeOpponent(total){
@@ -84,7 +82,7 @@ function makeOpponent(total){
   for(let t=0;t<300;t++){
     const rk=pick(races), R=RACES[rk]; let st=R.st, dx=R.dx, extra=total-st-dx;
     while(extra-->0){ if(Math.random()<.5)st++; else dx++; }
-    const armor=pick(["none","leather","leather","chain","chain","plate"]);
+    const armor=pick(["none","cloth","leather","leather","chain","chain","halfplate","plate"]);
     const f={name:"",race:rk,cls:"fighter",st,dx,iq:R.iq,armor,silver:true,right:"none",left:"none",slung:"none",dag:["dagger"]};
     const ws=MELEE.filter(k=>W[k].st<=st&&k!=="dagger"); if(!ws.length)continue;
     f.right=pick(ws);
@@ -207,10 +205,11 @@ function spend(k){
 /* called once when a fight ends */
 function settle(){
   if(G.settled) return; G.settled=true; const r=me.rec; if(!r) return;
-  if(G.me.hp<=0){ r.dead=true; r.losses++; lg("Your run ends here."); }
-  else if(G.me.hp===1){ r.losses++; lg("A loss earns no EP. You heal and may fight again."); }
+  if(G.me.hp<0){ r.dead=true; r.losses++; lg("Your run ends here."); }
+  else if(G.me.hp===0){ r.losses++; lg("You are unconscious at ST 0. A loss earns no EP. You heal and may fight again."); }
   else {
-    r.wins++; r.ep+=50; lg(`Victory: +50 EP (${r.wins} wins).`);
+    const gain=(foe.st+foe.dx)-(me.st+me.dx)>3?100:50; G.gain=gain;
+    r.wins++; r.ep+=gain; lg(`Victory: +${gain} EP${gain===100?" (the enemy was more than 3 points superior in ST+DX)":""} (${r.wins} wins).`);
     if(r.ep>=100){ r.ep-=100; if(r.banked){ r.pend=2; r.must=true; r.banked=false; } else { r.pend=1; r.must=false; }
       lg("100 EP: you earned an attribute point."); }
     if(r.wins>=16&&r.pend===0) r.retired=true;
@@ -247,11 +246,11 @@ function startFight(){
   nextTurn(); ui(); drawMap();
 }
 function nextTurn(){
-  for(const u of [G.me,G.foe]){ u.wound2=u.hits>=5; u.hits=0; u.dealt=u.tookHit=u.defending=false; u.act=null; u.standUp=false; u.moved=0; u.engStart=false; }
+  for(const u of [G.me,G.foe]){ if(u.hits>=5)u.wound2=true; u.hits=0; u.dealt=u.tookHit=u.defending=false; u.act=null; u.standUp=false; u.moved=0; u.engStart=false; }
   G.turn++; let a,b; do{a=d6();b=d6();}while(a===b);
   lg(`— Turn ${G.turn}. Initiative: you ${a}, ${foe.name} ${b}.`);
-  if(G.me.wound2) lg("You took 5 or more hits last turn: DX −2 this turn.");
-  if(G.foe.wound2) lg(`${foe.name} took 5 or more hits last turn: DX −2 this turn.`);
+  if(G.me.wound2) lg("You took 5 or more hits: DX −2 for your next attack.");
+  if(G.foe.wound2) lg(`${foe.name} took 5 or more hits: DX −2 for its next attack.`);
   if(a>b){ G.phase="choose"; }
   else { lg(`${foe.name} wins it and moves second.`); G.order=["me","foe"]; G.idx=0; advance(); }
 }
@@ -260,13 +259,13 @@ function advance(){
   if(G.idx>=2){ beginActions(); return; }
   if(G.order[G.idx]==="foe"){ aiMove(); G.idx++; advance(); return; }
   const u=G.me;
-  if(u.down){ u.down=false; u.standUp=true; lg("You stand up. No other action this turn."); G.idx++; advance(); return; }
+  if(u.down){ u.standUp=true; lg("You start to stand up: no other action, and you stay on the floor until the end of the combat phase."); G.idx++; advance(); return; }
   G.phase="move"; G.start={q:u.q,r:u.r}; G.eng=isEngaged(u,G.foe); G.moved=0;
   G.reach=reach(G.start,G.foe,MA(me),G.eng);
 }
 function aiMove(){
   const a=G.foe,b=G.me;
-  if(a.down){ a.down=false; a.standUp=true; lg(`${foe.name} stands up.`); return; }
+  if(a.down){ a.standUp=true; lg(`${foe.name} starts to stand up.`); return; }
   const eng=isEngaged(a,b), R=reach(a,b,MA(foe),eng); let best=null;
   for(const h of R.values()){
     const d=dist(h,b); let s=d*10;
@@ -284,33 +283,33 @@ function undoMove(){ G.me.q=G.start.q; G.me.r=G.start.r; G.moved=0; ui(); drawMa
 function adjDXu(u,mode,tgt){
   const p=u.p; let a=p.dx-ARMOR[p.armor].pen;
   if(SHIELDS[u.left]) a-=SHIELDS[u.left].pen;
-  if(mode==="dual") a-=4; else if(u.left==="mg") a-=2;
+  if(mode==="mg") a-=4;   /* separate main-gauche attack */
   const wp=[u.right,u.left].filter(isW);
-  if(p.cls==="wizard"){ if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4; if(!p.silver&&(p.armor!=="none"||wp.some(k=>k!=="staff"))) a-=4; }
+  if(p.cls==="wizard"){ if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4 }
   if(u.wound2) a-=2;
   if(u.hp<=3) a-=3;
   if(tgt){ const r=relOf(tgt,u); if(r==="side")a+=2; else if(r==="rear")a+=4; }
   return a;
 }
-function stopsFor(d,a){
+function stopsFor(d,a,wid){
   let s=ARMOR[d.p.armor].stops; const r=relOf(d,a);
   if(SHIELDS[d.left]&&r==="front") s+=SHIELDS[d.left].stops;
   if(SHIELDS[d.slung]&&r==="rear") s+=SHIELDS[d.slung].stops;
-  if(d.left==="mg"&&r==="front") s+=1;
+  if(d.left==="mg"&&r==="front"&&wid&&W[wid]&&!W[wid].two&&!W[wid].miss) s+=1;   /* parries one-handed non-missile weapons only */
   return s;
 }
-function dmgRoll(u,id){ const w=W[id]; let m=w.m; if(u.p.race==="dwarf"&&/hammer|smallax|battle/.test(id)) m+=1; const dice=rollN(w.d); return {dice,m,total:Math.max(0,sum(dice)+m)}; }
+function dmgRoll(u,id){ const w=W[id]; let m=w.m; const dice=rollN(w.d); return {dice,m,total:Math.max(0,sum(dice)+m)}; }
 function options(u,o){
   const L=[]; if(u.standUp) return L;
   const eng=u.engStart, half=u.moved<=MA(u.p)/2, inF=relOf(u,o)==="front"&&!u.down;
   const wR=isW(u.right)?u.right:null, wL=(isW(u.left)&&!SHIELDS[u.left])?u.left:null;
-  if(inF&&(eng||half)&&(wR||wL)){ L.push({t:"attack",label:"Attack with "+iname(wR||wL)}); if(wR&&wL) L.push({t:"dual",label:"Attack with both weapons (−4 DX each)"}); }
+  if(inF&&(eng||half)&&(wR||wL)){ L.push({t:"attack",label:"Attack with "+iname(wR||wL)}); if(wR&&u.left==="mg") L.push({t:"dual",label:"Attack with "+iname(wR)+" and also with the main-gauche (−4 DX on that attack)"}); }
   if(eng&&(wR||wL)) L.push({t:"defend",label:"Defend (attackers roll 4 dice; you do not attack)"});
   if(isEngaged(u,o)) L.push({t:"disengage",label:"Disengage (move 1 hex, no attack)"});
   if(eng||u.moved<=2){
     if(u.slung!=="none") L.push({t:"ready",it:{id:u.slung,src:"slung"},label:`Ready ${iname(u.slung)} (slung)`});
     u.dag.forEach(k=>L.push({t:"ready",it:{id:k,src:"dag"},label:`Ready ${iname(k)} (sheathed)`}));
-    G.floor.filter(f=>f.q===u.q&&f.r===u.r).forEach(f=>L.push({t:"ready",it:{id:f.id,src:"floor",obj:f},label:`Pick up and ready ${iname(f.id)} (on the floor here)`}));
+    G.floor.filter(f=>dist(f,u)<=1).forEach(f=>L.push({t:"ready",it:{id:f.id,src:"floor",obj:f},label:`Pick up and ready ${iname(f.id)} (on the floor ${f.q===u.q&&f.r===u.r?"here":"next to you"})`}));
   }
   L.push({t:"none",label:"Do nothing"});
   return L;
@@ -334,7 +333,7 @@ function aiAct(){
     if(fr.length) return {t:"disengage",dest:fr[0].h};
   }
   if(has("defend")){ const edx=adjDXu(o,"single",u), mdx=adjDXu(u,"single",o); const bad=(edx-mdx>=3&&u.hp<=Math.max(6,u.p.st*.6))||u.hp<=5; if(bad&&Math.random()<.4) return has("defend"); }
-  if(has("dual")&&adjDXu(u,"dual",o)>=10) return has("dual");
+  if(has("dual")&&adjDXu(u,"mg",o)>=10) return has("dual");
   return has("attack")||{t:"none"};
 }
 function beginActions(){
@@ -343,11 +342,11 @@ function beginActions(){
 }
 function doAttack(a,d,wid,mode){
   let dx=adjDXu(a,mode,d);
-  if(d.act&&d.act.t==="disengage"){ const dd=adjDXu(d,"single",a); if(dx<=dd) dx-=dd-dx; }   /* disengaging: attacker slower or equal loses the difference */
+  if(a.wound2){ a.wound2=false; }   /* the -2 DX from 5+ hits lasts for the next attack only */
   const defend=d.defending, n=defend?4:3, dice=rollN(n), t=sum(dice);
   let hit,mult=1,fumble=null;
   if(!defend){ if(t===3){hit=true;mult=3;} else if(t===4){hit=true;mult=2;} else if(t===5)hit=true; else if(t===16)hit=false; else if(t===17){hit=false;fumble="drop";} else if(t===18){hit=false;fumble="break";} else hit=t<=dx; }
-  else { if(t===4||t===5)hit=true; else if(t>=23){hit=false;fumble="break";} else if(t>=21){hit=false;fumble="drop";} else if(t>=20)hit=false; else hit=t<=dx; }
+  else { if(t===4){hit=true;mult=3;} else if(t===5){hit=true;mult=2;} else if(t>=23){hit=false;fumble="break";} else if(t>=21){hit=false;fumble="drop";} else if(t>=20)hit=false; else hit=t<=dx; }
   const head=`${sub(a)} ${vb(a,"attack","attacks")} ${d===G.me?"you":sub(d)} with ${iname(wid)} (needs ${dx} or less on ${n}d6, rolled ${t}${mult===3?": triple damage":mult===2?": double damage":""})`;
   if(!hit){
     let extra=""; 
@@ -355,12 +354,12 @@ function doAttack(a,d,wid,mode){
     if(fumble==="break"){ extra=` — the ${iname(wid).toLowerCase()} breaks!`; if(a.right===wid)a.right="none"; else if(a.left===wid)a.left="none"; }
     lg(head+": miss"+extra+"."); return;
   }
-  const r=dmgRoll(a,wid), full=r.total*mult, st=stopsFor(d,a), hits=Math.max(0,full-st);
+  const r=dmgRoll(a,wid), full=r.total*mult, st=stopsFor(d,a,wid), hits=Math.max(0,full-st);
   lg(`${head}: HIT. ${iname(wid)} ${dice_txt(r)}${mult>1?" ×"+mult+" = "+full:""}; armor and shield stop ${Math.min(st,full)}. ${hits?vb(d,"You take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
   if(hits>0){
     d.hp-=hits; d.hits+=hits; d.tookHit=true; a.dealt=true;
     lg(`${vb(d,"Your","its")} ST is now ${Math.max(d.hp,0)}${d===G.me?"":" ("+d.p.name+")"}.`);
-    if(d.hits>=8&&d.hp>1&&!d.down){ d.down=true; lg(`${sub(d)} ${vb(d,"are","is")} knocked down by ${d.hits} hits!`); }
+    if(d.hits>=8&&d.hp>0&&!d.down){ d.down=true; lg(`${sub(d)} ${vb(d,"are","is")} knocked down by ${d.hits} hits!`); }
   }
   endCheck();
 }
@@ -368,41 +367,41 @@ const dice_txt=r=>`(${r.dice.join("+")}${r.m?(r.m>0?"+":"−")+Math.abs(r.m):""}
 function endCheck(){
   if(G.phase==="over") return;
   const a=G.me,b=G.foe;
-  if(a.hp<=1||b.hp<=1){
+  if(a.hp<=0||b.hp<=0){
     G.phase="over";
-    if(a.hp<=0) lg("You are dead."); else if(a.hp===1) lg("You collapse at ST 1. You lose the fight, but you live.");
-    else lg(`${foe.name} ${b.hp<=0?"is dead":"collapses at ST 1"}. You win the fight!`);
+    if(a.hp<0) lg("You are dead."); else if(a.hp===0) lg("You fall unconscious at ST 0. You lose the fight, but you live.");
+    else lg(`${foe.name} ${b.hp<0?"is dead":"falls unconscious at ST 0"}. You win the fight!`);
     settle();
   }
 }
 function resolveTurn(pa){
   G.me.act=pa; G.foe.act=aiAct(); G.phase="resolve";
   const U=[G.me,G.foe]; U.forEach(u=>{ u.defending=u.act.t==="defend"; });
-  const N2={attack:"attack",dual:"attack with both weapons",defend:"defend",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
-  const N3={attack:"attacks",dual:"attacks with both weapons",defend:"defends",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
+  const N2={attack:"attack",dual:"attack with a weapon and the main-gauche",defend:"defend",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
+  const N3={attack:"attacks",dual:"attacks with a weapon and the main-gauche",defend:"defends",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
   U.forEach(u=>lg(`${sub(u)} ${u===G.me?"choose to "+N2[u.act.t]:"chooses to "+N2[u.act.t]}.`));
-  const ent=U.map(u=>({u,dx:adjDXu(u,u.act.t==="dual"?"dual":"single",other(u)),tie:Math.random()})).sort((a,b)=>b.dx-a.dx||a.tie-b.tie);
+  const ent=U.map(u=>({u,dx:adjDXu(u,"single",other(u)),tie:Math.random()})).sort((a,b)=>b.dx-a.dx||a.tie-b.tie);
   for(const pass of [1,2]) for(const e of ent){
     if(G.phase==="over")break; const u=e.u,o=other(u),t=u.act.t;
-    if(u.down||u.hp<=1)continue;
+    if(u.down||u.hp<=0)continue;
     if(pass===1){
       if(t==="attack"){ const w=isW(u.right)?u.right:(isW(u.left)&&!SHIELDS[u.left]?u.left:null);
         if(w&&relOf(u,o)==="front") doAttack(u,o,w,"single"); else lg(`${sub(u)} ${vb(u,"have","has")} no target in front.`); }
-      else if(t==="dual"){ if(isW(u.right)&&relOf(u,o)==="front") doAttack(u,o,u.right,"dual"); }
+      else if(t==="dual"){ if(isW(u.right)&&relOf(u,o)==="front") doAttack(u,o,u.right,"single"); }
       else if(t==="disengage"){ const dest=u.act.dest; if(dest&&!same(dest,o)&&dist(dest,u)===1){ u.q=dest.q; u.r=dest.r; lg(`${sub(u)} ${vb(u,"disengage","disengages")}.`);} }
       else if(t==="ready"){ applyReady(u,u.act.it); lg(`${sub(u)} ${vb(u,"ready","readies")} ${iname(u.act.it.id).toLowerCase()} (usable next turn).`); u.justReady=true; }
-    } else if(t==="dual"){ if(isW(u.left)&&!SHIELDS[u.left]&&relOf(u,o)==="front") doAttack(u,o,u.left,"dual"); }
+    } else if(t==="dual"){ if(u.left==="mg"&&relOf(u,o)==="front") doAttack(u,o,u.left,"mg"); }
   }
-  if(G.phase!=="over") afterActions();
+  if(G.phase!=="over"){ U.forEach(u=>{ if(u.standUp&&u.down){ u.down=false; lg(`${sub(u)} ${vb(u,"are","is")} back on ${vb(u,"your","its")} feet.`); } }); afterActions(); }
   ui(); drawMap();
 }
 function afterActions(){
-  const w=[G.me,G.foe].find(u=>u.dealt&&!u.tookHit&&u.hp>1);
+  const w=[G.me,G.foe].find(u=>u.dealt&&!u.tookHit&&u.hp>0);
   if(!w){ endTurn(); return; }
-  const d=other(w), opts=freeNeighbors(d);
-  if(!opts.length){ const r=sum(rollN(3)), dx=adjDXu(d,"single"); if(r>dx){ d.down=true; lg(`${sub(d)} ${vb(d,"have","has")} nowhere to retreat and ${vb(d,"fall","falls")} (rolled ${r} vs DX ${dx}).`); } else lg(`${sub(d)} ${vb(d,"have","has")} nowhere to retreat but ${vb(d,"keep","keeps")} ${vb(d,"your","its")} feet.`); endTurn(); return; }
+  const d=other(w), opts=freeNeighbors(d).filter(h=>dist(h,w)>dist(d,w));   /* one hex farther from the attacker */
+  if(!opts.length){ lg(`${sub(w)} could force a retreat, but there is no free hex behind ${d===G.me?"you":sub(d)}.`); endTurn(); return; }
   if(w===G.foe){
-    const pick1=opts.map(h=>({h,s:dist(h,w)*3+Math.random()})).sort((a,b)=>b.s-a.s)[0].h, from={q:d.q,r:d.r};
+    const pick1=opts.map(h=>({h,s:Math.random()})).sort((a,b)=>b.s-a.s)[0].h, from={q:d.q,r:d.r};
     d.q=pick1.q; d.r=pick1.r; w.q=from.q; w.r=from.r;
     lg(`${foe.name} forces you back one hex and follows.`); endTurn(); return; }
   G.phase="retreat"; G.ropts=new Map(opts.map(h=>[key(h.q,h.r),h])); G.rfrom={q:d.q,r:d.r};
@@ -418,7 +417,7 @@ function ui(){
   if(rr&&(rr.retired||rr.dead||rr.pend>0)&&!G){ c.innerHTML=rr.pend>0?"Spend your attribute point in the Your fighter box first.":rr.dead?"This fighter is dead. Load another fighter.":"This champion has retired. Copy the updated fighter, or load another."; return; }
   if(!G){ c.innerHTML=`<button class="pri" id="bGo">Start fight</button> <span class="mut">You and ${esc(foe?foe.name:"")} enter at opposite ends.</span>`; $("bGo").onclick=startFight; return; }
   const A=G.me,B=G.foe; let t="",b="";
-  const flags=u=>(u.down?" (down)":"")+(u.wound2?" (DX −2)":"");
+  const flags=u=>(u.down?" (down)":"")+(u.wound2?" (DX −2 next attack)":"");
   const st=`<b>You</b> ST ${Math.max(A.hp,0)}/${me.st}${flags(A)} · <b>${esc(foe.name)}</b> ST ${Math.max(B.hp,0)}/${foe.st}${flags(B)}<br>You are ${isEngaged(A,B)?"<b>engaged</b>":"not engaged"}; ${esc(foe.name)} is ${isEngaged(B,A)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)}.`;
   if(G.phase==="choose"){ t="You won the initiative roll. Move first or second?"; b=`<button class="pri" id="b1">Move first</button><button id="b2">Move second</button>`; }
   else if(G.phase==="move"){
@@ -430,7 +429,7 @@ function ui(){
   else if(G.phase==="dest"){ t="Click the highlighted hex on the map that you want to disengage into (on a phone, scroll to the map)."; b=`<button id="bBack">Back</button>`; }
   else if(G.phase==="retreat"){ t=`You hit ${esc(foe.name)} and took no hits, so you may force a retreat: click a highlighted hex on the map to push them there (on a phone, scroll to the map). Or skip it.`; b=`<button id="bSkip">Skip the retreat</button>`; }
   else if(G.phase==="advance"){ t="Move into the hex they left, or hold your ground?"; b=`<button class="pri" id="bAdv">Advance</button><button id="bStay">Stay</button>`; }
-  else if(G.phase==="over"){ t=A.hp<=1?(A.hp<=0?"You have fallen.":"You collapse at ST 1. You live, but this fight is lost (no EP)."):"Victory! +50 EP.";
+  else if(G.phase==="over"){ t=A.hp<=0?(A.hp<0?"You have fallen.":"You fall unconscious at ST 0. You live, but this fight is lost (no EP)."):`Victory! +${G.gain||50} EP.`;
     const q=me.rec; if(q&&q.pend>0) t+=" Spend your attribute point in the Your fighter box."; else if(q&&(q.retired||q.dead)) t+=q.dead?" Load another fighter.":" 16 wins: this champion retires."; else b=`<button class="pri" id="bNew">Next fight</button>`; b+=` <a href="index.html"><button>Back to menu</button></a>`; }
   c.innerHTML=`<div class="mut" style="margin-bottom:4px">Turn ${G.turn}</div><div>${t}</div><div class="mut" style="margin:4px 0">${st}</div><div>${b}</div><div id="log">${G.log.slice(-60).map(esc).join("<br>")}</div>`;
   const lgE=$("log"); if(lgE) lgE.scrollTop=lgE.scrollHeight;
@@ -459,7 +458,7 @@ function drawMap(){
   }
   /* square counter: the flat top edge (where the head is) shows the facing. Original artwork, drawn here. */
   const tokn=(f,c,fr)=>{ const h=M.get(key(f.q,f.r)), [x,y]=h.p, rot=SCR[f.f]+90;
-    const R=f.right!==undefined?f.right:fr.right, Lh=f.left!==undefined?f.left:fr.left, dead=f.hp!==undefined&&f.hp<=1;
+    const R=f.right!==undefined?f.right:fr.right, Lh=f.left!==undefined?f.left:fr.left, dead=f.hp!==undefined&&f.hp<=0;
     const w=R!=="none"&&W[R];
     const L=(fr.name||"?").trim().charAt(0).toUpperCase();
     const fig=dead?`<ellipse cx="0" cy="-.05" rx=".2" ry=".22" fill="${c}"/><rect x="-.1" y=".1" width=".2" height=".12" fill="${c}"/><circle cx="-.08" cy="-.07" r=".05" fill="var(--card)"/><circle cx=".08" cy="-.07" r=".05" fill="var(--card)"/><path d="M-.3 .3 L.3 .1 M-.3 .1 L.3 .3" stroke="${c}" stroke-width=".06" stroke-linecap="round"/>`
@@ -482,7 +481,7 @@ function drawMap(){
       layer=pk+tokn(fm,"var(--me)",me)+tokn(ff,"var(--foe)",foe); }
     else layer=P.filter(h=>h.e).map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
   } else {
-    for(const [f,c] of [[G.me,"--me"],[G.foe,"--foe"]]) if(!f.down&&f.hp>1) for(const k of [-1,0,1]){ const n=nbr(f,(f.f+k+6)%6); if(n) layer+=`<polygon points="${poly(n)}" fill="var(${c})" fill-opacity=".13" pointer-events="none"/>`; }
+    for(const [f,c] of [[G.me,"--me"],[G.foe,"--foe"]]) if(!f.down&&f.hp>0) for(const k of [-1,0,1]){ const n=nbr(f,(f.f+k+6)%6); if(n) layer+=`<polygon points="${poly(n)}" fill="var(${c})" fill-opacity=".13" pointer-events="none"/>`; }
     if(G.phase==="move"){
       for(const r of G.reach.values()){ const h=M.get(key(r.q,r.r)); layer+=`<polygon data-go="${key(r.q,r.r)}" points="${poly(h)}" fill="var(--acc)" fill-opacity="${same(r,G.me)?0:.22}" stroke="var(--acc)" stroke-width=".05" style="cursor:pointer"/>`; }
     }
