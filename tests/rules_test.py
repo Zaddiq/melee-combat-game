@@ -107,6 +107,8 @@ JS=r'''
  ok("P6 shield-rush by a weaker figure rolls only 2 dice: 2+2 leaves the target standing, 12 floors it",(()=>{ const a=unit(mkF({st:10,dx:12,a:"shortsw",b:"small"}),A,2), d=unit(mkF({st:12,dx:12}),stepB(A,2,1),5); fresh(a,d); face(a,d); dice([3,3,3],[2,2]); doRush(a,d); const s1=d.down; dice([3,3,3],[6,6]); doRush(a,d); return s1===false&&d.down===true; })());
  ok("P7 shield-rush against a figure with more than twice your ST has no effect",(()=>{ const a=unit(mkF({st:10,dx:12,a:"shortsw",b:"large"}),A,2), d=unit(mkF({st:25,dx:12}),stepB(A,2,1),5); fresh(a,d); face(a,d); dice([3,3,3]); doRush(a,d); return d.down===false; })());
  ok("P8 shield-rush puts no hits on the target and a miss does nothing",(()=>{ const a=unit(mkF({st:14,dx:8,a:"shortsw",b:"large"}),A,2), d=unit(mkF({st:12,dx:12}),stepB(A,2,1),5); fresh(a,d); face(a,d); dice([6,6,5]); doRush(a,d); return d.down===false&&d.hp===12&&d.hits===0; })());
+ ok("G1 two-handed weapon in hand with a shield listed in the left hand: the shield is slung on the back, hands hold only the weapon",(()=>{ const f=fromBuilder({name:"g",race:"human",cls:"fighter",st:14,dx:12,iq:8,a:"battle",b:"large",armor:"none",d1:"dagger"}); return f.right==="battle"&&f.left==="none"&&f.slung==="large"; })());
+ ok("G2 reloading a fighter from the builder refreshes the saved gear in its record",(()=>{ REC={}; const o1={name:"Gear Test",race:"human",cls:"fighter",st:14,dx:12,iq:8,a:"shortsw",b:"large",armor:"leather",d1:"dagger"}; const m1=applyRecord(fromBuilder(o1)); const o2=Object.assign({},o1,{a:"battle",b:"none"}); const m2=applyRecord(fromBuilder(o2)); return m2.rec.src.a==="battle"&&m2.right==="battle"&&m1.rec===m2.rec; })());
  return R;
 }'''
 with sync_playwright() as p:

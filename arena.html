@@ -65,8 +65,10 @@ function fromBuilder(o){
   const hasStaff=f.cls==="wizard"&&Array.isArray(o.spells)&&o.spells.includes("Staff");
   f.right=hasStaff?"staff":(W[o.a]&&!W[o.a].left?o.a:"none");
   f.left=(SHIELDS[o.b]||(W[o.b]&&!W[o.b].two&&o.b!=="staff"))?o.b:"none";
+  const lf=f.left;
   if(f.right!=="none"&&W[f.right].two) f.left="none";
   f.slung=(SHIELDS[o.s1]||(W[o.s1]&&o.s1!=="mg"))?o.s1:"none";
+  if(f.left==="none"&&SHIELDS[lf]&&f.slung==="none") f.slung=lf;   /* a two-handed weapon: the shield goes on the back */
   f.dag=[o.d1,o.d2].filter(k=>k==="dagger"||k==="mg").slice(0,1);   /* 3E: one dagger or main-gauche only */
   return f;
 }
@@ -200,7 +202,7 @@ const recKey=f=>f.name.trim().toLowerCase();
 function applyRecord(f){
   const k=recKey(f); let r=REC[k];
   if(!r){ r={name:f.name,st:f.st,dx:f.dx,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false,src:f.src||null}; REC[k]=r; saveRec(); }
-  if(!r.src&&f.src){ r.src=f.src; saveRec(); }
+  if(f.src&&JSON.stringify(r.src)!==JSON.stringify(f.src)){ r.src=f.src; saveRec(); }   /* always keep the gear as it is in the builder now */
   f.st=r.st; f.dx=r.dx; f.rec=r; return f;
 }
 function recBlock(){
