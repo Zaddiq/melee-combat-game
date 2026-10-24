@@ -7,7 +7,11 @@ body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans
 main{max-width:1000px;margin:0 auto;padding:16px}
 h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 6px}
 .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px}
-@media(max-width:760px){.grid{grid-template-columns:1fr}}
+@media(max-width:760px){.grid{grid-template-columns:1fr}
+ .grid>.card{order:-1;position:sticky;top:0;z-index:5;margin-bottom:8px}
+ .grid>.card svg{max-height:40vh}.grid>.card .mapcap{display:none}}
+@media(min-width:761px){.grid>.card{position:sticky;top:8px;align-self:start}.grid>.card svg{max-height:calc(100vh - 170px)}}
+details.setup>summary{cursor:pointer;font-weight:600;margin-bottom:8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
 button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
 button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
@@ -22,15 +26,17 @@ svg{width:100%;height:auto;max-height:80vh}
 <p style="margin:0 0 6px"><a href="index.html" style="color:var(--acc)">← Menu</a> · <a href="builder.html" style="color:var(--acc)">Character builder</a> · <a href="sim.html" style="color:var(--acc)">Fight simulator</a></p>
 <p class="mut">Basic fight against a computer opponent matched to your ST+DX. Win and loss records come in a later stage.</p>
 <div class="grid"><div>
+ <details class="setup" id="setup" open><summary>Fighter and opponent</summary>
  <div class="card"><h2>Your fighter</h2>
   <div class="row"><button class="pri" id="bLoad">Load from builder</button><button id="bEx">Use example</button></div>
   <details><summary class="mut">Or paste a fighter (copy it from the builder)</summary><textarea id="paste" placeholder="paste JSON here"></textarea><div class="row"><button id="bPaste">Use pasted fighter</button></div></details>
   <div id="msg" class="mut"></div><div id="me"></div></div>
  <div class="card"><h2>Opponent</h2>
   <div class="row"><button id="bFoe">New opponent</button></div><div id="foe"></div></div>
+ </details>
  <div class="card"><h2>Fight</h2><div id="ctl" class="mut">Load a fighter first.</div></div>
 </div>
-<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut">Top: opponent entrance. Bottom: yours. You start on the front hex nearest the middle; click any of the four green-outlined hexes at your end to start there instead.</div></div></div>
+<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">Top: opponent entrance. Bottom: yours. You start on the front hex nearest the middle; click any of the four green-outlined hexes at your end to start there instead.</div></div></div>
 </main>
 <script src="rules.js"></script>
 <script>
@@ -129,7 +135,7 @@ function card(f,cls){
 }
 let me=null, foe=null, myStart=null;
 function setMe(f,msg){ G=null; me=applyRecord(f); $("msg").textContent=msg||""; renderMe(); newFoe(); }
-function newFoe(){ if(!me)return; G=null; foe=makeOpponent(me.st+me.dx); $("foe").innerHTML=card(foe,"foe"); ui(); drawMap(); }
+function newFoe(){ if(!me)return; G=null; $("setup").open=true; foe=makeOpponent(me.st+me.dx); $("foe").innerHTML=card(foe,"foe"); ui(); drawMap(); }
 $("bLoad").onclick=()=>{ let t=null; try{t=localStorage.getItem(KEY);}catch(e){}
   if(!t){$("msg").textContent="No saved fighter found here. Open the builder on this same site first, or paste one below.";return;}
   try{ setMe(fromBuilder(JSON.parse(t)),"Loaded from the builder."); }catch(e){ $("msg").textContent="Could not read the saved fighter."; } };
@@ -243,6 +249,7 @@ function startFight(){
   if(!me||!foe)return; const s=startHexes();
   G={me:mk(s.mine,me),foe:mk(s.theirs,foe),turn:0,phase:"",log:[],order:[],idx:0,start:null,reach:null,eng:false,moved:0,floor:[]};
   G.me.f=faceToward(G.me,G.foe); G.foe.f=faceToward(G.foe,G.me);
+  $("setup").open=false;   /* fold the setup cards so the fight controls sit beside the map */
   nextTurn(); ui(); drawMap();
 }
 function nextTurn(){
@@ -417,6 +424,7 @@ function ui(){
   if(rr&&(rr.retired||rr.dead||rr.pend>0)&&!G){ c.innerHTML=rr.pend>0?"Spend your attribute point in the Your fighter box first.":rr.dead?"This fighter is dead. Load another fighter.":"This champion has retired. Copy the updated fighter, or load another."; return; }
   if(!G){ c.innerHTML=`<button class="pri" id="bGo">Start fight</button> <span class="mut">You and ${esc(foe?foe.name:"")} enter at opposite ends.</span>`; $("bGo").onclick=startFight; return; }
   const A=G.me,B=G.foe; let t="",b="";
+  if(G.phase==="over") $("setup").open=true;   /* show the fighter box again (attribute points, next opponent) */
   const flags=u=>(u.down?" (down)":"")+(u.wound2?" (DX −2 next attack)":"");
   const st=`<b>You</b> ST ${Math.max(A.hp,0)}/${me.st}${flags(A)} · <b>${esc(foe.name)}</b> ST ${Math.max(B.hp,0)}/${foe.st}${flags(B)}<br>You are ${isEngaged(A,B)?"<b>engaged</b>":"not engaged"}; ${esc(foe.name)} is ${isEngaged(B,A)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)}.`;
   if(G.phase==="choose"){ t="You won the initiative roll. Move first or second?"; b=`<button class="pri" id="b1">Move first</button><button id="b2">Move second</button>`; }
@@ -494,7 +502,7 @@ function drawMap(){
         layer+=`<circle data-face="${d}" cx="${cx}" cy="${cy}" r=".2" fill="${d===G.me.f?"var(--me)":"var(--card)"}" stroke="var(--me)" stroke-width=".07" style="cursor:pointer"/><circle data-face="${d}" cx="${cx}" cy="${cy}" r=".42" fill="transparent" style="cursor:pointer"/>`; } }
   }
   const m=$("map"); m.setAttribute("viewBox",`${x0} ${y0} ${x1-x0} ${y1-y0}`); m.innerHTML=s+edges+layer;
-  if(G&&(G.phase==="retreat"||G.phase==="dest")&&window.innerWidth<=760&&!G.scrolled){ G.scrolled=true; m.scrollIntoView({block:"center"}); } if(G&&G.phase!=="retreat"&&G.phase!=="dest") G.scrolled=false;
+  /* the map stays pinned on screen next to the buttons, so no scrolling is needed */
   m.querySelectorAll("polygon[data-k]").forEach(e=>e.onclick=()=>{myStart=e.dataset.k;drawMap();});
   m.querySelectorAll("[data-go]").forEach(e=>e.onclick=()=>{ const r=G.reach.get(e.dataset.go); G.me.q=r.q; G.me.r=r.r; G.moved=r.c; ui(); drawMap(); });
   m.querySelectorAll("[data-face]").forEach(e=>e.onclick=()=>{ G.me.f=+e.dataset.face; drawMap(); });
