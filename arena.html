@@ -361,7 +361,6 @@ function options(u,o){
   const wR=isW(u.right)?u.right:null, wL=(isW(u.left)&&!SHIELDS[u.left])?u.left:null;
   const pw=poleOf(u), chg=!eng&&u.moved>0&&dist(u,o)===1;
   if(!eng&&half&&pw&&pw!=="javelin"&&inJab(u,o)) L.push({t:"jab",wid:pw,label:`Jab with ${iname(pw)} at the target two hexes away (needs ${adjDXu(u,"single",null)} or less)`});
-  if(inF&&(eng||half)&&SHIELDS[u.left]&&u.p.cls!=="wizard") L.push({t:"rush",label:`Shield-rush with the ${iname(u.left).toLowerCase()} (no weapon attack; if it hits, the target saves vs DX on ${u.p.st>=o.p.st?3:2} dice or falls)`});
   if(inF&&(eng||half)&&(wR||wL)){ L.push({t:"attack",label:"Attack with "+iname(wR||wL)+(chg?(pw&&straight3(u)?" (pole-weapon charge: one extra die of damage)":pw?" (pole-weapon charge: strikes first)":" (charge)"):"")}); if(wR&&u.left==="mg") L.push({t:"dual",label:"Attack with "+iname(wR)+" and also with the main-gauche (−4 DX on that attack)"}); }
   /* missile and thrown weapons: the target must be in front of you (Melee p. 9-10, 15-16) */
   if(!u.down&&inFront(u,o)){
@@ -381,6 +380,7 @@ function options(u,o){
     u.dag.forEach(k=>L.push({t:"ready",it:{id:k,src:"dag"},label:`Ready ${iname(k)} (sheathed)`}));
     G.floor.filter(f=>dist(f,u)<=1).forEach(f=>L.push({t:"ready",it:{id:f.id,src:"floor",obj:f},label:`Pick up and ready ${iname(f.id)} (on the floor ${f.q===u.q&&f.r===u.r?"here":"next to you"})`}));
   }
+  if(inF&&(eng||half)&&SHIELDS[u.left]&&u.p.cls!=="wizard") L.push({t:"rush",label:`Shield-rush with the ${iname(u.left).toLowerCase()} (no weapon attack; if it hits, the target saves vs DX on ${u.p.st>=o.p.st?3:2} dice or falls)`});
   L.push({t:"none",label:"Do nothing"});
   return L.filter(x=>!x.off);
 }
