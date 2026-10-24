@@ -27,6 +27,7 @@ svg{width:100%;height:auto;max-height:80vh}
 <p style="margin:0 0 6px"><a href="index.html" style="color:var(--acc)">← Menu</a> · <a href="builder.html" style="color:var(--acc)">Character builder</a> · <a href="sim.html" style="color:var(--acc)">Fight simulator</a></p>
 <p class="mut">Basic fight against a computer opponent matched to your ST+DX. Missile and thrown weapons are in: arrows are unlimited, and range is counted in megahexes.</p>
 <div class="grid"><div>
+ <div class="card"><h2>Fight</h2><div id="ctl" class="mut">Load a fighter first (the box below).</div></div>
  <details class="setup" id="setup" open><summary>Fighter and opponent</summary>
  <div class="card"><h2>Your fighter</h2>
   <div class="row"><button class="pri" id="bLoad">Load from builder</button><button id="bEx">Use example</button></div>
@@ -34,11 +35,10 @@ svg{width:100%;height:auto;max-height:80vh}
   <div id="msg" class="mut"></div><div id="me"></div></div>
  <div class="card"><h2>Opponent</h2>
   <div class="row"><select id="foeSel"></select><button id="bFoe">New opponent</button></div><div id="foeCfg"></div><div id="foe"></div></div>
+ </details>
  <div class="card"><h2>Your roster</h2><div class="mut" style="margin-bottom:4px">Every fighter you take into the arena is kept here with its record, so you can pause one and play another.</div><div id="roster"></div>
   <div class="row"><button id="bExp">Export roster</button><button id="bImp">Import roster</button></div><textarea id="rx" style="display:none" placeholder="paste an exported roster here"></textarea><div class="row"><button id="bRxGo" style="display:none">Import pasted roster</button></div></div>
  <div class="card"><h2>Hall of fame</h2><div class="mut" style="margin-bottom:4px">Fighters who won 16 fights and retired. This list is kept permanently, even if you erase a record.</div><div id="hof"></div></div>
- </details>
- <div class="card"><h2>Fight</h2><div id="ctl" class="mut">Load a fighter first.</div></div>
 </div>
 <div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">Top: opponent entrance. Bottom: yours. You start on the front hex nearest the middle; click any of the four green-outlined hexes at your end to start there instead.</div></div></div>
 </main>
