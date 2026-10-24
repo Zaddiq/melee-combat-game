@@ -120,6 +120,13 @@ JS=r'''
  ok("H7 break away with equal DX needs a 1",(()=>{ const [a,d]=hp2({},{},"rear"); dice([1],[6,6,6]); startHth(a,d); const dest=freeNeighbors(a)[0]; dice([2]); a.act={t:"hesc",dest}; hthResolve(a,d,"hesc"); return a.hth&&a.down; })());
  ok("H8 hand-to-hand is not allowed against an equal-MA enemy facing you",(()=>{ const [a,d]=hp2({},{}); return !canHth(a,d); })());
  ok("H9 drawing a dagger in hand-to-hand works on 1-3",(()=>{ const [a,d]=hp2({},{},"rear"); dice([1],[6,6,6]); startHth(a,d); dice([2]); hthResolve(a,d,"hdraw"); return a.right==="dagger"; })());
+
+ ok("K1 prone crossbowman gets +1 DX; prone bowman cannot fire; kneeling bowman can",(()=>{ const [a,d]=hp2({a:"lxbow"},{}); a.low="prone"; const dx0=adjDXu(a,"single",null); const ok1=shotDX(a,d,"lxbow","missile")===dx0+1+mhPen(mhDist(a,d)); const o1=options(a,d).some(x=>x.t==="fire"||x.t==="last");
+   const [b,e]=hp2({a:"lbow"},{}); b.low="prone"; const o2=options(b,e).some(x=>x.t==="fire"||x.t==="last"); b.low="kneel"; const o3=options(b,e).some(x=>x.t==="fire"||x.t==="last"); return ok1&&o1&&!o2&&o3; })());
+ ok("K2 attacking a prone enemy gets +4 DX, a kneeling one does not",(()=>{ const [a,d]=hp2({},{}); const base=adjDXu(a,"single",d); d.low="prone"; const pr=adjDXu(a,"single",d); d.low="kneel"; const kn=adjDXu(a,"single",d); return pr===base+4-0&&kn===base; })());
+ ok("K3 a standing archer can kneel-and-fire, and a crossbowman can lie prone and fire",(()=>{ const [a,d]=hp2({a:"lxbow"},{}); a.f=faceToward(a,d); a.moved=0; const L=options(a,d); return L.some(x=>x.t==="fire"&&x.pos==="kneel")&&L.some(x=>x.t==="fire"&&x.pos==="prone")&&L.some(x=>x.t==="drop"); })());
+ ok("K4 kneeling figure may only fire, stand up or wait; rising clears the posture",(()=>{ const [a,d]=hp2({a:"shortsw"},{}); a.low="kneel"; const L=options(a,d).map(x=>x.t); a.act={t:"rise"}; d.act={t:"none"}; return L.includes("rise")&&!L.includes("attack")&&!L.includes("disengage"); })());
+ ok("K5 hand-to-hand is allowed against a kneeling enemy",(()=>{ const [a,d]=hp2({},{}); d.low="kneel"; return canHth(a,d); })());
  return R;
 }'''
 with sync_playwright() as p:
