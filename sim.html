@@ -82,7 +82,7 @@ dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap
     <div class="fighters" id="fighters"></div>
     <div class="panel">
       <label class="chk"><input type="checkbox" id="rules" checked>
-        <span>Use Melee special rules: automatic hits on 3, 4 and 5 (triple and double damage on 3 and 4), automatic misses on 16 to 18, wound penalties, and knockdown from 8 or more hits.</span></label>
+        <span>Use Melee special rules: automatic hits on 3, 4 and 5 (triple and double damage on 3 and 4), automatic misses on 16 to 18, wound penalties (DX -2 on the next attack after 5 or more hits), and knockdown from 8 or more hits in one turn (the figure loses its next action standing up, and is hit at +4 while down).</span></label>
     </div>
     <p id="err" role="alert"></p>
     <button type="submit" id="go">Run fights</button>
@@ -109,7 +109,7 @@ dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap
         <tr><th scope="row">Attacks that do no damage (misses plus stopped hits)</th><td id="s5a"></td><td id="s5b"></td></tr>
       </tbody></table></div>
     <div id="histwrap" hidden><h2 class="hh">Previous runs, newest first</h2><ol id="hist"></ol></div>
-    <p class="note">Both fighters start adjacent and attack once per turn, highest adjusted DX first, ties decided randomly. A fighter is out at ST 1 and dead at 0, so the first to put the other at ST 1 or less wins. Not modeled: movement, facing, defend and dodge, forced retreat, hand-to-hand, left-hand dagger, pole-weapon charges. A 17 costs the next turn (picking up the weapon). An 18 breaks the weapon, so that fighter does no more damage.</p>
+    <p class="note">Both fighters start adjacent and attack once per turn, highest adjusted DX first, ties decided randomly. A fighter falls unconscious at ST 0 and dies below 0, so the first to put the other at ST 0 or less wins. Not modeled: movement, facing, defend and dodge, forced retreat, hand-to-hand, left-hand dagger, pole-weapon charges. A 17 costs the next turn (picking up the weapon). An 18 breaks the weapon, so that fighter does no more damage.</p>
   </section>
 </main>
 
@@ -134,7 +134,7 @@ function probHit(eff, rules) {
 var fmtDmg = function (w) { return w.d + "d" + (w.m > 0 ? "+" + w.m : w.m < 0 ? "-" + (-w.m) : ""); };
 var WEAPONS = Object.keys(RULES.W).filter(function (k) { var w = RULES.W[k]; return !w.miss && k !== "staff" && k !== "mg"; })
   .map(function (k) { var w = RULES.W[k]; return [w.n, fmtDmg(w), w.st, w.two ? 1 : 0]; });
-var ARMOR_SHORT = { none: "No armor", leather: "Leather", chain: "Chainmail", plate: "Plate" };
+var ARMOR_SHORT = { none: "No armor", cloth: "Cloth", leather: "Leather", chain: "Chainmail", halfplate: "Half plate", plate: "Plate" };
 var ARMORS = Object.keys(RULES.ARMOR).map(function (k) { var a = RULES.ARMOR[k]; return [ARMOR_SHORT[k], a.stops, a.pen.m, a.ma]; });
 var SHIELDS = [["No shield", 0, 0]].concat(Object.keys(RULES.SHIELDS).map(function (k) { var s = RULES.SHIELDS[k]; return [s.n, s.stops, s.pen]; }));
 
@@ -163,7 +163,7 @@ var SLABELS = SHIELDS.map(function (a) { return a[0]; });
 function build(s) {
   return '<fieldset class="panel"><legend>' + (s === "a" ? "Fighter A" : "Fighter B") + "</legend>" +
     field(s, "name", "Name", "", false) +
-    field(s, "st", "ST", "Hit points. Out at 1, dead at 0.", true) +
+    field(s, "st", "ST", "Hit points. Unconscious at 0, dead below 0.", true) +
     field(s, "dx", "Basic DX", "Before armor and shield penalties.", true) +
     '<div class="field"><label for="' + s + '_w">Weapon</label>' + sel(s + "_w", WLABELS) + "</div>" +
     '<div class="field" id="' + s + '_cwrap" hidden><label for="' + s + '_dmg">Custom damage</label>' +
@@ -308,7 +308,7 @@ function makeSheet(f, doc, oy) {
   // ---- Left column: title, details, stats, protection, weapons ----
   d.setFont("times", "bold"); d.setFontSize(18); color(navy); d.text("Melee Character Sheet", LX, 50);
   d.setFont("times", "italic"); d.setFontSize(8.5); color(ink);
-  d.text("The Fantasy Trip, Fifth Edition rules (Metagaming, 1981)", LX, 63);
+  d.text("The Fantasy Trip: Melee, Third Edition rules (Steve Jackson Games, 2018)", LX, 63);
 
   var hasShield = f.shieldName !== "No shield";
   var shieldTxt = !hasShield ? "None" : f.shOn ? f.shieldName + " (stops " + f.shStops + ")" : f.shieldName + " (slung on back)";
@@ -383,8 +383,8 @@ function makeSheet(f, doc, oy) {
   var ny = head("Notes", RX, NW, 50);
   var nend = bullets([
     "To hit, roll adjDX or less on 3 dice. A 3 hits for triple damage, a 4 for double, and a 5 always hits. A 16 misses, a 17 drops the weapon, an 18 breaks it.",
-    "Subtract the hits stopped by armor and shield from each damage roll. A figure at ST 1 collapses; at ST 0 it is dead.",
-    "Taking 5 or more hits in one turn: DX -2 next turn. ST 3 or less: DX -3. Taking 8 or more hits in one turn: knocked down."
+    "Subtract the hits stopped by armor and shield from each damage roll. A figure at ST 0 falls unconscious; below 0 it is dead.",
+    "Taking 5 or more hits in one turn: DX -2 on its next attack only. ST 3 or less: DX -3. Taking 8 or more hits in one turn: knocked down; attacks on a fallen figure are at +4."
   ], RX, NW, ny, 8, 9.8);
 
   // Ruled lines for handwritten player notes, in the free space at lower right
@@ -393,7 +393,7 @@ function makeSheet(f, doc, oy) {
   for (var ly = py + 8; ly < 358; ly += 16) d.line(RX, ly, RX + RW, ly);
 
   d.setFont("times", "italic"); d.setFontSize(7); color(ink);
-  d.text("Built from the printed rules: attributes p. 4, attacks p. 10-11, armor and weapons p. 13, injury p. 17. Made with tftfightersimulator.", LX, 366);
+  d.text("Built from the printed rules: creating a figure p. 3, DX adjustments p. 10, weapons and armor p. 14-15, injury p. 20. Made with tftfightersimulator.", LX, 366);
   return D;
 }
 
@@ -441,41 +441,46 @@ function exportSheet(s) {
 });
 $("both_pdf").addEventListener("click", exportBoth);
 
-function swing(att, rules) {
+function swing(att, rules, bonus) {
+  var eff = att.eff + (bonus || 0);
   var roll = d6() + d6() + d6(), mult = 1, hit;
   if (rules && roll <= 5) { hit = true; mult = roll === 3 ? 3 : roll === 4 ? 2 : 1; }
   else if (rules && roll >= 16) hit = false;
-  else hit = roll <= att.eff;
+  else hit = roll <= eff;
   return { roll: roll, hit: hit, mult: mult };
 }
 
 function duel(a, b, rules) {
   var f = [a, b].map(function (x) {
-    return { st: x.st, base: x.base, dmg: x.dmg, stops: x.stops, last: 0, skip: 0, broken: false, took: 0, acted: false, eff: 0 };
+    return { st: x.st, base: x.base, dmg: x.dmg, stops: x.stops, wound: false, skip: 0, down: false, standing: false, broken: false, took: 0, acted: false, eff: 0 };
   });
   for (var t = 1; t <= MAXR; t++) {
     f.forEach(function (x) {
-      x.eff = x.base - (rules ? (x.last >= 5 ? 2 : 0) + (x.st <= 3 ? 3 : 0) : 0);
+      x.eff = x.base - (rules ? (x.wound ? 2 : 0) + (x.st <= 3 ? 3 : 0) : 0);
       x.took = 0; x.acted = false;
     });
     var order = f[0].eff > f[1].eff ? [0, 1] : f[0].eff < f[1].eff ? [1, 0] : (Math.random() < 0.5 ? [0, 1] : [1, 0]);
     for (var i = 0; i < 2; i++) {
       var me = f[order[i]], foe = f[1 - order[i]];
       me.acted = true;
-      if (me.skip > 0) { me.skip--; continue; }
-      var r = swing(me, rules), sx = S[order[i]];
+      if (me.skip > 0) { me.skip--; if (me.skip === 0 && me.down) me.standing = true; continue; }
+      var r = swing(me, rules, rules && foe.down ? 4 : 0), sx = S[order[i]];
+      if (me.wound) me.wound = false;   /* the DX -2 from 5+ hits lasts for one attack only */
       sx.att++; if (!r.hit) sx.none++;
       if (r.hit) {
         var raw = me.broken ? 0 : rollDamage(me.dmg) * r.mult;
         var through = Math.max(0, raw - foe.stops);
         foe.st -= through; foe.took += through;
         sx.hit++; sx.dmg += through; if (through === 0) sx.none++;
-        if (foe.st <= 1) return { w: order[i] === 0 ? "a" : "b", r: t, left: me.st };
-        if (rules && through >= 8) foe.skip = foe.acted ? 1 : 2;
+        if (foe.st <= 0) return { w: order[i] === 0 ? "a" : "b", r: t, left: me.st };
+        if (rules && foe.took >= 8 && !foe.down) { foe.down = true; foe.skip = foe.acted ? 1 : 2; }
       } else if (rules && r.roll === 17) me.skip = 1;
       else if (rules && r.roll === 18) me.broken = true;
     }
-    f.forEach(function (x) { x.last = x.took; });
+    f.forEach(function (x) {
+      if (x.took >= 5) x.wound = true;
+      if (x.standing) { x.down = false; x.standing = false; }
+    });
   }
   return { w: "d", r: MAXR, left: 0 };
 }
