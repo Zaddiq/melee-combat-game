@@ -217,13 +217,13 @@ summary{cursor:pointer;font:600 12px var(--f-mono);letter-spacing:.08em;text-tra
 <script src="rules.js"></script>
 <script>
 "use strict";
-/* ---------- Rules data (old Wizard + Melee) ---------- */
+/* ---------- Rules data (Wizard 2018 spells + Melee 2018 numbers from rules.js) ---------- */
 const {RACES,ARMOR,W,SHIELDS,RATE}=RULES;
 
 /* [iq, name, type, cost (number or "var"), upkeep, summary] */
 const SPELLS = [
  [8,"Staff","S",5,"","Turns a piece of wood into your staff, a one-die weapon that costs no ST. Knowing it means you start the game holding one. Cost 5 only if cast mid-game."],
- [8,"Magic Fist","M","var","","Missile. Roll 1 die per ST spent, then subtract 2 per die."],
+ [8,"Magic Fist","M","var","","Missile. 1d−2 damage per ST spent, never less than the ST spent. 6 or more hits before armor also trips the target (3-die roll on ST or DX, whichever is higher, to stay up)."],
  [8,"Blur","T",1,"+1/turn","Attacks and spells against the subject are at -4 DX."],
  [8,"Slow Movement","T",2,"","Halves the victim's MA for 4 turns. Slows add time, not effect."],
  [8,"Drop Weapon","T",1,"","Victim drops what is in one hand. Costs 2 if victim's ST is 20+."],
@@ -232,21 +232,21 @@ const SPELLS = [
  [9,"Confusion","T","var","","-2 IQ per ST spent, for 3 turns."],
  [9,"Avert","T",2,"+1/turn","Victim must end each move at least 2 hexes farther from you."],
  [9,"Aid","T","var","","+1 to ST, DX or IQ per ST spent, for 2 turns."],
- [9,"Summon Wolf","C",2,"+1/turn","Wolf: ST 10, DX 14, IQ 6, MA 12, bite 1+1."],
+ [9,"Summon Wolf","C",2,"+1/turn","Wolf: ST 10, DX 14, IQ 6, MA 12, bite 1+1, fur stops 1 hit."],
  [9,"Reveal Magic","S",1,"","Shows reverse missiles, spell shields, stone and iron flesh, shock shields, slippery floors."],
  [9,"Fire","C",1,"","One hex of flame. 2 hits passing through, 4 hits and -2 DX if you stop in it."],
  [10,"Trip","T",2,"","Knocks victim down, no damage. Costs 4 if victim's ST is 30+."],
  [10,"Speed Movement","T",2,"","Doubles the target's MA for 4 turns."],
  [10,"Summon Myrmidon","C",2,"+1/turn","Warrior: ST 12, DX 12, IQ 8, MA 10, broadsword, no armor."],
  [10,"Dazzle","S",3,"","Everything with eyes within 5 megahexes (not you) is at -3 DX for 3 turns."],
- [10,"Shadow","C",1,"","One hex of black shadow. Attacking from or into it is -6 or -4 DX."],
+ [10,"Shadow","C",1,"","One hex of black shadow. A figure in it, or attacking through it, is at −6 DX. Attacking a figure in a shadow hex is −4."],
  [10,"Shock Shield","T",2,"+1/turn","Does 1 die to every creature in the subject's hex each turn."],
  [11,"Sleep","T",3,"","Victim sleeps until hit or shaken awake. Not on ST 20+."],
- [11,"Summon Bear","C",4,"+1/turn","Bear: ST 30, DX 11, IQ 6, MA 8, bite 2+2."],
+ [11,"Summon Bear","C",4,"+1/turn","Bear: ST 30, DX 11, IQ 6, MA 8, bite 2+2, fur stops 2 hits."],
  [11,"Control Animal","T",2,"+1/turn","Controls one real animal. Saving roll vs IQ on 3 dice."],
  [11,"Illusion","C",2,"","Creates any one-hex illusion."],
  [11,"Reverse Missiles","T",2,"+1/turn","Missiles aimed at the subject hit their sender instead."],
- [11,"Rope","C",2,"","Entangles victim: MA halved, DX -2, one worse each turn. Not on ST 20+."],
+ [11,"Rope","C",2,"","Entangles victim: MA halved, DX −2, one worse each turn. Not on ST 20+. At DX 2 or less the victim falls helpless. A neighbor can pull it off with an adjDX roll on 3 dice."],
  [11,"Create Wall","C",2,"","Solid wall in one hex. Fails if a figure is there."],
  [11,"Destroy Creation","T",1,"","Removes one thing made by a Creation spell."],
  [12,"Freeze","T",4,"","Victim is frozen for 2 to 12 turns. Not on ST 30+."],
@@ -258,7 +258,7 @@ const SPELLS = [
  [12,"3-Hex Fire","C",2,"","Fire over up to 3 connected hexes."],
  [12,"3-Hex Shadow","C",2,"","Shadow over up to 3 connected hexes."],
  [13,"Flight","T",3,"+1/turn","Subject flies at MA 12. Attacks on a flier are at -4 DX."],
- [13,"Summon Gargoyle","C",4,"+1/turn","Gargoyle: ST 20, DX 11, IQ 8, MA 8 ground / 16 air, fist 2 dice."],
+ [13,"Summon Gargoyle","C",4,"+1/turn","Gargoyle: ST 20, DX 11, IQ 8, MA 8 ground / 16 air, fist 2 dice, stops 3 hits."],
  [13,"Control Person","T",3,"+1/turn","Controls one human or humanoid. Saving roll vs IQ on 3 dice."],
  [13,"Stone Flesh","T",2,"+1/turn","Subject's body stops 4 hits per attack."],
  [13,"Slippery Floor","T",3,"","One megahex of slick floor. Saving roll vs DX or fall."],
@@ -266,23 +266,23 @@ const SPELLS = [
  [13,"4-Hex Image","C",2,"","Image up to 4 hexes in size."],
  [13,"3-Hex Wall","C",4,"","Wall over up to 3 connected hexes."],
  [14,"Lightning","M","var","","Missile. 1 die per ST spent, no subtraction. Blasts through created walls."],
- [14,"Summon Giant","C",4,"+1/turn","Giant: ST 30, DX 9, IQ 8, MA 8, club 3+3."],
+ [14,"Summon Giant","C",4,"+1/turn","Giant: ST 30, DX 9, IQ 8, MA 8 (the monster table says 10), club 3+3, no armor."],
  [14,"4-Hex Illusion","C",3,"","Illusion up to 4 hexes in size."],
  [14,"Remove Thrown Spell","T",2,"","Cancels any Thrown-type spell on a subject."],
  [14,"Dispel Illusions","S",5,"","Removes all illusions within 5 megahexes."],
- [14,"Spell Shield","T",3,"+1/turn","Blocks Special, Missile and Thrown spells cast on the subject."],
+ [14,"Spell Shield","T",3,"+1/turn","Blocks Special, Missile and Thrown spells cast on the subject. A Death Spell cast at it costs the caster only 1 ST."],
  [15,"Iron Flesh","T",3,"+1/turn","Subject's body stops 6 hits per attack."],
- [15,"Teleport","S","var","","Blinks you to another hex. 1 ST per megahex moved."],
- [15,"Summon Small Dragon","C",5,"+1/turn","4-hex dragon: ST 30, DX 13, IQ 16, breath 2 dice, claw 2-2."],
- [15,"Giant Rope","C",5,"","Rope for creatures of ST 20+, or two ropes on weaker ones."],
+ [15,"Teleport","S","var","","Blinks you to any hex you choose, facing as you like. 1 ST per megahex moved. Arriving in a solid object kills you (and it, if alive). Illusions count as solid, images do not."],
+ [15,"Summon Small Dragon","C",5,"+1/turn","4-hex dragon: ST 30, DX 13, IQ 16, MA 6 ground / 16 air, breath 2 dice, claw 2d−2, stops 3 hits. Two attacks a turn."],
+ [15,"Giant Rope","C",5,"","Rope for creatures of ST 20+. On weaker creatures it counts as two ropes, removed one at a time."],
  [15,"7-Hex Shadow","C",3,"","Shadow over up to 7 connected hexes."],
  [15,"7-Hex Image","C",4,"","Image up to 7 hexes in size."],
  [15,"Megahex Avert","T",3,"+1/turn","Avert on everyone in a megahex."],
  [16,"7-Hex Illusion","C",5,"","Illusion up to 7 hexes in size."],
- [16,"Summon Dragon","C",5,"+2/turn","7-hex dragon: ST 60, DX 14, IQ 20, breath 3 dice, claw 2 dice."],
- [16,"Death Spell","T","var","","Weaker of you and the victim loses ST equal to the lower ST; both lose it."],
+ [16,"Summon Dragon","C",5,"+2/turn","7-hex dragon: ST 60, DX 14, IQ 20, MA 8 ground / 20 air, breath 3 dice, claw 2 dice, stops 5 hits. Two attacks a turn."],
+ [16,"Death Spell","T","var","","The weaker of you and the victim goes to ST −1 and dies. The stronger loses ST equal to the weaker one's ST. Armor and Stone or Iron Flesh do not help. Spell Shield stops it."],
  [16,"7-Hex Fire","C",4,"","Fire over up to 7 connected hexes."],
- [16,"7-Hex Wall","C",6,"","Wall over up to 7 connected hexes."],
+ [16,"7-Hex Wall","C",6,"","Wall over up to 7 connected hexes. Can wall in every hex around a figure to trap it."],
  [16,"Megahex Sleep","S",8,"","Sleeps every figure under ST 20 in a megahex, or one figure up to ST 50."]
 ].map(a=>({iq:a[0],name:a[1],type:a[2],cost:a[3],up:a[4],txt:a[5]}));
 const SPELL_BY = Object.fromEntries(SPELLS.map(s=>[s.name,s]));
@@ -293,7 +293,7 @@ const costTxt = s => (s.cost==="var" ? "ST: var." : "ST "+s.cost) + (s.up?" "+s.
 const KEY="wizard-builder-v1";
 const EXAMPLE = {name:"Yzor (example)",cls:"wizard",race:"human",total:32,st:9,dx:12,iq:11,
   spells:["Staff","Magic Fist","Blur","Slow Movement","Drop Weapon","Image","Dazzle","Illusion","Sleep","Fire","Rope"],
-  a:"none",b:"none",s1:"none",d1:"dagger",d2:"none",armor:"none",ep:0,notes:"",silver:false,armorSrc:"melee"};
+  a:"none",b:"none",s1:"none",d1:"dagger",d2:"none",armor:"none",ep:0,notes:"",silver:false};
 let S = JSON.parse(JSON.stringify(EXAMPLE));
 
 /* Right hand (a): any weapon except the main-gauche. Left hand (b): shield, main-gauche or a one-handed weapon. */
@@ -312,7 +312,7 @@ function normalize(o){
   if(r.st+r.dx+r.iq>r.total){r.total=r.st+r.dx+r.iq}
   r.ep=Math.max(0,Math.round(+r.ep||0));
   r.name=String(r.name||"").slice(0,60); r.notes=String(r.notes||"").slice(0,2000);
-  r.silver=!!r.silver; r.armorSrc=r.armorSrc==="melee"?"melee":"wizard";
+  r.silver=!!r.silver; delete r.armorSrc; r.d2="none";   /* 2018 Melee: one dagger or main-gauche, no second item at the side */
   if(!ARMOR[r.armor]) r.armor="none";
   if(o && o.left && o.left!=="none" && (!o.b||o.b==="none")) r.b=o.left;
   delete r.left;
@@ -341,6 +341,7 @@ function enforce(r){
   }
   const A2=(r.cls==="wizard"&&r.spells.includes("Staff"))?"staff":r.a;
   if(W[A2]&&W[A2].two&&r.b!=="none"&&!SHIELDS[r.b]){ r.b="none"; notes.push("A two-handed weapon fills both hands. Left hand item removed."); }
+  if(r.b==="mg"&&r.d1!=="none"){ r.d1="none"; notes.push("A figure carries one dagger or main-gauche, not both. The side dagger was removed."); }
   let nsh=0, nmg=0;
   for(const k of ["b","s1","d1","d2"]){
     if(SHIELDS[r[k]]){ if(++nsh>1){ r[k]="none"; notes.push("Only one shield is allowed. Extra shield removed."); } }
@@ -369,19 +370,17 @@ function pool(){
   return p;
 }
 const itemName=id=>W[id]?W[id].n:SHIELDS[id]?SHIELDS[id].n:"";
-const armorPen=()=>ARMOR[S.armor].pen[S.armorSrc==="melee"?"m":"w"];
+const armorPen=()=>ARMOR[S.armor].pen.m;
+const METAL_ARMOR=["chain","halfplate","plate"];
 const baseMA=()=>S.race==="elf"?12:10;
 function ma(){
   let m=ARMOR[S.armor].ma;
-  if(S.race==="elf"){ if(S.armor==="none")m=12; else if(S.armor==="leather")m=10; }
+  if(S.race==="elf"){ if(S.armor==="none"||S.armor==="cloth")m=12; else if(S.armor==="leather")m=10; }
   return m;
 }
 function damageText(id){
-  const w=W[id]; let d=w.d,m=w.m,extra="";
-  if(S.race==="dwarf"&&/hammer|ax/i.test(w.n)) m+=1;
-  if(S.race==="hobbit"&&w.miss) m+=1;
-  if(S.race==="hobbit"&&w.th&&!w.miss) extra=" (+1 thrown)";
-  return fmtDice(d,m)+extra;
+  const w=W[id];
+  return fmtDice(w.d,w.m)+(S.race==="hobbit"&&w.th?" (+2 DX thrown)":"");
 }
 
 /* ---------- Ready configurations ---------- */
@@ -402,10 +401,10 @@ function configs(){
     const label=rdy.length?rdy.map(x=>itemName(x.id)).join(" + "):"Nothing ready";
     const start=rdy.map(x=>x.id).sort().join("|")===startIds;
     const variants=[{dual:false}];
-    if(wp.length>=2) variants.push({dual:true});
+    if(wp.length>=2&&wp.some(x=>x.id==="mg")) variants.push({dual:true});
     for(const v of variants){
       const row=evalConfig(rdy,sh,wp,v.dual);
-      row.label=label+(v.dual?" (attack with both)":(wp.length>=2&&wp.some(x=>x.id==="mg")?" (attack with the weapon, parry with main-gauche)":""));
+      row.label=label+(v.dual?" (also make the separate main-gauche attack)":(wp.length>=2&&wp.some(x=>x.id==="mg")?" (attack with the weapon, parry with main-gauche)":""));
       row.start=start&&!v.dual;
       if(!seen.has(row.label)){seen.add(row.label);out.push(row);}
     }
@@ -419,12 +418,14 @@ function evalConfig(rdy,sh,wp,dual){
   add(-armorPen(),ARMOR[S.armor].n.toLowerCase().replace(" armor",""));
   sh.forEach(x=>add(-SHIELDS[x.id].pen,SHIELDS[x.id].n.toLowerCase()));
   const mg=wp.some(x=>x.id==="mg");
-  if(dual) add(-4,"two attacks");
-  else if(mg) add(-2,"main-gauche parry, one attack");
+  const castBase=adj;
   if(S.cls==="wizard"){
     if(wp.some(x=>x.id!=="staff"&&x.id!=="dagger"&&x.id!=="mg")) add(-4,"wizard with weapon");
-    if(!S.silver && (S.armor!=="none" || wp.some(x=>x.id!=="staff"))) add(-4,"iron or steel");
   }
+  /* iron or steel instead of silver: an extra -4 to spellcasting only */
+  const iron=S.cls==="wizard"&&!S.silver&&(METAL_ARMOR.includes(S.armor)||wp.some(x=>x.id!=="staff"));
+  const castAdj=castBase-(iron?4:0);
+  if(dual) parts.push("main-gauche attack at "+(adj-4)+" (−4)");
   let stops=ARMOR[S.armor].stops + sh.reduce((t,x)=>t+SHIELDS[x.id].stops,0);
   const stopsMelee=stops+(mg?1:0);
   const shots=wp.map(x=>W[x.id]).filter(w=>w.rate).map(w=>{
@@ -432,7 +433,7 @@ function evalConfig(rdy,sh,wp,dual){
     return w.n+": "+w.rate+(ok?" (met)":" (not met)");
   });
   const cant=S.cls==="wizard" && (sh.length>0 || wp.some(x=>x.id!=="staff"));
-  return {adj,parts,stops,stopsMelee,mg,cant,shots,cls:S.cls};
+  return {adj,castAdj,iron,parts,stops,stopsMelee,mg,cant,shots,cls:S.cls};
 }
 
 /* ---------- Render: steps ---------- */
@@ -514,19 +515,18 @@ function renderGear(){
   const A=hasStaff();
   $("s-gear").innerHTML=`<h2><span class="n">4</span>Armor and weapons</h2>
   <div class="gear">
-    <label class="f">Armor<select id="armor">${Object.entries(ARMOR).map(([k,a])=>`<option value="${k}"${k===S.armor?" selected":""}>${a.n} (stops ${a.stops}, DX −${a.pen[S.armorSrc==="melee"?"m":"w"]})</option>`).join("")}</select></label>
+    <label class="f">Armor<select id="armor">${Object.entries(ARMOR).map(([k,a])=>`<option value="${k}"${k===S.armor?" selected":""}>${a.n} (stops ${a.stops}${a.pen.m?`, DX −${a.pen.m}`:""})</option>`).join("")}</select></label>
     <label class="f">Right hand<select id="slotA"${A?" disabled":""}>${A?`<option>Staff (from Staff spell)</option>`:gearOptions("a")}</select></label>
     <label class="f">Left hand<select id="slotB">${gearOptions("b")}</select></label>
     <label class="f">Slung on back<select id="slotS1">${gearOptions("s1")}</select></label>
-    <label class="f">Dagger at side (carried free)<select id="slotD1">${daggerOptions("d1")}</select></label>
-    <label class="f">Second item at side (counts as a weapon)<select id="slotD2">${daggerOptions("d2")}</select></label>
+    <label class="f">Dagger or main-gauche at side (carried free)<select id="slotD1">${daggerOptions("d1")}</select></label>
   </div>
-  <p class="note">The right and left hand are what is ready when the game starts. Anything slung on the back or sheathed at the side can be readied later, for example a bow first, then the main-gauche and a dagger after firing. A figure carries two weapons plus a dagger, and a shield counts as one weapon. One dagger or main-gauche is carried free. Any additional dagger counts as one of the two weapons.</p>
-  <p class="note">The right hand holds a weapon. A two-handed weapon (†) fills both hands, so a shield has to be slung. The left hand holds nothing, a shield, a main-gauche, or a one-handed weapon as a second weapon. When both hands attack in the same turn, both attacks are at −4 DX. The main-gauche and shields cannot go in the right hand. Weapons need basic ST at or above the number shown.${A?" Your staff is your right-hand weapon.":""}</p>${(S._notes||[]).filter(t=>/Carrying|shield|main-gauche|hands/.test(t)).map(t=>`<div class="alert">${esc(t)}</div>`).join("")}
+  <p class="note">The right and left hand are what is ready when the game starts. Anything slung on the back or sheathed at the side can be readied later, for example a bow first, then the main-gauche and a dagger after firing. A figure carries two weapons plus one dagger or main-gauche, and a shield counts as one weapon. The dagger or main-gauche is carried free.</p>
+  <p class="note">The right hand holds a weapon. A two-handed weapon (†) fills both hands, so a shield has to be slung. The left hand holds nothing, a shield, a main-gauche, or a one-handed weapon as a second weapon. A main-gauche in the left hand parries 1 hit from one-handed weapons and allows a separate attack at −4 DX. The main-gauche and shields cannot go in the right hand. Weapons need basic ST at or above the number shown.${A?" Your staff is your right-hand weapon.":""}</p>${(S._notes||[]).filter(t=>/Carrying|shield|main-gauche|hands/.test(t)).map(t=>`<div class="alert">${esc(t)}</div>`).join("")}
   <div class="row" style="margin-top:10px">
     ${S.cls==="wizard"?`<label class="f" style="flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink)"><input type="checkbox" id="silver"${S.silver?" checked":""}> Wizard's gear is silver, not iron or steel</label>`:""}
   </div>
-  <p class="note">Armor DX penalties: leather −2, chainmail −3, plate −6. A wizard whose weapon or armor is iron or steel takes −4 DX; the rules do not say whether this stacks with the −4 for carrying a weapon, so both are applied.</p>`;
+  <p class="note">Armor DX penalties come from Melee: cloth −1, leather −2, chainmail −3, half plate −4, plate −5. A wizard using any weapon except a staff or dagger is at −4 DX on physical attacks. A wizard whose weapon or armor is iron or steel instead of silver takes an extra −4 to spellcasting only. This builder counts chainmail, half plate, plate and any weapon other than a staff as iron or steel.</p>`;
 }
 
 /* ---------- Render: sheet ---------- */
@@ -564,13 +564,13 @@ function renderSheet(){
     </div>
     <div class="pfig"><span>Figure</span></div>
   </div>
-  ${S.race==="hobbit"?`<p class="note" style="margin:0">Hobbit: +3 DX on top of the numbers below with missile spells, thrown weapons and missile weapons.</p>`:""}
+  ${S.race==="hobbit"?`<p class="note" style="margin:0">Halfling: +2 DX whenever throwing something, and may throw any weapon the turn it is readied.</p>`:""}
   <h3>Armor</h3>
   <div style="font-size:14px">${ARMOR[S.armor].n}${ARMOR[S.armor].stops?`: stops ${ARMOR[S.armor].stops} hits per attack, DX −${armorPen()}`:""}${sh.length?`<br>${sh.map(s=>`${s.n} (${s.loc==="Slung"?"slung":"ready at start"}): stops ${s.stops} from the front when ready${s.pen?`, DX −${s.pen}`:""}; slung, it stops nothing from the front but covers the rear hex`).join("<br>")}`:""}</div>
   <h3>Adjusted DX by what is ready</h3>
   <div class="help noprint" style="margin-bottom:6px">Every way to hold your gear. The first row is how you start.</div>
   <div class="scroll"><table><thead><tr><th>Ready</th><th class="num">adjDX</th><th class="num">Stops</th></tr></thead><tbody>
-  ${cfg.map(c=>`<tr${c.start?"":' class="alt"'}><td>${esc(c.label)}${c.start?` <span class="pill">starts ready</span>`:""}${c.cant?`<span class="sm bad-t">Cannot cast spells like this</span>`:""}${c.parts.length?`<span class="sm">${esc(c.parts.join(", "))}</span>`:""}${c.shots.map(t=>`<span class="sm">${esc(t)}</span>`).join("")}</td>
+  ${cfg.map(c=>`<tr${c.start?"":' class="alt"'}><td>${esc(c.label)}${c.start?` <span class="pill">starts ready</span>`:""}${c.cant?`<span class="sm bad-t">Cannot cast spells like this</span>`:(S.cls==="wizard"?`<span class="sm">Casting DX ${c.castAdj}${c.iron?" (iron or steel −4)":""}</span>`:"")}${c.parts.length?`<span class="sm">${esc(c.parts.join(", "))}</span>`:""}${c.shots.map(t=>`<span class="sm">${esc(t)}</span>`).join("")}</td>
    <td class="num">${c.adj}</td><td class="num">${c.stops}${c.mg?` (${c.stopsMelee} vs melee)`:""}</td></tr>`).join("")}
   </tbody></table></div>
   ${wrows.length?`<h3>Weapons</h3><div class="scroll"><table><thead><tr><th>Weapon</th><th class="num">Damage</th><th class="num">Min ST</th></tr></thead><tbody>${wrows.join("")}</tbody></table></div>`:""}
@@ -592,7 +592,7 @@ function sheetText(){
   L.push("Ready at start: "+nm(x=>x.loc.endsWith("hand")));
   L.push("Slung on back: "+nm(x=>x.loc==="Slung"));
   L.push("Sheathed at side: "+nm(x=>x.loc==="Sheathed"));
-  configs().forEach(c=>L.push(`  ${c.label}: adjDX ${c.adj}, stops ${c.stops}${c.mg?` (${c.stopsMelee} vs melee)`:""}${c.cant?", cannot cast":""}`));
+  configs().forEach(c=>L.push(`  ${c.label}: adjDX ${c.adj}, stops ${c.stops}${c.mg?` (${c.stopsMelee} vs melee)`:""}${c.cant?", cannot cast":(S.cls==="wizard"?", casting DX "+c.castAdj:"")}`));
   if(S.cls==="wizard") L.push("Spells ("+S.spells.length+"/"+S.iq+"): "+S.spells.map(n=>n).join(", "));
   L.push("EP: "+S.ep); if(S.notes) L.push("Notes: "+S.notes);
   return L.join("\n");
@@ -631,8 +631,6 @@ document.addEventListener("change",e=>{
     case "slotB": S.b=t.value; commit(); break;
     case "slotS1": S.s1=t.value; commit(); break;
     case "slotD1": S.d1=t.value; commit(); break;
-    case "slotD2": S.d2=t.value; commit(); break;
-    case "armorSrc": S.armorSrc=t.value; commit(); break;
     case "silver": S.silver=t.checked; commit(); break;
     case "ep": S.ep=Math.max(0,Math.round(+t.value||0)); renderSheet(); save(); break;
   }
