@@ -66,7 +66,7 @@ function fromBuilder(o){
   f.right=hasStaff?"staff":(W[o.a]&&!W[o.a].left?o.a:"none");
   f.left=(SHIELDS[o.b]||(W[o.b]&&!W[o.b].two&&o.b!=="staff"))?o.b:"none";
   const lf=f.left;
-  if(f.right!=="none"&&W[f.right].two) f.left="none";
+  if(f.right!=="none"&&W[f.right].two){ if(SHIELDS[f.left]&&f.slung==="none") f.slung=f.left; f.left="none"; }   /* a two-hander fills both hands: the shield goes on the back */
   f.slung=(SHIELDS[o.s1]||(W[o.s1]&&o.s1!=="mg"))?o.s1:"none";
   if(f.left==="none"&&SHIELDS[lf]&&f.slung==="none") f.slung=lf;   /* a two-handed weapon: the shield goes on the back */
   f.dag=[o.d1,o.d2].filter(k=>k==="dagger"||k==="mg").slice(0,1);   /* 3E: one dagger or main-gauche only */
@@ -610,6 +610,8 @@ function hofAdd(r){
   const o=updated(r), e={id:r.name.trim().toLowerCase(),name:r.name,race:o.race||"human",cls:o.cls||"fighter",st:r.st,dx:r.dx,total0:r.total0,total:r.total0+r.pts,wins:r.wins,losses:r.losses,date:new Date().toISOString().slice(0,10),src:o};
   const i=HOF.findIndex(x=>x.id===e.id); if(i>=0)HOF[i]=e; else HOF.push(e); saveHof(); renderHof();
 }
+function freshSrc(r){ let b=null; try{ b=JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){}
+  return b&&typeof b.name==="string"&&b.name.trim().toLowerCase()===r.name.trim().toLowerCase()?b:r.src; }
 function sendToBuilder(o){
   let cur=null; try{ cur=JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){}
   const q=cur&&cur.name&&cur.name!==o.name?`The builder currently holds "${cur.name}". Replace it with ${o.name}?`:`Send ${o.name} to the builder?`;
@@ -629,7 +631,7 @@ function renderRoster(){
   if(!ks.length){ el.innerHTML='<div class="mut">No saved fighters yet. Load one above and it appears here.</div>'; return; }
   el.innerHTML=ks.map(k=>{ const r=REC[k], cur=me&&recKey(me)===k;
     return `<div class="ent"><b>${esc(r.name)}</b>${cur?' <span class="chip">playing</span>':""} ${statusChip(r)}<br><span class="mut">ST ${r.st} / DX ${r.dx} (total ${r.st+r.dx}) · ${r.wins}/16 wins, ${r.losses} losses · EP ${r.ep}/100${r.banked?" · 1 point banked":""}</span><div class="row">${cur?"":(r.src&&!r.dead?`<button data-rl="${esc(k)}">Play this fighter</button>`:`<span class="mut">${r.dead?"Run over.":"Load once from the builder to attach its gear."}</span>`)}<button data-rd="${esc(k)}">Erase</button></div></div>`; }).join("");
-  el.querySelectorAll("[data-rl]").forEach(b=>b.onclick=()=>{ const r=REC[b.dataset.rl]; if(r&&r.src) setMe(fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx})),"Switched to "+r.name+". Your other fighters keep their records."); });
+  el.querySelectorAll("[data-rl]").forEach(b=>b.onclick=()=>{ const r=REC[b.dataset.rl]; if(r&&r.src) setMe(fromBuilder(Object.assign({},freshSrc(r),{st:r.st,dx:r.dx})),"Switched to "+r.name+" (gear from the builder if it holds this fighter). Your other fighters keep their records."); });
   el.querySelectorAll("[data-rd]").forEach(b=>b.onclick=()=>{ const k=b.dataset.rd, r=REC[k]; if(!r||!confirm("Erase the record for "+r.name+"? Wins, EP and earned points are lost. The hall of fame is not affected.")) return; delete REC[k]; saveRec(); if(me&&recKey(me)===k){ me=null; G=null; $("me").innerHTML=""; $("foe").innerHTML=""; ui(); drawMap(); } renderRoster(); });
 }
 $("bExp").onclick=()=>{ const t=JSON.stringify({v:1,rec:REC,hof:HOF}), ta=$("rx"); ta.style.display="block"; $("bRxGo").style.display="none"; ta.value=t; ta.select(); copyText(t); $("msg").textContent="Roster and hall of fame copied. Save the text somewhere safe, for example in a note."; };
@@ -687,7 +689,7 @@ $("foeSel").onchange=()=>{ const v=$("foeSel").value;
   else if(v.startsWith("p:")){ foeMode={k:"preset",id:v.slice(2)}; renderFoeCfg(""); if(me) newFoe(); }
   else renderFoeCfg(v); };
 renderFoeSel(); renderHof();
-try{ const last=localStorage.getItem("melee-arena-last"), r=last&&REC[last]; if(r&&r.src&&!r.dead) setMe(fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx})),"Welcome back. Resumed "+r.name+"."); }catch(e){}
+try{ const last=localStorage.getItem("melee-arena-last"), r=last&&REC[last]; if(r&&r.src&&!r.dead) setMe(fromBuilder(Object.assign({},freshSrc(r),{st:r.st,dx:r.dx})),"Welcome back. Resumed "+r.name+" (gear from the builder if it holds this fighter)."); }catch(e){}
 renderRoster();
 ui(); drawMap();
 </script></body></html>
