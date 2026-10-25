@@ -104,7 +104,7 @@ makeOpponent follows two rules: (1) the weapon that does the most damage for its
 Added to the Wizard arena and the duel: Speed Movement (self, 2 ST, doubles MA for 4 turns; cancels Slow Movement), Dazzle (special, 3 ST, −3 DX for 3 turns, within 5 megahexes; not added on top of Blur's −4), Blast (special, 2 ST, 1 die to the enemy next to you, armor and Stone/Iron Flesh stop it), Break Weapon (3 ST, weapon does half damage, shield or staff is destroyed), Remove Thrown Spell (2 ST, on the enemy or on yourself: ends Blur, Stone/Iron Flesh, Slow, Stop, Speed, Clumsiness, Aid, Sleep, Freeze), Spell Shield (3 ST +1 a turn, nothing can be cast on you, and you cannot cast on yourself; a spell that is stopped still costs the caster its full price) and Death Spell (the weaker of the two dies, the stronger loses the weaker's ST; equal ST kills both; a Spell Shield costs the caster just 1 ST).
 - Special spells (Blast, Dazzle) are like thrown spells: a miss costs 1 ST.
 - In the duel, Spell Shield is secret like Stone and Iron Flesh and is renewed in secret.
-- Broken weapons are tracked by weapon id, so picking up another weapon of the same kind keeps the break. Shock Shield, Confusion and Teleport are still to do.
+- Broken weapons are tracked by weapon id, so picking up another weapon of the same kind keeps the break. Shock Shield and Confusion are still to do.
 - Tests: S25 to S35 in tests/spells_test.py.
 
 ### Reverse Missiles
@@ -112,3 +112,6 @@ Added to the Wizard arena and the duel: Speed Movement (self, 2 ST, doubles MA f
 
 ### Flight
 3 ST, +1 a turn, IQ 13, cast on yourself. The wizard takes off at the start of next turn: MA 6 on the first turn in the air, then 12. Fliers and ground figures do not engage each other (two fliers do), so a flier moves freely around a ground figure (it cannot yet fly over its hex). Attacks and spells aimed at a flier are −4 DX; a flier is −2 on melee attacks and on casting at others, −4 with missile or thrown weapons. A flier cannot be tripped or grappled. When the wizard stops renewing, or Remove Thrown Spell or Sleep hits, it lands and cannot move on the ground that turn. The computer wizard does not cast Flight. Tests S39 to S41.
+
+### Teleport
+Special spell, IQ 15. You pick the hex on the map after choosing the spell; it costs 1 ST per megahex moved (at least 1) and needs a to-hit roll on your adjDX with no range penalty (a miss costs 1 ST, a fizzle the full price). You arrive facing the enemy and leave any hand-to-hand. You cannot pick the enemy's hex (the rules would kill both of you), and nothing else on this map is solid. Spell Shield does not stop it, since it only moves you. The computer wizard does not cast it. Tests S42 and S43.

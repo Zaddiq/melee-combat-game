@@ -461,6 +461,7 @@ const SP={
  "Stone Flesh":{k:"T",cost:()=>2,self:1,cont:"stone"},
  "Stop":{k:"T",cost:()=>3},
  "Iron Flesh":{k:"T",cost:()=>3,self:1,cont:"iron"},
+ "Teleport":{k:"S",cost:()=>1,tele:1},
  "Flight":{k:"T",cost:()=>3,self:1,cont:"fly"},
  "Reverse Missiles":{k:"T",cost:()=>2,self:1,cont:"rev"},
  "Speed Movement":{k:"T",cost:()=>2,self:1},
@@ -482,6 +483,7 @@ function castList(u,o){
   for(const name of Object.keys(SP)){ if(!known.has(name)) continue; const d=SP[name];
     if(d.k==="M"){ if(!front) continue; const mh=mhDist(u,o), dx=base+fy+mhPen(mh)+(o.blur?-4+(u.daz>0?3:0):0);
       for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less; ${mh} megahex${mh===1?"":"es"} away)`}); continue; }
+    if(d.k==="S"&&d.tele){ L.push({sp:name,cost:1,dx:base,tele:1,label:`Teleport (1 ST per megahex moved, at least 1; needs ${base} or less; you choose the hex next and face the enemy there)`}); continue; }
     if(d.k==="S"){ const mhd=mhDist(u,o); if(d.rng===1?dist(u,o)>1:mhd>d.rng) continue; if(d.cost(o)>mx) continue;
       const dx=base+(d.rng===1?fy-dist(u,o):0)+(o.blur&&u.daz>0?3:0); L.push({sp:name,cost:d.cost(o),dx,label:`${name} (${d.cost(o)} ST; needs ${dx} or less${name==="Dazzle"?"; −3 DX for 3 turns to everyone with eyes within 5 megahexes":"; 1 die of damage to everything in your hex and the hexes next to you"})`}); continue; }
     if(d.rm){ const dxr=base+fy-dist(u,o)+(o.blur?-4:0)+(o.blur&&u.daz>0?3:0);
@@ -499,8 +501,10 @@ function castList(u,o){
 }
 function payST(u,c){ u.hp-=c; }
 function doCast(u,o,pa){
-  const c=castList(u,o).find(x=>x.sp===pa.sp&&(pa.n==null||x.n===pa.n)&&(pa.on==null||x.on===pa.on));
+  let c=castList(u,o).find(x=>x.sp===pa.sp&&(pa.n==null||x.n===pa.n)&&(pa.on==null||x.on===pa.on));
   if(!c){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} cast that now.`); return; }
+  if(c.tele){ const h=pa.dest&&P.find(x=>x.q===pa.dest.q&&x.r===pa.dest.r); const tc=h?Math.max(1,mhDist(u,h)):0;
+    if(!h||same(h,o)||same(h,u)||tc>u.hp){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} teleport there.`); return; } c=Object.assign({},c,{cost:tc,dest:h,label:`Teleport ${tc} megahex${tc>1?"es":""}`}); }
   const d=SP[c.sp], dice=rollN(3), t=sum(dice); let hit,mult=1,fizz=false;
   if(t===3){hit=true;mult=3;} else if(t===4){hit=true;mult=2;} else if(t===5)hit=true; else if(t>=16){hit=false;fizz=t>=17;} else hit=t<=c.dx;
   const head=`${sub(u)} ${vb(u,"cast","casts")} ${c.sp}${c.n?" with "+c.n+" ST":""} (needs ${c.dx} or less on 3d6, rolled ${t}${mult===3?": triple effect":mult===2?": double effect":""})`;
@@ -511,7 +515,7 @@ function doCast(u,o,pa){
     endCheck(); return; }
   payST(u,c.cost);
   { const T0=(d.self||c.on==="self")?u:o;
-    if(T0.shield&&T0!==u&&c.sp!=="Spell Shield"){ const x=c.sp==="Death Spell"?1:0; if(x) payST(u,1); lg(`${head}: it works, but ${sub(o)} ${vb(o,"are","is")} protected by a Spell Shield, so nothing happens. ${sub(u)} ${vb(u,"lose","loses")} ${c.cost+x} ST.`); endCheck(); return; } }
+    if(T0.shield&&T0!==u&&!c.tele&&c.sp!=="Spell Shield"){ const x=c.sp==="Death Spell"?1:0; if(x) payST(u,1); lg(`${head}: it works, but ${sub(o)} ${vb(o,"are","is")} protected by a Spell Shield, so nothing happens. ${sub(u)} ${vb(u,"lose","loses")} ${c.cost+x} ST.`); endCheck(); return; } }
   if(d.k==="M"){
     let O=o, U=u; if(o.rev){ if(u.rev){ lg(`${head}: HIT, but both wizards are protected by Reverse Missiles and the missile flies back and forth, harming no one.`); endCheck(); return; } O=u; U=o; lg(`${head}: HIT, but Reverse Missiles turns it back on ${sub(u)}!`); }
     const dice2=rollN(c.n), raw=Math.max(c.n,sum(dice2)-d.sub*c.n), full=raw*mult, st=stopsFor(O,U,null,"missile"), hits=Math.max(0,full-st);
@@ -521,6 +525,7 @@ function doCast(u,o,pa){
       else if(c.sp==="Magic Fist"&&full>=6&&O.hp>0&&!O.down){ const sv=sum(rollN(3)), lim=Math.max(O.hp,adjDXu(O,"single",null)); if(sv>lim){ O.down=true; O.low=null; lg(`The blow trips ${sub(O)} (rolled ${sv} against ${lim}).`); } else lg(`${sub(O)} ${vb(O,"keep","keeps")} ${vb(O,"your","their")} feet (rolled ${sv} against ${lim}).`); } }
     endCheck(); return; }
   const m=mult, T=d.self?u:o, nn=c.n||1; let msg="";
+  if(c.tele){ u.q=c.dest.q; u.r=c.dest.r; u.f=faceToward(u,o); u.low=null; if(u.hth){ u.hth=false; o.hth=false; } lg(`${head}: it works (${c.cost} ST). ${sub(u)} ${vb(u,"vanish","vanishes")} and ${vb(u,"reappear","reappears")} in another hex, facing ${vb(u,"the enemy","the enemy")}.`); endCheck(); return; }
   if(d.k==="S"&&c.sp==="Blast"){ const dr=rollN(1), full=sum(dr)*m, st=stopsFor(o,u,null,"missile"), hits=Math.max(0,full-st);
     lg(`${head}: it works (2 ST). 1 die (${dr.join("")})${m>1?" ×"+m+" = "+full:""}; armor and protection stop ${Math.min(st,full)}. ${hits?sub(o)+" "+vb(o,"take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
     if(hits>0){ o.hp-=hits; o.hits+=hits; o.tookHit=true; o.sleep=false; lg(`${o.p.name}'s ST is now ${Math.max(o.hp,0)}.`); if(o.hits>=8&&o.hp>0&&!o.down){ o.down=true; o.low=null; lg(`${sub(o)} ${vb(o,"are","is")} knocked down by ${o.hits} hits!`); } }
@@ -773,7 +778,7 @@ function ui(){
     b=G.opts.length?G.opts.map((o,i)=>`<button data-opt="${i}"${i===0&&o.t!=="none"?' class="pri"':""}>${esc(o.label)}</button>`).join(""):`<button class="pri" data-opt="-1">Continue</button>`; }
   else if(G.phase==="renew"){ t="Renew your spells? Each costs 1 ST this turn. Spells you do not renew end now."; b=G.rlist.map((r,i)=>`<button data-rn="${i}"${r.on?' class="pri"':""}>${r.on?"Keep ":"Drop "}${CONTN[r.k]} (1 ST)</button>`).join("")+`<button class="pri" id="bRn">Done</button>`; }
   else if(G.phase==="spells"){ t="Choose a spell. A thrown spell that misses costs 1 ST, a missile spell costs everything you put into it, and a roll of 17 or 18 costs the full price."; b=G.sopts.map((x,i)=>`<button data-sp="${i}">${esc(x.label)}</button>`).join("")+`<button id="bBack">Back</button>`; }
-  else if(G.phase==="dest"){ t="Click the highlighted hex on the map that you want to disengage into (on a phone, scroll to the map)."; b=`<button id="bBack">Back</button>`; }
+  else if(G.phase==="dest"){ t="Click the highlighted hex on the map that you want to disengage or teleport into (on a phone, scroll to the map)."; b=`<button id="bBack">Back</button>`; }
   else if(G.phase==="retreat"){ t=`You hit ${esc(foe.name)} and took no hits, so you may force a retreat: click a highlighted hex on the map to push them there (on a phone, scroll to the map). Or skip it.`; b=`<button id="bSkip">Skip the retreat</button>`; }
   else if(G.phase==="advance"){ t="Move into the hex they left, or hold your ground?"; b=`<button class="pri" id="bAdv">Advance</button><button id="bStay">Stay</button>`; }
   else if(G.phase==="over"){ t=A.hp<=0?(A.hp<0?"You have fallen.":"You fall unconscious at ST 0. You live, but this fight is lost (no EP)."):`Victory! +${G.gain||50} EP.`;
@@ -783,9 +788,9 @@ function ui(){
   const lgE=$("log"); if(lgE) lgE.scrollTop=lgE.scrollHeight;
   const on=(id,f)=>{const e=$(id); if(e)e.onclick=f;};
   on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bUn",undoMove);
-  on("bSkip",()=>{lg("You do not force a retreat.");endTurn();ui();drawMap();}); on("bBack",()=>{G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false)); on("bNew",()=>newFoe());
+  on("bSkip",()=>{lg("You do not force a retreat.");endTurn();ui();drawMap();}); on("bBack",()=>{G.destX=null;G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false)); on("bNew",()=>newFoe());
   c.querySelectorAll("[data-rn]").forEach(e=>e.onclick=()=>{ const r=G.rlist[+e.dataset.rn]; r.on=!r.on; ui(); }); on("bRn",doRenew);
-  c.querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>{ const x=G.sopts[+e.dataset.sp]; resolveTurn({t:"cast",sp:x.sp,n:x.n,on:x.on}); });
+  c.querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>{ const x=G.sopts[+e.dataset.sp]; if(x.tele){ const U=G.me, V=G.foe; G.destT="cast"; G.destX={sp:"Teleport"}; G.phase="dest"; G.dopts=new Map(P.filter(h=>!same(h,U)&&!same(h,V)&&Math.max(1,mhDist(U,h))<=U.hp).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } resolveTurn({t:"cast",sp:x.sp,n:x.n,on:x.on}); });
   c.querySelectorAll("[data-opt]").forEach(e=>e.onclick=()=>{
     const o=G.opts[+e.dataset.opt]||{t:"none"};
     if(o.t==="cast"){ G.sopts=castList(G.me,G.foe); G.phase="spells"; ui(); drawMap(); }
@@ -849,7 +854,7 @@ function drawMap(){
   m.querySelectorAll("polygon[data-k]").forEach(e=>e.onclick=()=>{myStart=e.dataset.k;drawMap();});
   m.querySelectorAll("[data-go]").forEach(e=>e.onclick=()=>{ const r=G.reach.get(e.dataset.go); G.me.q=r.q; G.me.r=r.r; G.moved=r.c; ui(); drawMap(); });
   m.querySelectorAll("[data-face]").forEach(e=>e.onclick=()=>{ G.me.f=+e.dataset.face; drawMap(); });
-  m.querySelectorAll("[data-dest]").forEach(e=>e.onclick=()=>{ resolveTurn({t:G.destT||"disengage",dest:G.dopts.get(e.dataset.dest)}); });
+  m.querySelectorAll("[data-dest]").forEach(e=>e.onclick=()=>{ resolveTurn(Object.assign({t:G.destT||"disengage",dest:G.dopts.get(e.dataset.dest)},G.destX||{}));  G.destX=null; });
   m.querySelectorAll("[data-ret]").forEach(e=>e.onclick=()=>{ doRetreat(G.ropts.get(e.dataset.ret)); });
 }
 

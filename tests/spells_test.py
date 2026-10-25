@@ -12,7 +12,7 @@ JS=r'''
  let saved=rollN; const dice=(...q)=>{rollN=n=>{ if(!q.length) throw new Error("dice queue empty"); return q.shift(); };};
  const fresh=(a,b)=>{G={me:a,foe:b,log:[],floor:[],phase:"x",turn:1,settled:true}; me={name:"Me",rec:null,st:a.p.st,dx:a.p.dx}; foe=b.p; };
 
- const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles","Flight"];
+ const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles","Flight","Teleport"];
  const wz=(o)=>mkF(Object.assign({name:"Wiz",cls:"wizard",st:14,dx:13,iq:14,spells:ALL.filter(x=>x!=="Staff"),silver:true},o));
  const pair=(wo,fo,rear)=>{ const w=unit(wz(wo||{}),A,0), f=unit(mkF(Object.assign({name:"Foe",st:12,dx:12,a:"shortsw"},fo||{})),B,0); fresh(w,f); face(w,f); return [w,f]; };
  const cast=(w,f,sp,n)=>{ w.act={t:"cast",sp,n}; doCast(w,f,w.act); };
@@ -60,6 +60,9 @@ JS=r'''
  ok("S39 Flight: 3 ST, +1 a turn; in the air from next turn, half MA (6) first turn then 12; not engaged by a ground figure",(()=>{ const [w,f]=pair(); dice([3,3,2]); cast(w,f,"Flight"); const a=w.fly&&!w.air&&w.hp===11&&CONT.includes("fly"); w.air=true; w.airN=1; const b=MAu(w)===6; w.airN=2; return a&&b&&MAu(w)===12&&!isEngaged(w,f)&&!isEngaged(f,w); })());
  ok("S40 attacks on a flier are -4 DX; a flier attacks at -2 (-4 with missile weapons); spells at a flier -4, spells it casts -2",(()=>{ const [w,f]=pair(); const b0=adjDXu(f,"single",w), c0=adjDXu(w,"single",f), s0=castList(w,f).find(x=>x.sp==="Trip").dx; w.air=true; return adjDXu(f,"single",w)===b0-4&&adjDXu(w,"single",f)===c0-2&&castList(f.p.cls==="wizard"?f:w,f)!==null&&castList(w,f).find(x=>x.sp==="Trip").dx===s0-2&&shotDX(w,f,"lbow","missile")===shotDX(f,w,"lbow","missile")-4+0-0-0+(adjDXu(w,"single",null)-adjDXu(f,"single",null))+4; })());
  ok("S41 a flier cannot be tripped, cannot be grappled, and lands (no ground move that turn) when Flight lapses or is removed",(()=>{ const [w,f]=pair(); f.air=true; f.fly=true; dice([3,3,2]); cast(w,f,"Trip"); const a=!f.down; const b=!canHth(w,f); dice([3,3,2]); cast(w,f,"Remove Thrown Spell"); return a&&b&&!f.air&&!f.fly&&MAu(f)===0; })());
+
+ ok("S42 Teleport: 1 ST per megahex moved, you arrive facing the enemy; a miss costs 1 ST",(()=>{ const [w,f]=pair(); const far=P.filter(h=>!same(h,f)&&mhDist(A,h)===3)[0]; dice([3,3,2]); w.act={t:"cast",sp:"Teleport",dest:far}; doCast(w,f,w.act); const a=w.q===far.q&&w.r===far.r&&w.hp===14-3&&w.f===faceToward(w,f); const [w2,f2]=pair(); dice([5,6,5]); w2.act={t:"cast",sp:"Teleport",dest:far}; doCast(w2,f2,w2.act); return a&&w2.q===A.q&&w2.hp===13; })());
+ ok("S43 Teleport cannot go into the enemy's hex or cost more ST than you have",(()=>{ const [w,f]=pair(); doCast(w,f,{t:"cast",sp:"Teleport",dest:{q:f.q,r:f.r}}); const a=w.q===A.q; w.hp=2; const far=P.filter(h=>!same(h,f)&&mhDist(A,h)>=4)[0]; doCast(w,f,{t:"cast",sp:"Teleport",dest:far}); return a&&w.q===A.q&&w.hp===2; })());
 
  return R;
 }'''
