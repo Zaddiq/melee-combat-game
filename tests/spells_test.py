@@ -12,7 +12,7 @@ JS=r'''
  let saved=rollN; const dice=(...q)=>{rollN=n=>{ if(!q.length) throw new Error("dice queue empty"); return q.shift(); };};
  const fresh=(a,b)=>{G={me:a,foe:b,log:[],floor:[],phase:"x",turn:1,settled:true}; me={name:"Me",rec:null,st:a.p.st,dx:a.p.dx}; foe=b.p; };
 
- const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh"];
+ const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell"];
  const wz=(o)=>mkF(Object.assign({name:"Wiz",cls:"wizard",st:14,dx:13,iq:14,spells:ALL.filter(x=>x!=="Staff"),silver:true},o));
  const pair=(wo,fo,rear)=>{ const w=unit(wz(wo||{}),A,0), f=unit(mkF(Object.assign({name:"Foe",st:12,dx:12,a:"shortsw"},fo||{})),B,0); fresh(w,f); face(w,f); return [w,f]; };
  const cast=(w,f,sp,n)=>{ w.act={t:"cast",sp,n}; doCast(w,f,w.act); };
@@ -40,6 +40,18 @@ JS=r'''
  ok("S22 a Magic Fist doing 6 or more hits can trip its target",(()=>{ const [w,f]=pair({},{st:20}); dice([3,3,2],[6,6,6],[6,6,6]); cast(w,f,"Magic Fist",3); return f.down===true&&f.hp===8; })());
  ok("S23 spell upkeep: a continuing spell is kept for 1 ST or dropped",(()=>{ const [w,f]=pair(); w.blur=true; G.me=w; G.foe=f; const before=w.hp; G.rlist=[{k:"blur",on:true}]; G.afterRenew=()=>{}; doRenew(); return w.blur&&w.hp===before-1; })());
  ok("S24 the computer wizard opponent knows spells, carries a staff and casts something sensible",(()=>{ me=fromBuilder({name:"Me",race:"human",cls:"fighter",st:12,dx:12,iq:8,a:"shortsw",armor:"leather",d1:"dagger"}); const f=makeWizard(); return f.cls==="wizard"&&f.right==="staff"&&f.spells.length>5&&f.iq>=11; })());
+
+ ok("S25 Speed Movement doubles MA for 4 turns; with Slow Movement they cancel",(()=>{ const [w,f]=pair(); const m0=MAu(w); dice([3,3,2]); cast(w,f,"Speed Movement"); const a=MAu(w)===2*m0&&w.spd===4&&w.hp===12; w.slow=2; return a&&MAu(w)===m0; })());
+ ok("S26 Dazzle: -3 DX for 3 turns, 3 ST, not stacked with Blur's -4",(()=>{ const [w,f]=pair(); const b0=adjDXu(f,"single",null); dice([3,3,2]); cast(w,f,"Dazzle"); const a=f.daz===3&&adjDXu(f,"single",null)===b0-3&&w.hp===11; w.blur=true; return a&&adjDXu(f,"single",w)===b0-4; })());
+ ok("S27 Blast: 1 die to everyone adjacent, armor stops it, 2 ST",(()=>{ const [w,f]=pair({},{armor:"none"}); dice([3,3,2],[5]); cast(w,f,"Blast"); const a=f.hp===7&&w.hp===12; const [w2,f2]=pair({},{armor:"leather"}); dice([3,3,2],[5]); cast(w2,f2,"Blast"); return a&&f2.hp===12-3; })());
+ ok("S28 Blast and Dazzle are special spells: a miss loses just 1 ST; Dazzle reaches 5 megahexes",(()=>{ const [w,f]=pair(); dice([5,6,5]); cast(w,f,"Blast"); const a=w.hp===13&&f.hp===12; const [w2,f2]=pair(); const d=castList(w2,f2).find(x=>x.sp==="Dazzle"); return a&&!!d&&d.dx===castBase(w2); })());
+ ok("S29 Break Weapon halves a weapon's damage; staves and shields are destroyed",(()=>{ const [w,f]=pair({},{a:"broad",st:14}); dice([3,3,2]); cast(w,f,"Break Weapon"); const a=f.brkW==="broad" ; const [w2,f2]=pair({},{a:"shortsw",b:"smallsh"}); dice([3,3,2]); cast(w2,f2,"Break Weapon"); return !!a&&f2.brkW==="shortsw"; })());
+ ok("S30 a broken weapon: the rolled total is halved, rounded down",(()=>{ const [w,f]=pair({},{a:"shortsw"}); f.brkW="shortsw"; dice([3,2]); const r=dmgRoll(f,"shortsw"); return r.total===Math.floor((5+W.shortsw.m)/2); })());
+ ok("S31 Remove Thrown Spell ends the target's thrown spells",(()=>{ const [w,f]=pair(); f.blur=true; f.stone=true; f.slow=3; dice([3,3,2]); cast(w,f,"Remove Thrown Spell"); return !f.blur&&!f.stone&&f.slow===0&&w.hp===12; })());
+ ok("S32 Spell Shield: spells cast at the subject do nothing and the caster loses the full cost",(()=>{ const [w,f]=pair(); f.shield=true; dice([3,3,2]); cast(w,f,"Slow Movement"); const a=f.slow===0&&w.hp===12; dice([3,3,2],[6,6]); cast(w,f,"Lightning",2); return a&&f.hp===12&&w.hp===10; })());
+ ok("S33 Spell Shield costs 3 ST, +1 per turn, and also blocks the wizard's own spells",(()=>{ const [w,f]=pair(); dice([3,3,2]); cast(w,f,"Spell Shield"); const a=w.shield&&w.hp===11&&CONT.includes("shield"); return a&&!castList(w,f).some(x=>x.sp==="Blur"); })());
+ ok("S34 Death Spell: the weaker dies, the stronger loses the weaker's ST; Spell Shield costs the caster only 1",(()=>{ const [w,f]=pair({st:20},{st:8}); dice([3,3,2]); cast(w,f,"Death Spell"); const a=f.hp===-1&&w.hp===12; const [w2,f2]=pair({st:8},{st:20}); dice([3,3,2]); cast(w2,f2,"Death Spell"); const b=w2.hp===-1; const [w3,f3]=pair(); f3.shield=true; dice([3,3,2]); cast(w3,f3,"Death Spell"); return a&&b&&w3.hp===13&&f3.hp===12; })());
+ ok("S35 the computer wizard can know the new spells",(()=>{ me=fromBuilder({name:"Me",race:"human",cls:"fighter",st:12,dx:12,iq:8,a:"shortsw",armor:"leather",d1:"dagger"}); let seen=false; for(let i=0;i<40&&!seen;i++){ const f=makeWizard(); if(f.spells.includes("Dazzle")) seen=true; } return seen; })());
 
  return R;
 }'''

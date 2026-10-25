@@ -25,7 +25,7 @@ svg{width:100%;height:auto;max-height:80vh}
 </style></head><body><main>
 <h1>Wizard Arena <span class="chip">beta</span></h1>
 <p style="margin:0 0 6px"><a href="index.html" style="color:var(--acc)">← Menu</a> · <a href="builder.html" style="color:var(--acc)">Character builder</a> · <a href="sim.html" style="color:var(--acc)">Fight simulator</a></p>
-<p class="mut">The Melee arena plus spells (a first batch: Magic Fist, Fireball, Lightning, Blur, Drop Weapon, Trip, Slow Movement, Stop, Sleep, Freeze, Clumsiness, Aid, Stone Flesh, Iron Flesh). Pick the opponent “Wizard” to fight a spellcaster. Basic fight against a computer opponent matched to your ST+DX. Missile and thrown weapons are in: arrows are unlimited, and range is counted in megahexes.</p>
+<p class="mut">The Melee arena plus spells (Magic Fist, Fireball, Lightning, Blur, Drop Weapon, Trip, Slow Movement, Stop, Sleep, Freeze, Clumsiness, Aid, Stone Flesh, Iron Flesh, Speed Movement, Dazzle, Blast, Break Weapon, Remove Thrown Spell, Spell Shield, Death Spell). Pick the opponent “Wizard” to fight a spellcaster. Basic fight against a computer opponent matched to your ST+DX. Missile and thrown weapons are in: arrows are unlimited, and range is counted in megahexes.</p>
 <div class="grid"><div>
  <div class="card"><h2>Fight</h2><div id="ctl" class="mut">Load a fighter first (the box below).</div></div>
  <details class="setup" id="setup" open><summary>Fighter and opponent</summary>
@@ -87,7 +87,7 @@ function adjDX(f){ /* starting gear, old Melee/Wizard penalties as the builder c
   return a;
 }
 const MA=f=>{let m=ARMOR[f.armor].ma; if(f.race==="elf"){ if(f.armor==="none"||f.armor==="cloth")m=12; else if(f.armor==="leather")m=10; } return m;};
-const MAu=u=>u.stop>0?0:u.slow>0?Math.floor(MA(u.p)/2):MA(u.p);
+const MAu=u=>{ if(u.stop>0) return 0; let m=MA(u.p); if(u.spd>0) m*=2; if(u.slow>0) m=Math.floor(m/2); return m; };
 const stops=f=>ARMOR[f.armor].stops+[f.right,f.left].reduce((t,k)=>t+(SHIELDS[k]?SHIELDS[k].stops:0),0)+(f.left==="mg"?1:0);
 const iname=k=>k==="none"?"nothing":(W[k]||SHIELDS[k]).n;
 function dmg(f,k){ if(!W[k]||W[k].miss)return""; let m=W[k].m; return dice(W[k].d,m); }
@@ -278,7 +278,7 @@ function startHexes(){
   myStart=key(mine.q,mine.r);
   return {bottom,top,mine,theirs:front(top,-1)};
 }
-const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,cool:0,usedLast:false,dodging:false,
+const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
 function startFight(){
   if(!me||!foe)return; const s=startHexes();
@@ -290,7 +290,7 @@ function startFight(){
 }
 function nextTurn(){
   for(const u of [G.me,G.foe]){ if(u.hits>=5)u.wound2=true; u.hits=0; if(u.cool>0)u.cool--; u.dodging=false; if(!isEngaged(u,u===G.me?G.foe:G.me))u.usedLast=false; u.from={q:u.q,r:u.r}; u.extra=0; u.poleVs=false; u.pri=false; u.dealt=u.tookHit=u.defending=false; u.act=null; u.standUp=false; u.moved=0; u.engStart=false;
-    for(const k of ["slow","stop","clum","aid","frozen"]) if(u[k]>0) u[k]--; if(!u.aid) u.aidN=0; if(!u.clum) u.clumN=0; }
+    for(const k of ["slow","stop","spd","daz","clum","aid","frozen"]) if(u[k]>0) u[k]--; if(!u.aid) u.aidN=0; if(!u.clum) u.clumN=0; }
   G.turn++; let a,b; do{a=d6();b=d6();}while(a===b);
   lg(`— Turn ${G.turn}. Initiative: you ${a}, ${foe.name} ${b}.`);
   if(G.me.wound2) lg("You took 5 or more hits: DX −2 for your next attack.");
@@ -301,7 +301,7 @@ function nextTurn(){
   const act=CONT.filter(k=>G.me[k]);
   if(act.length&&G.me.hp>0){ G.phase="renew"; G.rlist=act.map(k=>({k,on:G.me.hp>=3})); G.afterRenew=go; } else go();
 }
-const CONT=["blur","stone","iron"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh"};
+const CONT=["blur","stone","iron","shield"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield"};
 function doRenew(){ const u=G.me; for(const r of G.rlist){ if(r.on&&u.hp>=1){ u.hp--; lg(`You keep ${CONTN[r.k]} going (1 ST).`); } else { u[r.k]=false; lg(`Your ${CONTN[r.k]} ends.`); } } G.phase="";
   endCheck(); if(G.phase!=="over"){ const f=G.afterRenew; f(); } }
 function choose(first){ G.order=first?["me","foe"]:["foe","me"]; G.idx=0; lg(first?"You move first.":"You move second."); advance(); ui(); drawMap(); }
@@ -344,7 +344,7 @@ function adjDXu(u,mode,tgt){
   const wp=[u.right,u.left].filter(isW);
   if(p.cls==="wizard"){ if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4 }
   if(u.wound2) a-=2;
-  if(u.aid>0) a+=u.aidN; if(u.clum>0) a-=u.clumN;
+  if(u.aid>0) a+=u.aidN; if(u.clum>0) a-=u.clumN; if(u.daz>0&&!(tgt&&tgt.blur)) a-=3;   /* Dazzle -3, but not on top of Blur's -4 */
   if(tgt&&tgt.blur) a-=4;   /* Blur: -4 to every attack against the subject */
   if(u.poleVs) a+=2;   /* pole weapon, standing still, against a charge */
   if(u.hp<=3) a-=3;
@@ -358,7 +358,7 @@ function stopsFor(d,a,wid,kind){
   if(d.left==="mg"&&r==="front"&&!kind&&wid&&W[wid]&&!W[wid].two&&!W[wid].miss) s+=1;   /* parries one-handed non-missile weapons only */
   return s;
 }
-function dmgRoll(u,id){ const w=W[id]; let m=w.m; const dice=rollN(w.d+(u.extra?1:0)); return {dice,m,total:Math.max(0,sum(dice)+m)}; }
+function dmgRoll(u,id){ const w=W[id]; let m=w.m; const dice=rollN(w.d+(u.extra?1:0)); let total=Math.max(0,sum(dice)+m); if(u.brkW===id) total=Math.floor(total/2); return {dice,m,total}; }
 /* ---- pole weapons and shield-rush (Melee 2018 p. 12-13) ---- */
 const ATK=["attack","dual","rush"];
 const poleOf=u=>[u.right,u.left].find(k=>W[k]&&W[k].pole&&!SHIELDS[k])||null;
@@ -459,19 +459,36 @@ const SP={
  "Freeze":{k:"T",cost:()=>4,ok:o=>o.p.st<30},
  "Stone Flesh":{k:"T",cost:()=>2,self:1,cont:"stone"},
  "Stop":{k:"T",cost:()=>3},
- "Iron Flesh":{k:"T",cost:()=>3,self:1,cont:"iron"}
+ "Iron Flesh":{k:"T",cost:()=>3,self:1,cont:"iron"},
+ "Speed Movement":{k:"T",cost:()=>2,self:1},
+ "Break Weapon":{k:"T",cost:()=>3,ok:o=>!!brkItem(o)},
+ "Remove Thrown Spell":{k:"T",cost:()=>2,rm:1},
+ "Spell Shield":{k:"T",cost:()=>3,self:1,cont:"shield"},
+ "Death Spell":{k:"T",cost:()=>0},
+ "Blast":{k:"S",cost:()=>2,rng:1},
+ "Dazzle":{k:"S",cost:()=>3,rng:5}
 };
+const RMV=["blur","stone","iron","slow","stop","spd","clum","aid","sleep","frozen"];
+const rmCount=u=>RMV.filter(k=>u[k]).length;
+function brkItem(o){ const w=[o.right,o.left].find(k=>isW(k)&&!SHIELDS[k]&&k!==o.brkW); if(w) return w; const sh=[o.left,o.right].find(k=>SHIELDS[k]); return sh||null; }
 const ironU=u=>u.p.cls==="wizard"&&!u.p.silver&&(["chain","halfplate","plate"].includes(u.p.armor)||[u.right,u.left].some(k=>isW(k)&&k!=="staff"));
 function castBase(u){ return adjDXu(u,"single",null)-(ironU(u)?4:0); }
 function castList(u,o){
   const L=[]; if(u.p.cls!=="wizard"||u.down||u.hp<=0) return L;
   const known=new Set(u.p.spells||[]), front=inFront(u,o), near=dist(u,o)<=1, base=castBase(u), mx=u.hp;
   for(const name of Object.keys(SP)){ if(!known.has(name)) continue; const d=SP[name];
-    if(d.k==="M"){ if(!front) continue; const mh=mhDist(u,o), dx=base+mhPen(mh)+(o.blur?-4:0);
+    if(d.k==="M"){ if(!front) continue; const mh=mhDist(u,o), dx=base+mhPen(mh)+(o.blur?-4+(u.daz>0?3:0):0);
       for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less; ${mh} megahex${mh===1?"":"es"} away)`}); continue; }
+    if(d.k==="S"){ const mhd=mhDist(u,o); if(d.rng===1?dist(u,o)>1:mhd>d.rng) continue; if(d.cost(o)>mx) continue;
+      const dx=base-(d.rng===1?dist(u,o):0)+(o.blur&&u.daz>0?3:0); L.push({sp:name,cost:d.cost(o),dx,label:`${name} (${d.cost(o)} ST; needs ${dx} or less${name==="Dazzle"?"; −3 DX for 3 turns to everyone with eyes within 5 megahexes":"; 1 die of damage to everything in your hex and the hexes next to you"})`}); continue; }
+    if(d.rm){ const dxr=base-dist(u,o)+(o.blur?-4:0)+(o.blur&&u.daz>0?3:0);
+      if(mx>=2&&!u.shield&&(rmCount(u)&&["slow","stop","clum","spd","aid"].some(k=>u[k]))) L.push({sp:name,on:"self",cost:2,dx:base,label:`${name} on yourself (2 ST; needs ${base} or less): ends your own thrown spells`});
+      if(mx>=2&&(front||near)&&rmCount(o)) L.push({sp:name,on:"foe",cost:2,dx:dxr,label:`${name} on the enemy (2 ST; needs ${dxr} or less): ends its thrown spells`}); continue; }
+    if(name==="Death Spell"){ if(!(front||near)) continue; const dxd=base-dist(u,o)+(o.blur?-4:0)+(o.blur&&u.daz>0?3:0); L.push({sp:name,cost:0,dx:dxd,label:`${name} (needs ${dxd} or less; the weaker of you two dies and the stronger loses the weaker's ST: yours is ${u.hp}, theirs ${o.hp})`}); continue; }
     if(d.cont&&u[d.cont]) continue; if(d.cont==="stone"&&u.iron) continue;
+    if(d.self&&u.shield) continue;   /* a Spell Shield keeps out the wizard's own spells too */
     if(!d.self){ if(!(front||near)) continue; if(d.ok&&!d.ok(o)) continue; }
-    const dx=base-(d.self?0:dist(u,o))+(d.self||!o.blur?0:-4);
+    const dx=base-(d.self?0:dist(u,o))+(d.self||!o.blur?0:-4)+(!d.self&&o.blur&&u.daz>0?3:0);
     if(d.v){ for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less)${name==="Clumsiness"?`: −${2*n} DX for ${o.p.st>=30?1:3} turns`:`: +${n} DX for 2 turns`}`}); }
     else { const c=d.cost(o); if(c>mx) continue; L.push({sp:name,cost:c,dx,label:`${name} (${c} ST${d.cont?", +1 each turn":""}; needs ${dx} or less)`}); }
   }
@@ -479,17 +496,19 @@ function castList(u,o){
 }
 function payST(u,c){ u.hp-=c; }
 function doCast(u,o,pa){
-  const c=castList(u,o).find(x=>x.sp===pa.sp&&(pa.n==null||x.n===pa.n));
+  const c=castList(u,o).find(x=>x.sp===pa.sp&&(pa.n==null||x.n===pa.n)&&(pa.on==null||x.on===pa.on));
   if(!c){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} cast that now.`); return; }
   const d=SP[c.sp], dice=rollN(3), t=sum(dice); let hit,mult=1,fizz=false;
   if(t===3){hit=true;mult=3;} else if(t===4){hit=true;mult=2;} else if(t===5)hit=true; else if(t>=16){hit=false;fizz=t>=17;} else hit=t<=c.dx;
   const head=`${sub(u)} ${vb(u,"cast","casts")} ${c.sp}${c.n?" with "+c.n+" ST":""} (needs ${c.dx} or less on 3d6, rolled ${t}${mult===3?": triple effect":mult===2?": double effect":""})`;
   if(!hit){
-    const lost=(d.k==="M"||fizz)?c.cost:1; payST(u,lost);
+    const lost=Math.max(1,(d.k==="M"||fizz)?c.cost:1); payST(u,lost);
     lg(`${head}: ${fizz?"the spell fizzles":"miss"}. ${sub(u)} ${vb(u,"lose","loses")} ${lost} ST${t===18?" and the shock knocks "+vb(u,"you","them")+" down":""}.`);
     if(t===18&&!u.down){ u.down=true; u.low=null; }
     endCheck(); return; }
   payST(u,c.cost);
+  { const T0=(d.self||c.on==="self")?u:o;
+    if(T0.shield&&T0!==u&&c.sp!=="Spell Shield"){ const x=c.sp==="Death Spell"?1:0; if(x) payST(u,1); lg(`${head}: it works, but ${sub(o)} ${vb(o,"are","is")} protected by a Spell Shield, so nothing happens. ${sub(u)} ${vb(u,"lose","loses")} ${c.cost+x} ST.`); endCheck(); return; } }
   if(d.k==="M"){
     const dice2=rollN(c.n), raw=Math.max(c.n,sum(dice2)-d.sub*c.n), full=raw*mult, st=stopsFor(o,u,null,"missile"), hits=Math.max(0,full-st);
     lg(`${head}: HIT. ${c.n} ${c.n>1?"dice":"die"} (${dice2.join("+")}${d.sub?" −"+d.sub*c.n:""} = ${raw})${mult>1?" ×"+mult+" = "+full:""}; armor and protection stop ${Math.min(st,full)}. ${hits?sub(o)+" "+vb(o,"take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
@@ -498,9 +517,19 @@ function doCast(u,o,pa){
       else if(c.sp==="Magic Fist"&&full>=6&&o.hp>0&&!o.down){ const sv=sum(rollN(3)), lim=Math.max(o.hp,adjDXu(o,"single",null)); if(sv>lim){ o.down=true; o.low=null; lg(`The blow trips ${sub(o)} (rolled ${sv} against ${lim}).`); } else lg(`${sub(o)} ${vb(o,"keep","keeps")} ${vb(o,"your","their")} feet (rolled ${sv} against ${lim}).`); } }
     endCheck(); return; }
   const m=mult, T=d.self?u:o, nn=c.n||1; let msg="";
+  if(d.k==="S"&&c.sp==="Blast"){ const dr=rollN(1), full=sum(dr)*m, st=stopsFor(o,u,null,"missile"), hits=Math.max(0,full-st);
+    lg(`${head}: it works (2 ST). 1 die (${dr.join("")})${m>1?" ×"+m+" = "+full:""}; armor and protection stop ${Math.min(st,full)}. ${hits?sub(o)+" "+vb(o,"take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
+    if(hits>0){ o.hp-=hits; o.hits+=hits; o.tookHit=true; o.sleep=false; lg(`${o.p.name}'s ST is now ${Math.max(o.hp,0)}.`); if(o.hits>=8&&o.hp>0&&!o.down){ o.down=true; o.low=null; lg(`${sub(o)} ${vb(o,"are","is")} knocked down by ${o.hits} hits!`); } }
+    endCheck(); return; }
   switch(c.sp){
     case "Blur": u.blur=true; msg="A blur surrounds "+sub(u)+": attacks and spells against it are at −4 DX."; break;
     case "Stone Flesh": u.stone=true; msg=sub(u)+"'s body stops 4 hits per attack."; break;
+    case "Spell Shield": u.shield=true; msg=sub(u)+" is surrounded by a Spell Shield: no spell can be cast on "+(u===G.me?"you":"it")+" while it lasts, and "+sub(u)+" cannot cast on "+(u===G.me?"yourself":"itself")+" either."; break;
+    case "Speed Movement": u.spd=(u.spd||0)+4*m; msg=`${sub(u)}'s MA is doubled for ${u.spd} turns.`; break;
+    case "Dazzle": o.daz=3*m; msg=`${sub(o)} ${vb(o,"are","is")} dazzled: −3 DX for ${o.daz} turns.`; break;
+    case "Break Weapon": { const id=brkItem(o); if(!id){ msg="There is nothing to break."; break; } if(SHIELDS[id]||id==="staff"){ if(o.right===id) o.right="none"; else o.left="none"; msg=`${sub(o)}'s ${iname(id).toLowerCase()} shatters and is useless.`; } else { o.brkW=id; msg=`${sub(o)}'s ${iname(id).toLowerCase()} is broken: it now does half damage.`; } break; }
+    case "Remove Thrown Spell": { const X=c.on==="self"?u:o, gone=[]; for(const k of RMV){ if(X[k]){ gone.push(k); X[k]=k==="sleep"?false:(typeof X[k]==="number"?0:false); } } X.clumN=0; X.aidN=0; msg=`${X===u?sub(u)+"'s":sub(o)+"'s"} thrown spells end (${gone.length}).`; break; }
+    case "Death Spell": { const A=u.hp, B=o.hp; if(A>B){ o.hp=-1; u.hp-=B; msg=`${sub(o)} ${vb(o,"die","dies")}. ${sub(u)} ${vb(u,"lose","loses")} ${B} ST.`; } else if(A<B){ u.hp=-1; msg=`${sub(u)} ${vb(u,"are","is")} the weaker and ${vb(u,"die","dies")}!`; } else { u.hp=-1; o.hp=-1; msg="Equal strength: both fall dead."; } break; }
     case "Iron Flesh": u.iron=true; u.stone=false; msg=sub(u)+"'s body stops 6 hits per attack."; break;
     case "Aid": u.aid=2*m; u.aidN=nn; msg=`${sub(u)} gets +${nn} DX for ${2*m} turns.`; break;
     case "Clumsiness": o.clum=(o.p.st>=30?1:3)*m; o.clumN=2*nn; msg=`${sub(o)} ${vb(o,"get","gets")} −${2*nn} DX for ${o.clum} turns.`; break;
@@ -578,6 +607,13 @@ function aiCast(u,o){
       case "Freeze": v=o.frozen>0?0:p*8; break;
       case "Clumsiness": v=o.clum>0?0:p*x.n*1.8-0.3*x.n; break;
       case "Aid": v=x.n===2&&u.aid<=0?1.8:0; break;
+      case "Speed Movement": v=dist(u,o)>=4&&!(u.spd>0)?1.6:0; break;
+      case "Dazzle": v=o.daz>0?0:p*(armed?3.6:2.4); break;
+      case "Blast": v=p*Math.max(0,3.5-stp); break;
+      case "Break Weapon": { const bw=brkItem(o); v=bw&&!SHIELDS[bw]&&W[bw]?p*(W[bw].d>=2?3.4:1.4):bw?p*1.6:0; break; }
+      case "Remove Thrown Spell": v=x.on==="foe"?p*((o.iron?3.8:0)+(o.stone?3:0)+(o.blur?2.6:0)+(o.spd>0?1:0)+(o.aid>0?1.5:0)+(o.sleep?0:0)):p*((u.clum>0?2.2:0)+(u.slow>0&&dist(u,o)>=2?1:0)+(u.stop>0?1.5:0)); break;
+      case "Spell Shield": v=o.p.cls==="wizard"&&!u.shield&&u.hp>=9?3.4:0; break;
+      case "Death Spell": v=0; break;
     }
     v+=Math.random()*.6; if(!best||v>best.v) best={x,v}; }
   return best&&best.v>1.1?{t:"cast",sp:best.x.sp,n:best.x.n}:null;
@@ -614,7 +650,7 @@ function beginActions(){
 function doAttack(a,d,wid,mode,kind){
   let dx=adjDXu(a,mode,kind?null:d);
   if(kind==="thrown") dx-=dist(a,d); else if(kind==="missile") dx+=mhPen(mhDist(a,d))+xb(a,wid);
-  if(kind&&d.blur) dx-=4;
+  if(kind&&d.blur){ dx-=4; if(a.daz>0) dx+=3; }
   if(a.wound2){ a.wound2=false; }   /* the -2 DX from 5+ hits lasts for the next attack only */
   const defend=(kind==="missile"||kind==="thrown")?d.dodging:d.defending, n=defend?4:3, dice=rollN(n), t=sum(dice);
   let hit,mult=1,fumble=null;
@@ -716,7 +752,7 @@ function ui(){
   if(!G){ c.innerHTML=`<button class="pri" id="bGo">Start fight</button> <span class="mut">You and ${esc(foe?foe.name:"")} enter at opposite ends.</span>`; $("bGo").onclick=startFight; return; }
   const A=G.me,B=G.foe; let t="",b="";
   if(G.phase==="over") $("setup").open=true;   /* show the fighter box again (attribute points, next opponent) */
-  const fx=u=>[u.blur&&"Blur",u.stone&&"Stone Flesh",u.iron&&"Iron Flesh",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
+  const fx=u=>[u.blur&&"Blur",u.stone&&"Stone Flesh",u.iron&&"Iron Flesh",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.shield&&"Spell Shield",u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"")+(fx(u).length?" ["+fx(u).join(", ")+"]":"");
   const st=`<b>You</b> ST ${Math.max(A.hp,0)}/${me.st}${flags(A)} · <b>${esc(foe.name)}</b> ST ${Math.max(B.hp,0)}/${foe.st}${flags(B)}<br>You are ${isEngaged(A,B)?"<b>engaged</b>":"not engaged"}; ${esc(foe.name)} is ${isEngaged(B,A)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).${(MWid(A)||[A.right,A.left].some(k=>W[k]&&W[k].th))&&!inFront(A,B)?" The enemy is not in front of you, so you cannot shoot or throw at it.":""}`;
   if(G.phase==="choose"){ t="You won the initiative roll. Move first or second?"; b=`<button class="pri" id="b1">Move first</button><button id="b2">Move second</button>`; }
@@ -859,7 +895,7 @@ function matched(P,total){ const R=RACES[P.race]; let st=R.st,dx=R.dx,extra=Math
   return {name:P.n+" "+pick(["Brann","Silvo","Orsk","Tamar","Karg","Ilsa","Morn","Zed"]),race:P.race,cls:"fighter",st,dx,iq:R.iq,a:P.a,b:P.b,s1:P.s1||"none",armor:P.armor,d1:"dagger",silver:true}; }
 function makeWizard(){
   const R=RACES.human, iq=Math.min(14,Math.max(11,Math.round(me.total/3)+ri(2))), rest=Math.max(16,me.total-iq), st=Math.max(R.st,Math.round(rest*.46)), dx=Math.max(R.dx,rest-st);
-  const sp=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh"].filter(n=>n==="Staff"||(({"Magic Fist":8,"Blur":8,"Drop Weapon":8,"Slow Movement":8,"Clumsiness":9,"Aid":9,"Trip":10,"Sleep":11,"Fireball":12,"Freeze":12,"Stone Flesh":13,"Stop":13,"Lightning":14,"Iron Flesh":15})[n]<=iq));
+  const sp=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield"].filter(n=>n==="Staff"||(({"Magic Fist":8,"Blur":8,"Drop Weapon":8,"Slow Movement":8,"Clumsiness":9,"Aid":9,"Trip":10,"Sleep":11,"Fireball":12,"Freeze":12,"Stone Flesh":13,"Stop":13,"Lightning":14,"Iron Flesh":15,"Speed Movement":10,"Dazzle":10,"Blast":12,"Break Weapon":12,"Remove Thrown Spell":14,"Spell Shield":14})[n]<=iq));
   const f=fromBuilder({name:pick(["Morvane","Elowen","Sethric","Ilvara","Zorn","Kaleth"])+" the "+pick(["Mage","Sorcerer","Hedge Wizard","Enchanter"]),race:"human",cls:"wizard",st,dx,iq,a:"none",b:"none",armor:"none",d1:"dagger",silver:true,spells:sp,total:me.total});
   return f; }
 function buildFoe(){
