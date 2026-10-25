@@ -43,7 +43,7 @@ svg{width:100%;height:auto;max-height:80vh}
  </details>
  <div class="card" id="stats"><h2>Fighters</h2><div class="mut">Load both fighters to see their stats here.</div></div>
 </div>
-<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">Top: Player 2's entrance. Bottom: Player 1's. Player 1 may click one of the four green-outlined hexes at the bottom to start there.</div></div></div>
+<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">Top: Player 2's entrance. Bottom: Player 1's. Before the duel, each player taps one of the four outlined hexes at their own end to start there.</div></div></div>
 </main>
 <script src="rules.js"></script>
 <script>
@@ -145,7 +145,7 @@ function card(f,cls){
   <tr><td>Adjusted DX</td><td><b>${adjDX(f)}</b></td></tr>
   <tr><td>Other gear</td><td>${[f.slung!=="none"?iname(f.slung)+" (slung)":"",...f.dag.map(k=>iname(k)+" (sheathed)")].filter(Boolean).join(", ")||"none"}</td></tr></table>`;
 }
-let me=null, foe=null, myStart=null;
+let me=null, foe=null, myStart=null, foeStart=null;
 const slot=[null,null];
 function showSlot(i){ $(i?"foe":"me").innerHTML=slot[i]?card(slot[i],i?"foe":"me"):""; showStats(); }
 function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot[0]||slot[1]?`<div class="two">${[0,1].map(i=>slot[i]?`<div>${card(slot[i],i?"foe":"me")}</div>`:"").join("")}</div>`:`<div class="mut">Load both fighters to see their stats here.</div>`); }
@@ -227,7 +227,8 @@ function startHexes(){
     return arr.filter(h=>Math.abs(h.p[1]-fy)<.1).sort((a,b)=>Math.abs(a.p[0]-mx)-Math.abs(b.p[0]-mx))[0]; };
   const mine=bottom.find(h=>key(h.q,h.r)===myStart)||front(bottom,1);
   myStart=key(mine.q,mine.r);
-  return {bottom,top,mine,theirs:front(top,-1)};
+  const theirs=top.find(h=>key(h.q,h.r)===foeStart)||front(top,-1); foeStart=key(theirs.q,theirs.r);
+  return {bottom,top,mine,theirs};
 }
 const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
@@ -550,7 +551,7 @@ function endTurn(){ nextTurn(); }
 
 function ui(){
   const c=$("ctl"); if(!c)return;
-  if(!G){ if(me&&foe){ c.innerHTML=`<button class="pri" id="bGo">Start duel</button> <span class="mut">${esc(me.name)} and ${esc(foe.name)} enter at opposite ends. Nothing is recorded.</span>`; $("bGo").onclick=startFight; } else c.innerHTML="Load both fighters first (the boxes below)."; return; }
+  if(!G){ if(me&&foe){ c.innerHTML=`<button class="pri" id="bGo">Start duel</button> <div class="mut" style="margin-top:6px"><b class="me">${esc(me.name)}</b> (green, bottom) and <b class="foe">${esc(foe.name)}</b> (red, top): each player taps one of the four outlined hexes at their own end of the map to choose where to start (the open hex is the current choice). When both are happy, press Start duel. Nothing is recorded.</div>`; $("bGo").onclick=startFight; } else c.innerHTML="Load both fighters first (the boxes below)."; return; }
   const A=G.me,B=G.foe,cur=G.cur; let t="",b="";
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"");
   const nm=u=>`<b class="${u===A?"me":"foe"}">${esc(u.p.name)}</b>`;
@@ -613,7 +614,8 @@ function drawMap(){
   const hl=(map,attr,col)=>[...map.values()].map(h=>`<polygon ${attr}="${key(h.q,h.r)}" points="${poly(h)}" fill="var(${col})" fill-opacity=".3" stroke="var(${col})" stroke-width=".07" style="cursor:pointer"/>`).join("");
   if(!G){
     if(me&&foe){ const st=startHexes();
-      const pk=st.bottom.map(h=>`<polygon data-k="${key(h.q,h.r)}" points="${poly(h)}" fill="${h===st.mine?"none":"var(--me)"}" fill-opacity=".18" stroke="var(--me)" stroke-width=".1" style="cursor:pointer"/>`).join("");
+      const pk2=st.top.map(h=>`<polygon data-k2="${key(h.q,h.r)}" points="${poly(h)}" fill="${h===st.theirs?"none":"var(--foe)"}" fill-opacity=".18" stroke="var(--foe)" stroke-width=".1" style="cursor:pointer"/>`).join("");
+      const pk=pk2+st.bottom.map(h=>`<polygon data-k="${key(h.q,h.r)}" points="${poly(h)}" fill="${h===st.mine?"none":"var(--me)"}" fill-opacity=".18" stroke="var(--me)" stroke-width=".1" style="cursor:pointer"/>`).join("");
       const fm={...st.mine,f:0},ff={...st.theirs,f:0}; fm.f=faceToward(fm,ff); ff.f=faceToward(ff,fm);
       layer=pk+tokn(fm,"var(--me)",me)+tokn(ff,"var(--foe)",foe); }
     else layer=P.filter(h=>h.e).map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
@@ -633,6 +635,7 @@ function drawMap(){
   const m=$("map"); m.setAttribute("viewBox",`${x0} ${y0} ${x1-x0} ${y1-y0}`); m.innerHTML=s+edges+layer;
   /* the map stays pinned on screen next to the buttons, so no scrolling is needed */
   m.querySelectorAll("polygon[data-k]").forEach(e=>e.onclick=()=>{myStart=e.dataset.k;drawMap();});
+  m.querySelectorAll("polygon[data-k2]").forEach(e=>e.onclick=()=>{foeStart=e.dataset.k2;drawMap();});
   m.querySelectorAll("[data-go]").forEach(e=>e.onclick=()=>{ const r=G.reach.get(e.dataset.go); G.cur.q=r.q; G.cur.r=r.r; G.moved=r.c; ui(); drawMap(); });
   m.querySelectorAll("[data-face]").forEach(e=>e.onclick=()=>{ G.cur.f=+e.dataset.face; drawMap(); });
   m.querySelectorAll("[data-dest]").forEach(e=>e.onclick=()=>{ takePick({t:G.destT||"disengage",dest:G.dopts.get(e.dataset.dest)}); });
