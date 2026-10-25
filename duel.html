@@ -20,6 +20,7 @@ textarea{width:100%;box-sizing:border-box;min-height:70px;font:12px monospace;ba
 .mut{color:var(--mut);font-size:14px}.me{color:var(--me)}.foe{color:var(--foe)}
 table{border-collapse:collapse;width:100%}td{padding:2px 0}td:first-child{color:var(--mut);width:42%}
 svg{width:100%;height:auto;max-height:80vh}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 #ctl button{margin:2px 4px 2px 0}#log{font-size:13px;color:var(--mut);max-height:170px;overflow:auto;margin-top:6px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
 </style></head><body><main>
@@ -40,6 +41,7 @@ svg{width:100%;height:auto;max-height:80vh}
   <details><summary class="mut">Or paste a fighter (copy it from the builder)</summary><textarea id="paste1" placeholder="paste JSON here"></textarea><div class="row"><button id="pg1">Use pasted fighter</button></div></details>
   <div id="msg1" class="mut"></div><div id="foe"></div></div>
  </details>
+ <div class="card" id="stats"><h2>Fighters</h2><div class="mut">Load both fighters to see their stats here.</div></div>
 </div>
 <div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">Top: Player 2's entrance. Bottom: Player 1's. Player 1 may click one of the four green-outlined hexes at the bottom to start there.</div></div></div>
 </main>
@@ -145,7 +147,8 @@ function card(f,cls){
 }
 let me=null, foe=null, myStart=null;
 const slot=[null,null];
-function showSlot(i){ $(i?"foe":"me").innerHTML=slot[i]?card(slot[i],i?"foe":"me"):""; }
+function showSlot(i){ $(i?"foe":"me").innerHTML=slot[i]?card(slot[i],i?"foe":"me"):""; showStats(); }
+function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot[0]||slot[1]?`<div class="two">${[0,1].map(i=>slot[i]?`<div>${card(slot[i],i?"foe":"me")}</div>`:"").join("")}</div>`:`<div class="mut">Load both fighters to see their stats here.</div>`); }
 function setP(i,f,msg){
   if(G&&G.phase!=="over"&&!confirm("Leave the duel in progress?")) return; G=null;
   slot[i]=f; const o=slot[1-i]; if(o&&o.name.trim().toLowerCase()===f.name.trim().toLowerCase()) f.name+=" II";
