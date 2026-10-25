@@ -201,12 +201,14 @@ summary{cursor:pointer;font:600 12px var(--f-mono);letter-spacing:.08em;text-tra
       <div class="btnrow noprint"><button id="printBtn" class="primary">Print or save as PDF</button> <a href="arena.html" style="margin-left:12px;white-space:nowrap">Melee Arena &rarr;</a> <a href="sim.html" style="margin-left:12px;white-space:nowrap">Fight simulator &rarr;</a> <a href="index.html" style="margin-left:12px;white-space:nowrap">Menu</a></div>
       <details>
         <summary>Save and load</summary>
-        <p class="help">The page remembers your last character in this browser. To keep it elsewhere, copy the text below and paste it back later.</p>
+        <p class="help">The bench holds two fighters, A and B, that the simulator and the duel can load. The page remembers your last character in this browser. To keep it elsewhere, copy the text below and paste it back later.</p>
         <textarea id="json" rows="5" aria-label="Character data" spellcheck="false"></textarea>
         <div class="btnrow">
           <button id="copyJson">Copy data</button>
           <button id="loadJson">Load from box</button>
           <button id="copySheet">Copy sheet as text</button>
+          <button id="benchA">Send to bench as A</button>
+          <button id="benchB">Send to bench as B</button>
         </div>
         <div class="toast" id="toast" role="status"></div>
       </details>
@@ -608,6 +610,7 @@ document.addEventListener("click",e=>{
   if(t.dataset.inc){ const k=t.dataset.inc; if(S.st+S.dx+S.iq<S.total){ S[k]++; commit(); } return; }
   if(t.dataset.dec){ const k=t.dataset.dec; if(S[k]>RACES[S.race][k]){ S[k]--; commit(); } return; }
   if(t.id==="trade"){ if(S.ep>=100){ S.ep-=100; S.total++; commit(); } return; }
+  if(t.id==="benchA"||t.id==="benchB"){ try{ const c=Object.assign({},S); delete c._notes; let B={}; try{ B=JSON.parse(localStorage.getItem("melee-bench-v1")||"{}")||{}; }catch(e){} const k=t.id==="benchA"?"a":"b"; B[k]=c; localStorage.setItem("melee-bench-v1",JSON.stringify(B)); toast((c.name||"This fighter")+" is on the bench as "+k.toUpperCase()+". Open the simulator or the duel to use it."); }catch(e){ toast("Could not write to this browser's storage."); } return; }
   if(t.id==="copyJson"){ copy($("json").value,"Data copied."); return; }
   if(t.id==="copySheet"){ copy(sheetText(),"Sheet copied."); return; }
   if(t.id==="loadJson"){ try{ S=normalize(JSON.parse($("json").value)); $("name").value=S.name; $("notes").value=S.notes; renderAll(); toast("Loaded."); }catch(err){ toast("That text is not valid character data."); } return; }
