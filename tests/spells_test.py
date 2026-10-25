@@ -12,7 +12,7 @@ JS=r'''
  let saved=rollN; const dice=(...q)=>{rollN=n=>{ if(!q.length) throw new Error("dice queue empty"); return q.shift(); };};
  const fresh=(a,b)=>{G={me:a,foe:b,log:[],floor:[],phase:"x",turn:1,settled:true}; me={name:"Me",rec:null,st:a.p.st,dx:a.p.dx}; foe=b.p; };
 
- const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell"];
+ const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles"];
  const wz=(o)=>mkF(Object.assign({name:"Wiz",cls:"wizard",st:14,dx:13,iq:14,spells:ALL.filter(x=>x!=="Staff"),silver:true},o));
  const pair=(wo,fo,rear)=>{ const w=unit(wz(wo||{}),A,0), f=unit(mkF(Object.assign({name:"Foe",st:12,dx:12,a:"shortsw"},fo||{})),B,0); fresh(w,f); face(w,f); return [w,f]; };
  const cast=(w,f,sp,n)=>{ w.act={t:"cast",sp,n}; doCast(w,f,w.act); };
@@ -52,6 +52,10 @@ JS=r'''
  ok("S33 Spell Shield costs 3 ST, +1 per turn, and also blocks the wizard's own spells",(()=>{ const [w,f]=pair(); dice([3,3,2]); cast(w,f,"Spell Shield"); const a=w.shield&&w.hp===11&&CONT.includes("shield"); return a&&!castList(w,f).some(x=>x.sp==="Blur"); })());
  ok("S34 Death Spell: the weaker dies, the stronger loses the weaker's ST; Spell Shield costs the caster only 1",(()=>{ const [w,f]=pair({st:20},{st:8}); dice([3,3,2]); cast(w,f,"Death Spell"); const a=f.hp===-1&&w.hp===12; const [w2,f2]=pair({st:8},{st:20}); dice([3,3,2]); cast(w2,f2,"Death Spell"); const b=w2.hp===-1; const [w3,f3]=pair(); f3.shield=true; dice([3,3,2]); cast(w3,f3,"Death Spell"); return a&&b&&w3.hp===13&&f3.hp===12; })());
  ok("S35 the computer wizard can know the new spells",(()=>{ me=fromBuilder({name:"Me",race:"human",cls:"fighter",st:12,dx:12,iq:8,a:"shortsw",armor:"leather",d1:"dagger"}); let seen=false; for(let i=0;i<40&&!seen;i++){ const f=makeWizard(); if(f.spells.includes("Dazzle")) seen=true; } return seen; })());
+
+ ok("S36 Reverse Missiles costs 2 ST, +1 a turn; a missile that hits turns back on the shooter",(()=>{ const [w,f]=pair({},{a:"lbow",st:12}); dice([3,3,2]); cast(w,f,"Reverse Missiles"); const a=w.rev&&w.hp===12&&CONT.includes("rev"); const h=f.hp, wh=w.hp; dice([1,1,6],[3,3]); doAttack(f,w,"lbow","single","missile"); return a&&w.hp===wh&&f.hp<h; })());
+ ok("S37 Reverse Missiles turns a Magic Fist back on its caster; both protected means no harm",(()=>{ const [w,f]=pair({},{}); const f2=mkF({name:"W2",cls:"wizard",st:14,dx:13,iq:14,spells:["Magic Fist"],silver:true}); const e=unit(f2,B,0); const w1=unit(wz({}),A,0); fresh(w1,e); face(w1,e); e.rev=true; dice([3,3,2],[5,4]); cast(w1,e,"Magic Fist",2); const a=e.hp===14&&w1.hp<12; w1.rev=true; const h=w1.hp; dice([3,3,2]); cast(w1,e,"Magic Fist",1); return a&&e.hp===14&&w1.hp===h-1; })());
+ ok("S38 Reverse Missiles does nothing against melee blows",(()=>{ const [w,f]=pair({},{a:"shortsw"}); w.rev=true; const h=f.hp; dice([1,1,6],[3,3]); doAttack(f,w,"shortsw","single",null); return f.hp===h&&w.hp<14; })());
 
  return R;
 }'''

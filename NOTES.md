@@ -104,5 +104,8 @@ makeOpponent follows two rules: (1) the weapon that does the most damage for its
 Added to the Wizard arena and the duel: Speed Movement (self, 2 ST, doubles MA for 4 turns; cancels Slow Movement), Dazzle (special, 3 ST, −3 DX for 3 turns, within 5 megahexes; not added on top of Blur's −4), Blast (special, 2 ST, 1 die to the enemy next to you, armor and Stone/Iron Flesh stop it), Break Weapon (3 ST, weapon does half damage, shield or staff is destroyed), Remove Thrown Spell (2 ST, on the enemy or on yourself: ends Blur, Stone/Iron Flesh, Slow, Stop, Speed, Clumsiness, Aid, Sleep, Freeze), Spell Shield (3 ST +1 a turn, nothing can be cast on you, and you cannot cast on yourself; a spell that is stopped still costs the caster its full price) and Death Spell (the weaker of the two dies, the stronger loses the weaker's ST; equal ST kills both; a Spell Shield costs the caster just 1 ST).
 - Special spells (Blast, Dazzle) are like thrown spells: a miss costs 1 ST.
 - In the duel, Spell Shield is secret like Stone and Iron Flesh and is renewed in secret.
-- Broken weapons are tracked by weapon id, so picking up another weapon of the same kind keeps the break. Shock Shield, Reverse Missiles, Flight, Confusion and Teleport are still to do.
+- Broken weapons are tracked by weapon id, so picking up another weapon of the same kind keeps the break. Shock Shield, Flight, Confusion and Teleport are still to do.
 - Tests: S25 to S35 in tests/spells_test.py.
+
+### Reverse Missiles
+2 ST, +1 a turn, IQ 11. Missiles, thrown weapons and missile spells that hit the subject hit the sender instead (same damage, the sender's own armor). It does nothing against melee blows. If both are protected the missile harms no one. A fast archer's second arrow is not fired once the first has turned back. In the duel it is secret, like Stone Flesh. Tests S36 to S38.

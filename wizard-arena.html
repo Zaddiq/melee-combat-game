@@ -278,7 +278,7 @@ function startHexes(){
   myStart=key(mine.q,mine.r);
   return {bottom,top,mine,theirs:front(top,-1)};
 }
-const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,cool:0,usedLast:false,dodging:false,
+const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,rev:false,revHit:false,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
 function startFight(){
   if(!me||!foe)return; const s=startHexes();
@@ -290,7 +290,7 @@ function startFight(){
 }
 function nextTurn(){
   for(const u of [G.me,G.foe]){ if(u.hits>=5)u.wound2=true; u.hits=0; if(u.cool>0)u.cool--; u.dodging=false; if(!isEngaged(u,u===G.me?G.foe:G.me))u.usedLast=false; u.from={q:u.q,r:u.r}; u.extra=0; u.poleVs=false; u.pri=false; u.dealt=u.tookHit=u.defending=false; u.act=null; u.standUp=false; u.moved=0; u.engStart=false;
-    for(const k of ["slow","stop","spd","daz","clum","aid","frozen"]) if(u[k]>0) u[k]--; if(!u.aid) u.aidN=0; if(!u.clum) u.clumN=0; }
+    u.revHit=false; for(const k of ["slow","stop","spd","daz","clum","aid","frozen"]) if(u[k]>0) u[k]--; if(!u.aid) u.aidN=0; if(!u.clum) u.clumN=0; }
   G.turn++; let a,b; do{a=d6();b=d6();}while(a===b);
   lg(`— Turn ${G.turn}. Initiative: you ${a}, ${foe.name} ${b}.`);
   if(G.me.wound2) lg("You took 5 or more hits: DX −2 for your next attack.");
@@ -301,7 +301,7 @@ function nextTurn(){
   const act=CONT.filter(k=>G.me[k]);
   if(act.length&&G.me.hp>0){ G.phase="renew"; G.rlist=act.map(k=>({k,on:G.me.hp>=3})); G.afterRenew=go; } else go();
 }
-const CONT=["blur","stone","iron","shield"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield"};
+const CONT=["blur","stone","iron","shield","rev"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield",rev:"Reverse Missiles"};
 function doRenew(){ const u=G.me; for(const r of G.rlist){ if(r.on&&u.hp>=1){ u.hp--; lg(`You keep ${CONTN[r.k]} going (1 ST).`); } else { u[r.k]=false; lg(`Your ${CONTN[r.k]} ends.`); } } G.phase="";
   endCheck(); if(G.phase!=="over"){ const f=G.afterRenew; f(); } }
 function choose(first){ G.order=first?["me","foe"]:["foe","me"]; G.idx=0; lg(first?"You move first.":"You move second."); advance(); ui(); drawMap(); }
@@ -460,6 +460,7 @@ const SP={
  "Stone Flesh":{k:"T",cost:()=>2,self:1,cont:"stone"},
  "Stop":{k:"T",cost:()=>3},
  "Iron Flesh":{k:"T",cost:()=>3,self:1,cont:"iron"},
+ "Reverse Missiles":{k:"T",cost:()=>2,self:1,cont:"rev"},
  "Speed Movement":{k:"T",cost:()=>2,self:1},
  "Break Weapon":{k:"T",cost:()=>3,ok:o=>!!brkItem(o)},
  "Remove Thrown Spell":{k:"T",cost:()=>2,rm:1},
@@ -510,11 +511,12 @@ function doCast(u,o,pa){
   { const T0=(d.self||c.on==="self")?u:o;
     if(T0.shield&&T0!==u&&c.sp!=="Spell Shield"){ const x=c.sp==="Death Spell"?1:0; if(x) payST(u,1); lg(`${head}: it works, but ${sub(o)} ${vb(o,"are","is")} protected by a Spell Shield, so nothing happens. ${sub(u)} ${vb(u,"lose","loses")} ${c.cost+x} ST.`); endCheck(); return; } }
   if(d.k==="M"){
-    const dice2=rollN(c.n), raw=Math.max(c.n,sum(dice2)-d.sub*c.n), full=raw*mult, st=stopsFor(o,u,null,"missile"), hits=Math.max(0,full-st);
-    lg(`${head}: HIT. ${c.n} ${c.n>1?"dice":"die"} (${dice2.join("+")}${d.sub?" −"+d.sub*c.n:""} = ${raw})${mult>1?" ×"+mult+" = "+full:""}; armor and protection stop ${Math.min(st,full)}. ${hits?sub(o)+" "+vb(o,"take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
-    if(hits>0){ o.hp-=hits; o.hits+=hits; o.tookHit=true; o.sleep=false; lg(`${o.p.name}'s ST is now ${Math.max(o.hp,0)}.`);
-      if(o.hits>=8&&o.hp>0&&!o.down){ o.down=true; o.low=null; lg(`${sub(o)} ${vb(o,"are","is")} knocked down by ${o.hits} hits!`); }
-      else if(c.sp==="Magic Fist"&&full>=6&&o.hp>0&&!o.down){ const sv=sum(rollN(3)), lim=Math.max(o.hp,adjDXu(o,"single",null)); if(sv>lim){ o.down=true; o.low=null; lg(`The blow trips ${sub(o)} (rolled ${sv} against ${lim}).`); } else lg(`${sub(o)} ${vb(o,"keep","keeps")} ${vb(o,"your","their")} feet (rolled ${sv} against ${lim}).`); } }
+    let O=o, U=u; if(o.rev){ if(u.rev){ lg(`${head}: HIT, but both wizards are protected by Reverse Missiles and the missile flies back and forth, harming no one.`); endCheck(); return; } O=u; U=o; lg(`${head}: HIT, but Reverse Missiles turns it back on ${sub(u)}!`); }
+    const dice2=rollN(c.n), raw=Math.max(c.n,sum(dice2)-d.sub*c.n), full=raw*mult, st=stopsFor(O,U,null,"missile"), hits=Math.max(0,full-st);
+    lg(`${head}: HIT. ${c.n} ${c.n>1?"dice":"die"} (${dice2.join("+")}${d.sub?" −"+d.sub*c.n:""} = ${raw})${mult>1?" ×"+mult+" = "+full:""}; armor and protection stop ${Math.min(st,full)}. ${hits?sub(O)+" "+vb(O,"take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
+    if(hits>0){ O.hp-=hits; O.hits+=hits; O.tookHit=true; O.sleep=false; lg(`${O.p.name}'s ST is now ${Math.max(O.hp,0)}.`);
+      if(O.hits>=8&&O.hp>0&&!O.down){ O.down=true; O.low=null; lg(`${sub(O)} ${vb(O,"are","is")} knocked down by ${O.hits} hits!`); }
+      else if(c.sp==="Magic Fist"&&full>=6&&O.hp>0&&!O.down){ const sv=sum(rollN(3)), lim=Math.max(O.hp,adjDXu(O,"single",null)); if(sv>lim){ O.down=true; O.low=null; lg(`The blow trips ${sub(O)} (rolled ${sv} against ${lim}).`); } else lg(`${sub(O)} ${vb(O,"keep","keeps")} ${vb(O,"your","their")} feet (rolled ${sv} against ${lim}).`); } }
     endCheck(); return; }
   const m=mult, T=d.self?u:o, nn=c.n||1; let msg="";
   if(d.k==="S"&&c.sp==="Blast"){ const dr=rollN(1), full=sum(dr)*m, st=stopsFor(o,u,null,"missile"), hits=Math.max(0,full-st);
@@ -524,6 +526,7 @@ function doCast(u,o,pa){
   switch(c.sp){
     case "Blur": u.blur=true; msg="A blur surrounds "+sub(u)+": attacks and spells against it are at −4 DX."; break;
     case "Stone Flesh": u.stone=true; msg=sub(u)+"'s body stops 4 hits per attack."; break;
+    case "Reverse Missiles": u.rev=true; msg=sub(u)+" is protected: missiles and missile spells that hit turn back on whoever sent them."; break;
     case "Spell Shield": u.shield=true; msg=sub(u)+" is surrounded by a Spell Shield: no spell can be cast on "+(u===G.me?"you":"it")+" while it lasts, and "+sub(u)+" cannot cast on "+(u===G.me?"yourself":"itself")+" either."; break;
     case "Speed Movement": u.spd=(u.spd||0)+4*m; msg=`${sub(u)}'s MA is doubled for ${u.spd} turns.`; break;
     case "Dazzle": o.daz=3*m; msg=`${sub(o)} ${vb(o,"are","is")} dazzled: −3 DX for ${o.daz} turns.`; break;
@@ -612,6 +615,7 @@ function aiCast(u,o){
       case "Blast": v=p*Math.max(0,3.5-stp); break;
       case "Break Weapon": { const bw=brkItem(o); v=bw&&!SHIELDS[bw]&&W[bw]?p*(W[bw].d>=2?3.4:1.4):bw?p*1.6:0; break; }
       case "Remove Thrown Spell": v=x.on==="foe"?p*((o.iron?3.8:0)+(o.stone?3:0)+(o.blur?2.6:0)+(o.spd>0?1:0)+(o.aid>0?1.5:0)+(o.sleep?0:0)):p*((u.clum>0?2.2:0)+(u.slow>0&&dist(u,o)>=2?1:0)+(u.stop>0?1.5:0)); break;
+      case "Reverse Missiles": v=(MWid(o)||o.p.cls==="wizard")&&u.hp>=7?2.4:0; break;
       case "Spell Shield": v=o.p.cls==="wizard"&&!u.shield&&u.hp>=9?3.4:0; break;
       case "Death Spell": v=0; break;
     }
@@ -665,6 +669,7 @@ function doAttack(a,d,wid,mode,kind){
     if(fumble==="break"){ extra=` — the ${iname(wid).toLowerCase()} breaks!`; if(a.right===wid)a.right="none"; else if(a.left===wid)a.left="none"; }
     lg(head+": miss"+extra+"."); return;
   }
+  if((kind==="missile"||kind==="thrown")&&d.rev){ if(a.rev){ lg(head+": HIT, but both are protected by Reverse Missiles and the missile flies back and forth, harming no one."); return; } if(a.revHit){ lg(head+": the archer is warned that the first arrow turned back, and fires no second one."); return; } a.revHit=true; lg(head+": HIT, but Reverse Missiles turns it back on the one who fired!"); const t0=a; a=d; d=t0; }
   const r=dmgRoll(a,wid), full=r.total*mult, st=stopsFor(d,a,wid,kind), hits=Math.max(0,full-st);
   lg(`${head}: HIT. ${iname(wid)} ${dice_txt(r)}${mult>1?" ×"+mult+" = "+full:""}; armor and shield stop ${Math.min(st,full)}. ${hits?vb(d,"You take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
   if(hits>0){
@@ -752,7 +757,7 @@ function ui(){
   if(!G){ c.innerHTML=`<button class="pri" id="bGo">Start fight</button> <span class="mut">You and ${esc(foe?foe.name:"")} enter at opposite ends.</span>`; $("bGo").onclick=startFight; return; }
   const A=G.me,B=G.foe; let t="",b="";
   if(G.phase==="over") $("setup").open=true;   /* show the fighter box again (attribute points, next opponent) */
-  const fx=u=>[u.blur&&"Blur",u.stone&&"Stone Flesh",u.iron&&"Iron Flesh",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.shield&&"Spell Shield",u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
+  const fx=u=>[u.blur&&"Blur",u.stone&&"Stone Flesh",u.iron&&"Iron Flesh",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.shield&&"Spell Shield",u.rev&&"Reverse Missiles",u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"")+(fx(u).length?" ["+fx(u).join(", ")+"]":"");
   const st=`<b>You</b> ST ${Math.max(A.hp,0)}/${me.st}${flags(A)} · <b>${esc(foe.name)}</b> ST ${Math.max(B.hp,0)}/${foe.st}${flags(B)}<br>You are ${isEngaged(A,B)?"<b>engaged</b>":"not engaged"}; ${esc(foe.name)} is ${isEngaged(B,A)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).${(MWid(A)||[A.right,A.left].some(k=>W[k]&&W[k].th))&&!inFront(A,B)?" The enemy is not in front of you, so you cannot shoot or throw at it.":""}`;
   if(G.phase==="choose"){ t="You won the initiative roll. Move first or second?"; b=`<button class="pri" id="b1">Move first</button><button id="b2">Move second</button>`; }
@@ -895,7 +900,7 @@ function matched(P,total){ const R=RACES[P.race]; let st=R.st,dx=R.dx,extra=Math
   return {name:P.n+" "+pick(["Brann","Silvo","Orsk","Tamar","Karg","Ilsa","Morn","Zed"]),race:P.race,cls:"fighter",st,dx,iq:R.iq,a:P.a,b:P.b,s1:P.s1||"none",armor:P.armor,d1:"dagger",silver:true}; }
 function makeWizard(){
   const R=RACES.human, iq=Math.min(14,Math.max(11,Math.round(me.total/3)+ri(2))), rest=Math.max(16,me.total-iq), st=Math.max(R.st,Math.round(rest*.46)), dx=Math.max(R.dx,rest-st);
-  const sp=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield"].filter(n=>n==="Staff"||(({"Magic Fist":8,"Blur":8,"Drop Weapon":8,"Slow Movement":8,"Clumsiness":9,"Aid":9,"Trip":10,"Sleep":11,"Fireball":12,"Freeze":12,"Stone Flesh":13,"Stop":13,"Lightning":14,"Iron Flesh":15,"Speed Movement":10,"Dazzle":10,"Blast":12,"Break Weapon":12,"Remove Thrown Spell":14,"Spell Shield":14})[n]<=iq));
+  const sp=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Reverse Missiles"].filter(n=>n==="Staff"||(({"Magic Fist":8,"Blur":8,"Drop Weapon":8,"Slow Movement":8,"Clumsiness":9,"Aid":9,"Trip":10,"Sleep":11,"Fireball":12,"Freeze":12,"Stone Flesh":13,"Stop":13,"Lightning":14,"Iron Flesh":15,"Speed Movement":10,"Dazzle":10,"Blast":12,"Break Weapon":12,"Remove Thrown Spell":14,"Spell Shield":14,"Reverse Missiles":11})[n]<=iq));
   const f=fromBuilder({name:pick(["Morvane","Elowen","Sethric","Ilvara","Zorn","Kaleth"])+" the "+pick(["Mage","Sorcerer","Hedge Wizard","Enchanter"]),race:"human",cls:"wizard",st,dx,iq,a:"none",b:"none",armor:"none",d1:"dagger",silver:true,spells:sp,total:me.total});
   return f; }
 function buildFoe(){
