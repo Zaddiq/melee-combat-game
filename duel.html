@@ -31,12 +31,12 @@ svg{width:100%;height:auto;max-height:80vh}
  <div class="card"><h2>Duel</h2><div id="ctl" class="mut">Load both fighters first (the boxes below).</div></div>
  <details class="setup" id="setup" open><summary>The two fighters</summary>
  <div class="card"><h2 class="me">Player 1</h2>
-  <div class="row"><button class="pri" id="load0">Load from builder</button><button id="ex0">Use example</button></div>
+  <div class="row"><button class="pri" id="load0">Load from builder</button><button id="ex0">Use example</button><button id="bn0">Load bench A</button></div>
   <div class="row"><select id="rs0"></select><button id="rg0">Use this saved fighter</button></div>
   <details><summary class="mut">Or paste a fighter (copy it from the builder)</summary><textarea id="paste0" placeholder="paste JSON here"></textarea><div class="row"><button id="pg0">Use pasted fighter</button></div></details>
   <div id="msg0" class="mut"></div><div id="me"></div></div>
  <div class="card"><h2 class="foe">Player 2</h2>
-  <div class="row"><button class="pri" id="load1">Load from builder</button><button id="ex1">Use example</button></div>
+  <div class="row"><button class="pri" id="load1">Load from builder</button><button id="ex1">Use example</button><button id="bn1">Load bench B</button></div>
   <div class="row"><select id="rs1"></select><button id="rg1">Use this saved fighter</button></div>
   <details><summary class="mut">Or paste a fighter (copy it from the builder)</summary><textarea id="paste1" placeholder="paste JSON here"></textarea><div class="row"><button id="pg1">Use pasted fighter</button></div></details>
   <div id="msg1" class="mut"></div><div id="foe"></div></div>
@@ -161,6 +161,7 @@ function loadBuilder(i){ let t=null; try{t=localStorage.getItem(KEY);}catch(e){}
 const EXAMPLES=[{name:"Flavius (example)",race:"human",cls:"fighter",st:11,dx:12,iq:9,a:"broad",b:"small",armor:"leather",d1:"dagger"},{name:"Wulf (example)",race:"human",cls:"fighter",st:13,dx:11,iq:8,a:"battle",b:"none",armor:"none",d1:"dagger"}];
 for(const i of [0,1]){
   $("load"+i).onclick=()=>loadBuilder(i);
+  $("bn"+i).onclick=()=>{ let B={}; try{ B=JSON.parse(localStorage.getItem("melee-bench-v1")||"{}")||{}; }catch(e){} const o=B[i?"b":"a"]; if(!o){ $("msg"+i).textContent="Nothing on the bench as "+(i?"B":"A")+". Use the builder's Send to bench button."; return; } try{ setP(i,fromBuilder(o),"Loaded from the bench ("+(i?"B":"A")+")."); }catch(e){ $("msg"+i).textContent="Could not read the bench fighter."; } };
   $("ex"+i).onclick=()=>setP(i,fromBuilder(EXAMPLES[i]),"Example fighter.");
   $("pg"+i).onclick=()=>{ try{ setP(i,fromBuilder(JSON.parse($("paste"+i).value)),"Loaded pasted fighter."); }catch(e){ $("msg"+i).textContent="That does not look like a builder fighter."; } };
   $("rg"+i).onclick=()=>{ const r=REC[$("rs"+i).value]; if(r&&r.src) setP(i,fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx,name:r.name})),"Loaded from your arena roster (its own record is not touched)."); };

@@ -189,6 +189,26 @@ $("fighters").innerHTML = build("a") + build("b");
   $(s + "_sh").value = DEF[s].sh;
 });
 
+/* the bench: two fighters sent from the builder (melee-bench-v1), shown here in this page's simpler form */
+(function () {
+  var bench = {}; try { bench = JSON.parse(localStorage.getItem("melee-bench-v1") || "{}") || {}; } catch (e) {}
+  var wkeys = Object.keys(RULES.W).filter(function (k) { var w = RULES.W[k]; return !w.miss && k !== "staff" && k !== "mg"; });
+  var akeys = Object.keys(RULES.ARMOR), skeys = Object.keys(RULES.SHIELDS), used = [];
+  ["a", "b"].forEach(function (s) {
+    var o = bench[s]; if (!o || typeof o !== "object") return;
+    var R = RULES.RACES[o.race] || RULES.RACES.human;
+    var wi = wkeys.indexOf(o.a); if (wi < 0) wi = wkeys.indexOf("dagger"); if (wi < 0) wi = 0;
+    var si = skeys.indexOf(o.b); si = si < 0 ? 0 : si + 1;
+    if (wkeys[wi] && RULES.W[wkeys[wi]].two) si = 0;
+    $(s + "_name").value = String(o.name || (s === "a" ? "Fighter A" : "Fighter B")).slice(0, 40);
+    $(s + "_st").value = Math.max(R.st, +o.st || R.st); $(s + "_dx").value = Math.max(R.dx, +o.dx || R.dx);
+    $(s + "_w").value = wi; $(s + "_ar").value = Math.max(0, akeys.indexOf(o.armor)); $(s + "_sh").value = si;
+    $(s + "_race").value = o.race === "elf" && (o.armor === "none" || o.armor === "cloth") ? 1 : 0;
+    used.push((s === "a" ? "A" : "B") + " = " + $(s + "_name").value);
+  });
+  if (used.length) { var n = document.createElement("p"); n.className = "live"; n.textContent = "Loaded from your bench: " + used.join(", ") + ". Only the main weapon, shield and armor count here."; $("fighters").parentNode.insertBefore(n, $("fighters")); }
+})();
+
 function parseDamage(text) {
   var m = text.replace(/\s/g, "").toLowerCase().match(/^(\d+)d(\d*)([+-]\d+)?$/);
   if (!m) return null;
