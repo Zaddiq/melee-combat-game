@@ -70,3 +70,8 @@ Not done: jab blocked by a figure in the hex between (only one enemy on the map)
 
 ## Random opponents
 makeOpponent follows two rules: (1) the weapon that does the most damage for its ST (best average dice), (2) the most armor and shield it can wear while adjDX stays 11 or more. It tries every ST/DX split for each race and keeps the best by weapon damage, protection and ST, then picks among races, still avoiding matchups where neither side can get hits through. 15% are archers. Against a simple always-attack bot this is much deadlier (about 40-60% deaths, up from 10-20% for armored builds).
+
+## Duel (two players, one screen) - duel.html
+- A copy of the arena engine with both sides human. Player 1 is the engine's "me", Player 2 its "foe". Movement is public and in initiative order; each turn both pick actions in secret behind a "pass the tablet" cover screen, then results are revealed together. All the Melee rules in the solo arena apply (missiles, pole weapons, hand-to-hand, prone/kneeling).
+- Nothing is recorded. Fighters come from the builder, a paste, an example, or (read only) the solo arena's roster. `arena.html` is untouched.
+- Not done: spells, more than two fighters, hiding the log between picks (the log shows only public events anyway).
