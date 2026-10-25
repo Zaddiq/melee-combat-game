@@ -145,13 +145,13 @@ function card(f,cls){
   <tr><td>Adjusted DX</td><td><b>${adjDX(f)}</b></td></tr>
   <tr><td>Other gear</td><td>${[f.slung!=="none"?iname(f.slung)+" (slung)":"",...f.dag.map(k=>iname(k)+" (sheathed)")].filter(Boolean).join(", ")||"none"}</td></tr></table>`;
 }
-let me=null, foe=null, myStart=null, foeStart=null;
+let me=null, foe=null, myStart=null, foeStart=null, placeStep=0;
 const slot=[null,null];
 function showSlot(i){ $(i?"foe":"me").innerHTML=slot[i]?card(slot[i],i?"foe":"me"):""; showStats(); }
 function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot[0]||slot[1]?`<div class="two">${[0,1].map(i=>slot[i]?`<div>${card(slot[i],i?"foe":"me")}</div>`:"").join("")}</div>`:`<div class="mut">Load both fighters to see their stats here.</div>`); }
 function setP(i,f,msg){
   if(G&&G.phase!=="over"&&!confirm("Leave the duel in progress?")) return; G=null;
-  slot[i]=f; const o=slot[1-i]; if(o&&o.name.trim().toLowerCase()===f.name.trim().toLowerCase()) f.name+=" II";
+  placeStep=0; slot[i]=f; const o=slot[1-i]; if(o&&o.name.trim().toLowerCase()===f.name.trim().toLowerCase()) f.name+=" II";
   me=slot[0]; foe=slot[1]; $("msg"+i).textContent=msg||""; showSlot(i); showSlot(1-i); $("setup").open=true; ui(); drawMap();
 }
 function loadBuilder(i){ let t=null; try{t=localStorage.getItem(KEY);}catch(e){}
@@ -551,7 +551,10 @@ function endTurn(){ nextTurn(); }
 
 function ui(){
   const c=$("ctl"); if(!c)return;
-  if(!G){ if(me&&foe){ c.innerHTML=`<button class="pri" id="bGo">Start duel</button> <div class="mut" style="margin-top:6px"><b class="me">${esc(me.name)}</b> (green, bottom) and <b class="foe">${esc(foe.name)}</b> (red, top): each player taps one of the four outlined hexes at their own end of the map to choose where to start (the open hex is the current choice). When both are happy, press Start duel. Nothing is recorded.</div>`; $("bGo").onclick=startFight; } else c.innerHTML="Load both fighters first (the boxes below)."; return; }
+  if(!G){ if(me&&foe){ const pn=placeStep?foe:me;
+    c.innerHTML=`<div><b class="${placeStep?"foe":"me"}">${esc(pn.name)}</b> (Player ${placeStep+1}): tap one of your four outlined hexes on the map to choose where to start. The open hex is your current choice.</div><div style="margin-top:6px">${placeStep?`<button class="pri" id="bGo">Done: start the duel</button> <button id="bPrev">Back to Player 1</button>`:`<button class="pri" id="bNext">Done: pass to Player 2</button>`}</div><div class="mut" style="margin-top:6px">Nothing is recorded.</div>`;
+    if($("bNext")) $("bNext").onclick=()=>{ placeStep=1; ui(); drawMap(); }; if($("bPrev")) $("bPrev").onclick=()=>{ placeStep=0; ui(); drawMap(); };
+    if($("bGo")) $("bGo").onclick=startFight; } else c.innerHTML="Load both fighters first (the boxes below)."; return; }
   const A=G.me,B=G.foe,cur=G.cur; let t="",b="";
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"");
   const nm=u=>`<b class="${u===A?"me":"foe"}">${esc(u.p.name)}</b>`;
@@ -573,7 +576,7 @@ function ui(){
   const on=(id,f)=>{const e=$(id); if(e)e.onclick=f;};
   on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bUn",undoMove); on("bShow",showPick);
   on("bSkip",()=>{lg(`${G.rdec.p.name} does not force a retreat.`);endTurn();ui();drawMap();}); on("bBack",()=>{G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false));
-  on("bNew",()=>{ G=null; $("setup").open=true; ui(); drawMap(); });
+  on("bNew",()=>{ G=null; placeStep=0; $("setup").open=true; ui(); drawMap(); });
   c.querySelectorAll("[data-opt]").forEach(e=>e.onclick=()=>{
     const o=G.opts[+e.dataset.opt]||{t:"none"};
     if(o.t==="disengage"||o.t==="hesc"){ G.destT=o.t; G.phase="dest"; G.dopts=new Map(freeNeighbors(G.cur).map(h=>[key(h.q,h.r),h])); if(!G.dopts.size){G.phase="pick";G.note="There is no free hex to move into. ";} ui(); drawMap(); }
@@ -615,7 +618,7 @@ function drawMap(){
   if(!G){
     if(me&&foe){ const st=startHexes();
       const pk2=st.top.map(h=>`<polygon data-k2="${key(h.q,h.r)}" points="${poly(h)}" fill="${h===st.theirs?"none":"var(--foe)"}" fill-opacity=".18" stroke="var(--foe)" stroke-width=".1" style="cursor:pointer"/>`).join("");
-      const pk=pk2+st.bottom.map(h=>`<polygon data-k="${key(h.q,h.r)}" points="${poly(h)}" fill="${h===st.mine?"none":"var(--me)"}" fill-opacity=".18" stroke="var(--me)" stroke-width=".1" style="cursor:pointer"/>`).join("");
+      const pk=(placeStep?pk2:"")+(placeStep?"":st.bottom.map(h=>`<polygon data-k="${key(h.q,h.r)}" points="${poly(h)}" fill="${h===st.mine?"none":"var(--me)"}" fill-opacity=".18" stroke="var(--me)" stroke-width=".1" style="cursor:pointer"/>`).join(""));
       const fm={...st.mine,f:0},ff={...st.theirs,f:0}; fm.f=faceToward(fm,ff); ff.f=faceToward(ff,fm);
       layer=pk+tokn(fm,"var(--me)",me)+tokn(ff,"var(--foe)",foe); }
     else layer=P.filter(h=>h.e).map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
