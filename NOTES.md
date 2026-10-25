@@ -74,3 +74,11 @@ makeOpponent follows two rules: (1) the weapon that does the most damage for its
 ## Keeping the Melee arena safe
 - `arena.html` is the finished Melee arena and is not touched by spell work. Branch `melee-stable` is a frozen copy of it (same as `main` when spells began).
 - Spells are built in `wizard-arena.html` (a copy of the arena), on branch `spells`. It will be linked from the menu only when it works, and it shares the same saved fighters, roster and hall of fame keys unless noted.
+
+## Spells (wizard-arena.html, first batch) - Wizard 2018 rules PDF read
+- Casting: roll 3 dice vs adjDX (3-5 auto success, 16-18 miss; 3 triple effect, 4 double). A thrown spell that misses costs 1 ST; a missile spell costs everything put into it; 17 or 18 costs the full price (18 also knocks the wizard down). ST cost is drained like hits but is not counted as hits taken. A wizard may cast down to 0 ST (unconscious) but not below.
+- Missile spells (target in front, megahex range penalties, ST 1-3): Magic Fist (1d-2 per ST, min = ST, 6+ hits before armor trips unless 3 dice vs the higher of ST/adjDX), Fireball (1d-1 per ST), Lightning (1d per ST). Armor and shield/flesh protection apply.
+- Thrown spells: -1 DX per hex (none on self; target in your hex, adjacent or in front). Blur (-4 to all attacks and spells against it; continuing, 1 ST per turn), Stone Flesh (stops 4, cost 2 +1/turn), Iron Flesh (stops 6, 3 +1/turn), Drop Weapon, Trip, Slow Movement (halves MA, 4 turns), Stop (MA 0, 4 turns), Sleep (until hit; not ST 20+), Freeze (2d6 turns; not ST 30+), Clumsiness (-2 DX per ST, 3 turns), Aid (+1 DX per ST on yourself, 2 turns). Iron or steel armor/weapons instead of silver: extra -4 casting only.
+- Continuing spells: a "Renew" step each turn asks which to keep (1 ST each).
+- Wizard opponent: "Wizard (spells, matched to you)" in the opponent list; it casts with a simple scorer and keeps a 3 ST reserve.
+- Not in yet: Aid on ST/IQ or on others, shaking a sleeper awake, Confusion, Avert, Speed, Shock Shield, Reverse Missiles, Spell Shield, Control, Flight, Dazzle, creation spells, summons, Death Spell, Teleport.
