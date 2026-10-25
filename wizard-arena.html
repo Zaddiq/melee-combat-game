@@ -25,7 +25,7 @@ svg{width:100%;height:auto;max-height:80vh}
 </style></head><body><main>
 <h1>Wizard Arena <span class="chip">beta</span></h1>
 <p style="margin:0 0 6px"><a href="index.html" style="color:var(--acc)">← Menu</a> · <a href="builder.html" style="color:var(--acc)">Character builder</a> · <a href="sim.html" style="color:var(--acc)">Fight simulator</a></p>
-<p class="mut">The Melee arena plus spells (Magic Fist, Fireball, Lightning, Blur, Drop Weapon, Trip, Slow Movement, Stop, Sleep, Freeze, Clumsiness, Aid, Stone Flesh, Iron Flesh, Speed Movement, Dazzle, Blast, Break Weapon, Remove Thrown Spell, Spell Shield, Death Spell). Pick the opponent “Wizard” to fight a spellcaster. Basic fight against a computer opponent matched to your ST+DX. Missile and thrown weapons are in: arrows are unlimited, and range is counted in megahexes.</p>
+<p class="mut">The Melee arena plus spells (Magic Fist, Fireball, Lightning, Blur, Drop Weapon, Trip, Slow Movement, Stop, Sleep, Freeze, Clumsiness, Aid, Stone Flesh, Iron Flesh, Speed Movement, Dazzle, Blast, Break Weapon, Remove Thrown Spell, Spell Shield, Reverse Missiles, Flight, Teleport, Death Spell, Fire, Shadow, Create Wall, Rope, Destroy Creation and summoned creatures: Wolf, Myrmidon, Bear, Gargoyle, Giant). Pick the opponent “Wizard” to fight a spellcaster. Basic fight against a computer opponent matched to your ST+DX. Missile and thrown weapons are in: arrows are unlimited, and range is counted in megahexes.</p>
 <div class="grid"><div>
  <div class="card"><h2>Fight</h2><div id="ctl" class="mut">Load a fighter first (the box below).</div></div>
  <details class="setup" id="setup" open><summary>Fighter and opponent</summary>
@@ -50,6 +50,10 @@ svg{width:100%;height:auto;max-height:80vh}
 "use strict";
 const RACES=RULES.RACES, W=RULES.W, SHIELDS=RULES.SHIELDS;
 const ARMOR=Object.fromEntries(Object.entries(RULES.ARMOR).map(([k,v])=>[k,{n:v.n,stops:v.stops,ma:v.ma,pen:v.pen.m}]));  /* Melee DX penalties */
+/* natural weapons and hides for summoned creatures (Wizard 2018 p. 15-16); kept out of the fighter menus with hid */
+Object.assign(W,{bite:{n:"Bite",d:1,m:1,st:0,hid:1},bite2:{n:"Bite",d:2,m:2,st:0,hid:1},fist2:{n:"Fist",d:2,m:0,st:0,hid:1},club3:{n:"Club",d:3,m:3,st:0,hid:1}});
+Object.assign(ARMOR,{wolfhide:{n:"Fur",stops:1,ma:12,pen:0,hid:1},bearhide:{n:"Fur",stops:2,ma:8,pen:0,hid:1},stonehide:{n:"Stone skin",stops:3,ma:8,pen:0,hid:1},bighide:{n:"Hide",stops:0,ma:8,pen:0,hid:1}});
+const CRE={wolf:{name:"Wolf",st:10,dx:14,iq:6,w:"bite",armor:"wolfhide"},myrmidon:{name:"Myrmidon",st:12,dx:12,iq:8,w:"broad",armor:"none"},bear:{name:"Bear",st:30,dx:11,iq:6,w:"bite2",armor:"bearhide"},gargoyle:{name:"Gargoyle",st:20,dx:11,iq:8,w:"fist2",armor:"stonehide"},giant:{name:"Giant",st:30,dx:9,iq:8,w:"club3",armor:"bighide"}};
 const MELEE=Object.keys(W).filter(k=>!W[k].miss&&k!=="staff"&&k!=="mg");
 const MELEE_HEXES=[[0, 0, 0, 0], [-1, 1, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [-1, 2, 0, 0], [1, 1, 0, 0], [0, 2, 0, 0], [-2, 2, 1, 0], [-3, 2, 1, 0], [-3, 3, 1, 0], [-2, 3, 1, 0], [-4, 3, 1, 0], [-4, 4, 1, 0], [-3, 4, 1, 0], [2, -1, 2, 1], [2, 0, 2, 1], [3, -1, 2, 1], [3, 0, 2, 1], [-1, 3, 3, 0], [0, 3, 3, 0], [-2, 4, 3, 0], [-1, 4, 3, 0], [0, 4, 3, 0], [-2, 5, 3, 0], [-1, 5, 3, 0], [2, 1, 4, 0], [1, 2, 4, 0], [3, 1, 4, 0], [2, 2, 4, 0], [1, 3, 4, 0], [3, 2, 4, 0], [2, 3, 4, 0], [-5, 4, 5, 0], [-5, 5, 5, 0], [-6, 4, 5, 0], [-6, 5, 5, 0], [-6, 6, 5, 0], [-7, 5, 5, 0], [-7, 6, 5, 0], [-4, 5, 6, 0], [-3, 5, 6, 0], [-5, 6, 6, 0], [-3, 6, 6, 0], [-5, 7, 6, 0], [-4, 7, 6, 0], [-4, 6, 6, 0], [1, 4, 7, 0], [0, 5, 7, 0], [2, 4, 7, 0], [1, 5, 7, 0], [0, 6, 7, 0], [2, 5, 7, 0], [1, 6, 7, 0], [-2, 6, 8, 0], [-1, 6, 8, 0], [-3, 7, 8, 0], [-2, 7, 8, 0], [-1, 7, 8, 0], [-3, 8, 8, 0], [-2, 8, 8, 0], [-7, 7, 9, 0], [-6, 7, 9, 0], [-8, 8, 9, 0], [-7, 8, 9, 0], [-6, 8, 9, 0], [-8, 9, 9, 0], [-7, 9, 9, 0], [-8, 6, 10, 0], [-8, 7, 10, 0], [-9, 6, 10, 0], [-9, 7, 10, 0], [-9, 8, 10, 0], [-10, 7, 10, 0], [-10, 8, 10, 0], [-5, 8, 11, 0], [-4, 8, 11, 0], [-6, 9, 11, 0], [-5, 9, 11, 0], [-4, 9, 11, 0], [-6, 10, 11, 0], [-5, 10, 11, 0], [-9, 9, 12, 0], [-10, 9, 12, 0], [-10, 10, 12, 0], [-9, 10, 12, 0], [-11, 10, 12, 0], [-11, 11, 12, 0], [-10, 11, 12, 0], [-8, 10, 13, 0], [-7, 10, 13, 0], [-9, 11, 13, 0], [-8, 11, 13, 0], [-7, 11, 13, 0], [-9, 12, 13, 0], [-8, 12, 13, 0], [-11, 12, 14, 1], [-10, 12, 14, 1], [-11, 13, 14, 1], [-10, 13, 14, 1]];
 let HEXES=MELEE_HEXES; /* [q,r,megahex,isEnd] */
@@ -195,12 +199,13 @@ function faceToward(a,b){ const A=pt(a.q,a.r),B=pt(b.q,b.r); const ang=Math.atan
   let best=0,bd=999; SCR.forEach((s,i)=>{const dd=Math.abs((ang-s+540)%360-180); if(dd<bd){bd=dd;best=i;}}); return best; }
 /* hexes a figure may end its movement in. Engaged: shift one hex, staying next to the enemy. Otherwise up to MA hexes,
    and movement must stop on entering any enemy front hex. */
-function reach(a,b,ma,eng){
+function reach(a,B,ma,eng){
+  const E=[].concat(B), occ=allU().filter(x=>x.hp>0&&!same(x,a)), free=n=>n&&!occ.some(x=>same(x,n));
   const out=new Map([[key(a.q,a.r),{q:a.q,r:a.r,c:0,fire:0}]]);
-  if(eng){ for(let d=0;d<6;d++){const n=nbr(a,d); if(n&&!same(n,b)&&dist(n,b)===1) out.set(key(n.q,n.r),{q:n.q,r:n.r,c:1,fire:objAt(n,"fire")?1:0});} return out; }
+  if(eng){ for(let d=0;d<6;d++){const n=nbr(a,d); if(free(n)&&E.some(e=>dist(n,e)===1)) out.set(key(n.q,n.r),{q:n.q,r:n.r,c:1,fire:objAt(n,"fire")?1:0});} return out; }
   const qu=[{q:a.q,r:a.r,c:0}];
-  while(qu.length){ const cur=qu.shift(); if(cur.c>=ma)continue; if(cur.c>0&&relOf(b,cur)==="front"&&!!a.air===!!b.air)continue;
-    for(let d=0;d<6;d++){ const n=nbr(cur,d); if(!n||same(n,b)||out.has(key(n.q,n.r)))continue;
+  while(qu.length){ const cur=qu.shift(); if(cur.c>=ma)continue; if(cur.c>0&&E.some(e=>relOf(e,cur)==="front"&&!!a.air===!!e.air))continue;
+    for(let d=0;d<6;d++){ const n=nbr(cur,d); if(!free(n)||out.has(key(n.q,n.r)))continue;
       const e={q:n.q,r:n.r,c:cur.c+1,fire:(cur.fire||0)+(objAt(n,"fire")?1:0)}; out.set(key(n.q,n.r),e); qu.push(e); } }
   return out;
 }
@@ -268,7 +273,12 @@ let rollN=n=>Array.from({length:n},d6);   /* a test can swap this for scripted d
 const sum=a=>a.reduce((x,y)=>x+y,0);
 const isW=id=>!!(W[id]&&!W[id].miss);                 /* a usable melee weapon (main-gauche included) */
 const sub=u=>u===G.me?"You":u.p.name, vb=(u,a,b)=>u===G.me?a:b;
-const other=u=>u===G.me?G.foe:G.me;
+const allU=()=>G.units||[G.me,G.foe];
+const sideOf=u=>u.side||(u===G.me?"me":"foe");
+const enemiesOf=u=>allU().filter(x=>x!==u&&x.hp>0&&sideOf(x)!==sideOf(u));
+const engagedAny=u=>enemiesOf(u).some(e=>isEngaged(u,e));
+function other(u){ const E=enemiesOf(u); if(!E.length) return u===G.me?G.foe:G.me; if(u===G.me&&G.tgt&&E.includes(G.tgt)) return G.tgt;
+  let best=null; for(const e of E){ const sc=dist(u,e)*10+(e===G.me||e===G.foe?0:1); if(!best||sc<best.s) best={e,s:sc}; } return best.e; }
 const lg=t=>G.log.push(t);
 function startHexes(){
   const ends=P.filter(h=>h.e), ys=P.map(h=>h.p[1]), xs=P.map(h=>h.p[0]);
@@ -280,18 +290,18 @@ function startHexes(){
   myStart=key(mine.q,mine.r);
   return {bottom,top,mine,theirs:front(top,-1)};
 }
-const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,rev:false,revHit:false,rope:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,cool:0,usedLast:false,dodging:false,
+const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fresh:false,gone:false,rev:false,revHit:false,rope:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
 function startFight(){
   if(!me||!foe)return; const s=startHexes();
   G={me:mk(s.mine,me),foe:mk(s.theirs,foe),turn:0,phase:"",log:[],order:[],idx:0,start:null,reach:null,eng:false,moved:0,floor:[],objs:[]};
-  WALLS=new Set(); G.me.f=faceToward(G.me,G.foe); G.foe.f=faceToward(G.foe,G.me);
+  G.units=[G.me,G.foe]; G.tgt=null; WALLS=new Set(); G.me.f=faceToward(G.me,G.foe); G.foe.f=faceToward(G.foe,G.me);
   G.exhib=foeMode.k!=="random"&&(foe.st+foe.dx)<(me.st+me.dx)-3;
   $("setup").open=false;   /* fold the setup cards so the fight controls sit beside the map */
   nextTurn(); ui(); drawMap();
 }
 function nextTurn(){
-  for(const u of [G.me,G.foe]){ if(u.hits>=5)u.wound2=true; u.hits=0; if(u.cool>0)u.cool--; u.dodging=false; if(!isEngaged(u,u===G.me?G.foe:G.me))u.usedLast=false; u.from={q:u.q,r:u.r}; u.extra=0; u.poleVs=false; u.pri=false; u.dealt=u.tookHit=u.defending=false; u.act=null; u.standUp=false; u.moved=0; u.engStart=false; if(u.fly){ u.air=true; u.airN++; }
+  for(const u of allU()){ u.fresh=false; if(u.hits>=5)u.wound2=true; u.hits=0; if(u.cool>0)u.cool--; u.dodging=false; if(!engagedAny(u))u.usedLast=false; u.from={q:u.q,r:u.r}; u.extra=0; u.poleVs=false; u.pri=false; u.dealt=u.tookHit=u.defending=false; u.act=null; u.standUp=false; u.moved=0; u.engStart=false; if(u.fly){ u.air=true; u.airN++; }
     u.fireT=false; if(u.rope>0){ u.rope++; if(adjDXu(u,"single",null)<=2&&!u.down){ u.down=true; lg(`${sub(u)} ${vb(u,"are","is")} so tangled in rope that ${vb(u,"you fall","it falls")} helpless.`); } }
     u.revHit=false; for(const k of ["slow","stop","spd","daz","clum","aid","frozen"]) if(u[k]>0) u[k]--; if(!u.aid) u.aidN=0; if(!u.clum) u.clumN=0; }
   if(G.objs&&G.objs.length){ G.objs.forEach(o=>o.age++); const n0=G.objs.length; G.objs=G.objs.filter(o=>o.age<=12); if(G.objs.length<n0){ syncWalls(); lg("Some created things fade away (they last 12 turns)."); } }
@@ -302,28 +312,31 @@ function nextTurn(){
   const go=()=>{ if(G.phase==="over") return; if(a>b){ G.phase="choose"; } else { lg(`${foe.name} wins it and moves second.`); G.order=["me","foe"]; G.idx=0; advance(); } };
   /* step 2: renew continuing spells (the computer decides now; you are asked) */
   for(const k of CONT){ if(G.foe[k]){ if(G.foe.hp-1>=4&&Math.random()<.9){ G.foe.hp--; lg(`${foe.name} keeps ${CONTN[k]} going.`); } else { G.foe[k]=false; if(k==="fly") land(G.foe); lg(`${foe.name}'s ${CONTN[k]} ends.`); } } }
-  const act=CONT.filter(k=>G.me[k]);
-  if(act.length&&G.me.hp>0){ G.phase="renew"; G.rlist=act.map(k=>({k,on:G.me.hp>=3})); G.afterRenew=go; } else go();
+  for(const m of allU().filter(x=>x.minion&&x.hp>0&&sideOf(x)==="foe")){ if(G.foe.hp-1>=4&&Math.random()<.9){ G.foe.hp--; lg(`${foe.name} keeps ${m.p.name} going.`); } else { m.hp=0; endCheck(); } }
+  const act=CONT.filter(k=>G.me[k]), mins=allU().filter(x=>x.minion&&x.hp>0&&sideOf(x)==="me");
+  if((act.length||mins.length)&&G.me.hp>0){ G.phase="renew"; G.rlist=act.map(k=>({k,on:G.me.hp>=3})).concat(mins.map(m=>({k:"minion",m,on:G.me.hp>=3}))); G.afterRenew=go; } else go();
 }
 const CONT=["blur","stone","iron","shield","rev","fly"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield",rev:"Reverse Missiles",fly:"Flight"};
-function doRenew(){ const u=G.me; for(const r of G.rlist){ if(r.on&&u.hp>=1){ u.hp--; lg(`You keep ${CONTN[r.k]} going (1 ST).`); } else { u[r.k]=false; if(r.k==="fly") land(u); lg(`Your ${CONTN[r.k]} ends.`); } } G.phase="";
+const rname=r=>r.k==="minion"?r.m.p.name:CONTN[r.k];
+function doRenew(){ const u=G.me; for(const r of G.rlist){ if(r.on&&u.hp>=1){ u.hp--; lg(`You keep ${rname(r)} going (1 ST).`); } else if(r.k==="minion"){ r.m.hp=0; endCheck(); } else { u[r.k]=false; if(r.k==="fly") land(u); lg(`Your ${CONTN[r.k]} ends.`); } } G.phase="";
   endCheck(); if(G.phase!=="over"){ const f=G.afterRenew; f(); } }
 function choose(first){ G.order=first?["me","foe"]:["foe","me"]; G.idx=0; lg(first?"You move first.":"You move second."); advance(); ui(); drawMap(); }
+function minionMove(side){ for(const m of allU().filter(x=>x.minion&&x.hp>0&&sideOf(x)===side)) aiMove(m); }
 function advance(){
   if(G.idx>=2){ beginActions(); return; }
-  if(G.order[G.idx]==="foe"){ aiMove(); G.idx++; advance(); return; }
-  const u=G.me;
-  if(u.sleep||u.frozen>0){ lg(`You cannot move (${u.sleep?"asleep":"frozen"}).`); G.idx++; advance(); return; }
-  if(u.hth||u.low){ G.idx++; advance(); return; }   /* grappling or kneeling/prone figures do not move */   /* grappling figures do not move */
-  if(u.down){ u.standUp=true; lg("You start to stand up: no other action, and you stay on the floor until the end of the combat phase."); G.idx++; advance(); return; }
-  G.phase="move"; G.start={q:u.q,r:u.r,air:u.air}; G.eng=isEngaged(u,G.foe); G.moved=0;
-  G.reach=reach(G.start,G.foe,MAu(G.me),G.eng);
+  if(G.order[G.idx]==="foe"){ aiMove(G.foe); minionMove("foe"); G.idx++; advance(); return; }
+  const u=G.me, skip=()=>{ minionMove("me"); G.idx++; advance(); };
+  if(u.sleep||u.frozen>0){ lg(`You cannot move (${u.sleep?"asleep":"frozen"}).`); skip(); return; }
+  if(u.hth||u.low){ skip(); return; }   /* grappling or kneeling/prone figures do not move */
+  if(u.down){ u.standUp=true; lg("You start to stand up: no other action, and you stay on the floor until the end of the combat phase."); skip(); return; }
+  G.phase="move"; G.start={q:u.q,r:u.r,air:u.air}; G.eng=engagedAny(u); G.moved=0;
+  G.reach=reach(G.start,enemiesOf(u),MAu(G.me),G.eng);
 }
-function aiMove(){
-  const a=G.foe,b=G.me;
-  if(a.hth||a.low||a.sleep||a.frozen>0) return;
-  if(a.down){ a.standUp=true; lg(`${foe.name} starts to stand up.`); return; }
-  const eng=isEngaged(a,b), R=reach(a,b,MAu(a),eng); let best=null;
+function aiMove(a){
+  a=a||G.foe; const b=other(a);
+  if(a.fresh||a.hth||a.low||a.sleep||a.frozen>0) return;
+  if(a.down){ a.standUp=true; lg(`${a.p.name} starts to stand up.`); return; }
+  const eng=engagedAny(a), R=reach(a,enemiesOf(a),MAu(a),eng); let best=null;
   for(const [k,h] of [...R]) if(h.fire&&!same(h,a)) R.delete(k);   /* the computer will not walk into fire */
   if(MWid(a)&&!eng){   /* an archer holds its ground, steps back if the enemy gets within 2 hexes, and never walks into the enemy's front */
     for(const h of R.values()){ if(h.c>1)continue; const s=Math.min(dist(h,b),4)*2-(relOf(b,h)==="front"?9:0)+(h.c===0?0.4:0)+Math.random()*0.3; if(!best||s>best.s) best={h,s}; }
@@ -336,9 +349,9 @@ function aiMove(){
     if(!best||s<best.s) best={h,s};
   }
   const moved=!same(best.h,a); a.q=best.h.q; a.r=best.h.r; a.f=faceToward(a,b); a.engStart=eng; a.moved=best.h.c||0;
-  lg(`${foe.name} ${eng?(moved?"shifts":"holds"):(moved?"moves "+best.h.c+" hex"+(best.h.c>1?"es":""):"holds")}.`);
+  lg(`${a.p.name} ${eng?(moved?"shifts":"holds"):(moved?"moves "+best.h.c+" hex"+(best.h.c>1?"es":""):"holds")}.`);
 }
-function confirmMove(){ G.me.engStart=G.eng; G.me.moved=G.moved; lg(`You ${G.moved?"moved "+G.moved+" hex"+(G.moved>1?"es":""):"stayed put"}.`); fireMove(G.me,G.reach&&G.reach.get(key(G.me.q,G.me.r))); if(G.phase==="over"){ ui(); drawMap(); return; } G.idx++; advance(); ui(); drawMap(); }
+function confirmMove(){ minionMove("me"); G.me.engStart=G.eng; G.me.moved=G.moved; lg(`You ${G.moved?"moved "+G.moved+" hex"+(G.moved>1?"es":""):"stayed put"}.`); fireMove(G.me,G.reach&&G.reach.get(key(G.me.q,G.me.r))); if(G.phase==="over"){ ui(); drawMap(); return; } G.idx++; advance(); ui(); drawMap(); }
 function undoMove(){ G.me.q=G.start.q; G.me.r=G.start.r; G.moved=0; ui(); drawMap(); }
 
 /* ---- attack rules ---- */
@@ -385,7 +398,7 @@ function doRush(a,d){
 /* ---- hand-to-hand combat (Melee 2018 p. 17-20) ---- */
 const hthWeap=u=>[u.right,u.left].find(k=>k==="dagger"||k==="mg")||null;
 const sheathedDag=u=>u.dag.find(k=>k==="dagger"||k==="mg")||null;
-function canHth(u,o){ return !u.air&&!o.air&&!u.hth&&!o.hth&&!u.down&&u.hp>0&&dist(u,o)===1&&(o.down||o.low||MAu(u)>MAu(o)||relOf(o,u)==="rear"); }
+function canHth(u,o){ return !u.minion&&!o.minion&&!u.air&&!o.air&&!u.hth&&!o.hth&&!u.down&&u.hp>0&&dist(u,o)===1&&(o.down||o.low||MAu(u)>MAu(o)||relOf(o,u)==="rear"); }
 function hthWhy(u,o){ return o.down||o.low?"it is down, kneeling or prone":relOf(o,u)==="rear"?"you are behind it":"it has the lower MA"; }
 function dropGear(u,at){ const keep=hthWeap(u); let kept=false;
   for(const side of ["right","left"]){ const k=u[side]; if(k==="none")continue; if(k===keep&&!kept){kept=true;continue;} G.floor.push({q:at.q,r:at.r,id:k}); u[side]="none"; } }
@@ -462,7 +475,11 @@ function lineHexes(a,b){ const n=dist(a,b), out=[]; const A=[a.q,a.r,-a.q-a.r], 
     if(d[0]>d[1]&&d[0]>d[2]) r[0]=-r[1]-r[2]; else if(d[1]>d[2]) r[1]=-r[0]-r[2]; else r[2]=-r[0]-r[1]; out.push({q:r[0],r:r[1]}); }
   return out; }
 const blocked=(a,b)=>WALLS.size>0&&lineHexes(a,b).some(h=>WALLS.has(key(h.q,h.r)));
-function creaHexes(u,o,t){ return P.filter(h=>mhDist(u,h)<=1&&!blocked(u,h)&&!G.objs.some(x=>x.q===h.q&&x.r===h.r&&(t==="wall"||x.t===t||x.t==="wall"))&&(t!=="wall"||(!same(h,u)&&!same(h,o)))&&(t!=="fire"||!same(h,u))); }
+function creaHexes(u,o,t){ const occ=h=>allU().some(x=>x.hp>0&&same(x,h)), solid=t==="wall"||t==="summon";
+  return P.filter(h=>mhDist(u,h)<=1&&!blocked(u,h)&&!G.objs.some(x=>same(x,h)&&(solid||x.t===t||x.t==="wall"))&&(!solid||!occ(h))&&(t!=="fire"||!same(h,u))); }
+function summonMinion(u,kind,h){ const C=CRE[kind], n=allU().filter(x=>x.minion&&x.p.name.indexOf(C.name)===0).length;
+  const p=fromBuilder({name:C.name+(n?" "+(n+1):""),race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"});
+  const m=mk(h,p); m.minion=true; m.side=sideOf(u); m.owner=u; m.fresh=true; m.f=faceToward(m,other(u)); if(!G.units) G.units=[G.me,G.foe]; G.units.push(m); return m; }
 function fireHits(u,total){ const prot=ARMOR[u.p.armor].stops+(u.iron?6:u.stone?4:0), h=Math.max(0,total-prot);
   lg(`${sub(u)} ${vb(u,"take","takes")} ${total} hits of fire; protection stops ${Math.min(prot,total)}. ${h?sub(u)+" "+vb(u,"take","takes")+" "+h+" hit"+(h>1?"s":""):"No damage gets through"}.`);
   if(h>0){ u.hp-=h; u.hits+=h; u.tookHit=true; u.sleep=false; lg(`${vb(u,"Your","Its")} ST is now ${Math.max(u.hp,0)}.`); } endCheck(); }
@@ -485,6 +502,11 @@ const SP={
  "Shadow":{k:"C",cost:()=>1,obj:"shadow"},
  "Create Wall":{k:"C",cost:()=>2,obj:"wall"},
  "Rope":{k:"C",cost:()=>2,rope:1},
+ "Summon Wolf":{k:"C",cost:()=>2,obj:"summon",summon:"wolf"},
+ "Summon Myrmidon":{k:"C",cost:()=>2,obj:"summon",summon:"myrmidon"},
+ "Summon Bear":{k:"C",cost:()=>4,obj:"summon",summon:"bear"},
+ "Summon Gargoyle":{k:"C",cost:()=>4,obj:"summon",summon:"gargoyle"},
+ "Summon Giant":{k:"C",cost:()=>4,obj:"summon",summon:"giant"},
  "Destroy Creation":{k:"T",cost:()=>1,destroy:1},
  "Teleport":{k:"S",cost:()=>1,tele:1},
  "Flight":{k:"T",cost:()=>3,self:1,cont:"fly"},
@@ -546,8 +568,9 @@ function doCast(u,o,pa){
   payST(u,c.cost);
   { const T0=(d.self||c.on==="self")?u:o;
     if(T0.shield&&T0!==u&&!c.tele&&d.k!=="C"&&!d.destroy&&c.sp!=="Spell Shield"){ const x=c.sp==="Death Spell"?1:0; if(x) payST(u,1); lg(`${head}: it works, but ${sub(o)} ${vb(o,"are","is")} protected by a Spell Shield, so nothing happens. ${sub(u)} ${vb(u,"lose","loses")} ${c.cost+x} ST.`); endCheck(); return; } }
-  if(d.k==="C"&&!d.rope){ const ob={t:d.obj,q:c.dest.q,r:c.dest.r,age:0}; G.objs.push(ob); syncWalls(); lg(`${head}: it works (${c.cost} ST). A ${d.obj==="wall"?"wall":d.obj==="fire"?"hex of flame":"hex of black shadow"} appears.`);
-    if(d.obj==="fire"){ const f=[u,o].find(x=>same(x,ob)); if(f) fireHits(f,2); } else endCheck(); return; }
+  if(d.k==="C"&&!d.rope){ if(d.summon){ const m=summonMinion(u,d.summon,c.dest); lg(`${head}: it works (${c.cost} ST). ${m.p.name} appears (it cannot move or fight this turn; it costs 1 ST a turn to keep).`); endCheck(); return; }
+  const ob={t:d.obj,q:c.dest.q,r:c.dest.r,age:0}; G.objs.push(ob); syncWalls(); lg(`${head}: it works (${c.cost} ST). A ${d.obj==="wall"?"wall":d.obj==="fire"?"hex of flame":"hex of black shadow"} appears.`);
+    if(d.obj==="fire"){ const f=allU().find(x=>x.hp>0&&same(x,ob)); if(f) fireHits(f,2); } else endCheck(); return; }
   if(d.rope){ o.rope=1; lg(`${head}: it works (${c.cost} ST). A magic rope ties up ${sub(o)}: MA halved, DX −2, and one worse each turn until ${vb(o,"you stand","it stands")} still and break${vb(o,"","s")} free.`); if(adjDXu(o,"single",null)<=2) o.down=true; endCheck(); return; }
   if(d.destroy){ const ob=(G.objs||[])[c.objId]; if(ob){ G.objs.splice(c.objId,1); syncWalls(); lg(`${head}: it works (1 ST). The ${ob.t} vanishes.`); } else lg(`${head}: it works, but nothing is left to destroy.`); endCheck(); return; }
   if(d.k==="M"){
@@ -626,7 +649,7 @@ function options(u,o){
   L.push({t:"none",label:"Do nothing"});
   return L.filter(x=>!x.off);
 }
-function freeNeighbors(u){ const out=[]; for(let d=0;d<6;d++){const n=nbr(u,d); if(n&&!same(n,G.me)&&!same(n,G.foe)) out.push(n);} return out; }
+function freeNeighbors(u){ const out=[]; for(let d=0;d<6;d++){const n=nbr(u,d); if(n&&!allU().some(x=>x.hp>0&&same(n,x))) out.push(n);} return out; }
 function applyReady(u,it){
   const id=it.id;
   if(it.src==="slung") u.slung="none"; else if(it.src==="dag"){ const i=u.dag.indexOf(id); if(i>=0)u.dag.splice(i,1); } else { const i=G.floor.indexOf(it.obj); if(i>=0)G.floor.splice(i,1); }
@@ -658,16 +681,17 @@ function aiCast(u,o){
       case "Blast": v=p*Math.max(0,3.5-stp); break;
       case "Break Weapon": { const bw=brkItem(o); v=bw&&!SHIELDS[bw]&&W[bw]?p*(W[bw].d>=2?3.4:1.4):bw?p*1.6:0; break; }
       case "Remove Thrown Spell": v=x.on==="foe"?p*((o.iron?3.8:0)+(o.stone?3:0)+(o.blur?2.6:0)+(o.spd>0?1:0)+(o.aid>0?1.5:0)+(o.sleep?0:0)):p*((u.clum>0?2.2:0)+(u.slow>0&&dist(u,o)>=2?1:0)+(u.stop>0?1.5:0)); break;
+      case "Summon Wolf": case "Summon Myrmidon": case "Summon Bear": case "Summon Gargoyle": case "Summon Giant": { const own=allU().filter(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(u)).length; v=own===0&&u.hp>=x.cost+6?({wolf:2.6,myrmidon:3.1,bear:4.4,gargoyle:3.8,giant:4.8})[SP[x.sp].summon]:0; break; }
       case "Rope": v=p*(armed?3.4:2.4); break;
       case "Reverse Missiles": v=(MWid(o)||o.p.cls==="wizard")&&u.hp>=7?2.4:0; break;
       case "Spell Shield": v=o.p.cls==="wizard"&&!u.shield&&u.hp>=9?3.4:0; break;
       case "Death Spell": v=0; break;
     }
     v+=Math.random()*.6; if(!best||v>best.v) best={x,v}; }
-  return best&&best.v>1.1?{t:"cast",sp:best.x.sp,n:best.x.n}:null;
+  if(!best||best.v<=1.1) return null; const pk={t:"cast",sp:best.x.sp,n:best.x.n}; if(best.x.hexsel){ const H=creaHexes(u,o,best.x.hexsel).sort((a,b)=>dist(a,o)-dist(b,o)); if(!H.length) return null; pk.dest=H[Math.min(1,H.length-1)]; } return pk;
 }
-function aiAct(){
-  const u=G.foe,o=G.me; if(u.standUp) return {t:"none"};
+function aiAct(u,o){
+  u=u||G.foe; o=o||other(u); if(u.standUp||u.fresh) return {t:"none"};
   if(u.sleep||u.frozen>0) return {t:"none"};
   const L=options(u,o), has=t=>L.find(x=>x.t===t);
   if(has("cast")){ const c=aiCast(u,o); if(c) return c; }
@@ -692,7 +716,8 @@ function aiAct(){
   return has("attack")||{t:"none"};
 }
 function beginActions(){
-  G.phase="pick"; const o=G.foe, u=G.me; G.opts=options(u,o);
+  G.phase="pick"; const u=G.me, o=other(u); G.opts=options(u,o);
+  if(enemiesOf(u).length>1) lg(`Your target is ${o.p.name}. Click another enemy on the map to change it.`);
   if(MWid(u)&&u.cool>0) lg(`Your ${iname(MWid(u)).toLowerCase()} is still reloading (${u.cool} more turn${u.cool>1?"s":""}).`);
   if(!G.opts.some(x=>x.t==="attack")&&relOf(u,o)==="front"&&!u.engStart&&u.moved>MAu(u)/2) lg(`You moved more than half your MA, so you cannot attack this turn.`);
 }
@@ -719,7 +744,7 @@ function doAttack(a,d,wid,mode,kind){
   const r=dmgRoll(a,wid), full=r.total*mult, st=stopsFor(d,a,wid,kind), hits=Math.max(0,full-st);
   lg(`${head}: HIT. ${iname(wid)} ${dice_txt(r)}${mult>1?" ×"+mult+" = "+full:""}; armor and shield stop ${Math.min(st,full)}. ${hits?vb(d,"You take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
   if(hits>0){
-    d.hp-=hits; d.hits+=hits; d.tookHit=true; d.sleep=false; if(!kind||kind==="jab")a.dealt=true;   /* missile and thrown hits do not allow a forced retreat */
+    d.hp-=hits; d.hits+=hits; d.tookHit=true; d.sleep=false; if(!kind||kind==="jab"){ a.dealt=true; a.lastTgt=d; }   /* missile and thrown hits do not allow a forced retreat */
     lg(`${vb(d,"Your","its")} ST is now ${Math.max(d.hp,0)}${d===G.me?"":" ("+d.p.name+")"}.`);
     if(d.hits>=8&&d.hp>0&&!d.down){ d.down=true; lg(`${sub(d)} ${vb(d,"are","is")} knocked down by ${d.hits} hits!`); }
   }
@@ -727,6 +752,7 @@ function doAttack(a,d,wid,mode,kind){
 }
 const dice_txt=r=>`(${r.dice.join("+")}${r.m?(r.m>0?"+":"−")+Math.abs(r.m):""} = ${r.total})`;
 function endCheck(){
+  for(const m of allU()) if(m.minion&&m.hp<=0&&!m.gone){ m.gone=true; lg(`${m.p.name} ${m.hp<0?"is slain":"falls and vanishes"}.`); }
   if(G.phase==="over") return;
   const a=G.me,b=G.foe;
   if(a.hp<=0||b.hp<=0){
@@ -737,12 +763,12 @@ function endCheck(){
   }
 }
 function resolveTurn(pa){
-  G.me.act=pa; G.foe.act=aiAct(); G.phase="resolve";
-  const U=[G.me,G.foe]; U.forEach(u=>{ u.defending=u.act.t==="defend"; u.dodging=u.act.t==="dodge"; });
+  G.me.act=pa; const U=allU().filter(u=>u.hp>0); for(const u of U) if(u!==G.me) u.act=aiAct(u,other(u)); G.phase="resolve"; U.forEach(u=>{ u.defending=u.act.t==="defend"; u.dodging=u.act.t==="dodge"; });
   const N2={unrope:"struggle with the rope",cast:"cast a spell",drop:"drop down",rise:"stand up",hth:"close for hand-to-hand",hattack:"fight hand to hand",hdraw:"try to draw a dagger",hesc:"break away from the grapple",jab:"jab with a pole weapon",rush:"shield-rush",attack:"attack",dual:"attack with a weapon and the main-gauche",defend:"defend",dodge:"dodge",fire:"fire a missile weapon",last:"fire one last shot",throw:"throw a weapon",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
   const N3={unrope:"struggles with the rope",cast:"casts a spell",drop:"drops down",rise:"starts to stand up",hth:"closes for hand-to-hand",hattack:"fights hand to hand",hdraw:"tries to draw a dagger",hesc:"tries to break away",jab:"jabs with a pole weapon",rush:"shield-rushes",attack:"attacks",dual:"attacks with a weapon and the main-gauche",defend:"defends",dodge:"dodges",fire:"fires a missile weapon",last:"fires one last shot",throw:"throws a weapon",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
   U.forEach(u=>{ if(u.act.pos&&(u.act.t==="drop"||u.act.t==="fire")&&!u.low){ u.low=u.act.pos; lg(`${sub(u)} ${vb(u,"go","goes")} ${u.act.pos==="prone"?"prone":"down on one knee"}.`); } if(u.act.t==="rise") u.standUp=true; });
   U.forEach(u=>lg(`${sub(u)} ${u===G.me?"choose to "+N2[u.act.t]:"chooses to "+N2[u.act.t]}.`));
+  U.forEach(u=>{ u.lastTgt=null; });
   U.forEach(u=>{ const o=other(u); u.extra=0; u.poleVs=false; u.pri=false;
     if(ATK.includes(u.act.t)&&u.act.t!=="rush"){ const w=isW(u.right)?u.right:(isW(u.left)&&!SHIELDS[u.left]?u.left:null);
       if(w&&W[w].pole){ const charging=chargedBy(u,o), ch=charging&&straight3(u), vs=u.act.t==="attack"&&u.moved===0&&chargedBy(o,u);
@@ -782,17 +808,17 @@ function resolveTurn(pa){
   ui(); drawMap();
 }
 function afterActions(){
-  const w=[G.me,G.foe].find(u=>u.dealt&&!u.tookHit&&u.hp>0);
+  const w=allU().find(u=>u.dealt&&!u.tookHit&&u.hp>0&&u.lastTgt&&u.lastTgt.hp>0);
   if(!w){ endTurn(); return; }
-  const d=other(w), opts=freeNeighbors(d).filter(h=>dist(h,w)>dist(d,w));   /* one hex farther from the attacker */
+  const d=w.lastTgt, opts=freeNeighbors(d).filter(h=>dist(h,w)>dist(d,w));   /* one hex farther from the attacker */
   if(!opts.length){ lg(`${sub(w)} could force a retreat, but there is no free hex behind ${d===G.me?"you":sub(d)}.`); endTurn(); return; }
-  if(w===G.foe){
+  if(w!==G.me){
     const pick1=opts.map(h=>({h,s:Math.random()})).sort((a,b)=>b.s-a.s)[0].h, from={q:d.q,r:d.r};
     d.q=pick1.q; d.r=pick1.r; w.q=from.q; w.r=from.r;
-    lg(`${foe.name} forces you back one hex and follows.`); endTurn(); return; }
-  G.phase="retreat"; G.ropts=new Map(opts.map(h=>[key(h.q,h.r),h])); G.rfrom={q:d.q,r:d.r};
+    lg(`${w.p.name} forces ${d===G.me?"you":d.p.name} back one hex and follows.`); endTurn(); return; }
+  G.phase="retreat"; G.ropts=new Map(opts.map(h=>[key(h.q,h.r),h])); G.rfrom={q:d.q,r:d.r}; G.rd=d;
 }
-function doRetreat(h){ const d=G.foe; d.q=h.q; d.r=h.r; G.phase="advance"; lg(`You force ${foe.name} back one hex.`); ui(); drawMap(); }
+function doRetreat(h){ const d=G.rd; d.q=h.q; d.r=h.r; G.phase="advance"; lg(`You force ${d.p.name} back one hex.`); ui(); drawMap(); }
 function doAdvance(yes){ if(yes){ G.me.q=G.rfrom.q; G.me.r=G.rfrom.r; lg("You advance into the vacated hex."); } else lg("You hold your ground."); endTurn(); ui(); drawMap(); }
 function endTurn(){ nextTurn(); }
 
@@ -802,11 +828,11 @@ function ui(){
   const rr=me.rec;
   if(rr&&(rr.retired||rr.dead||rr.pend>0)&&!G){ c.innerHTML=rr.pend>0?"Spend your attribute point in the Your fighter box first.":rr.dead?"This fighter is dead. Load another fighter.":"This champion has retired. Copy the updated fighter, or load another."; return; }
   if(!G){ c.innerHTML=`<button class="pri" id="bGo">Start fight</button> <span class="mut">You and ${esc(foe?foe.name:"")} enter at opposite ends.</span>`; $("bGo").onclick=startFight; return; }
-  const A=G.me,B=G.foe; let t="",b="";
+  const A=G.me,B=other(G.me); let t="",b="";
   if(G.phase==="over") $("setup").open=true;   /* show the fighter box again (attribute points, next opponent) */
   const fx=u=>[u.blur&&"Blur",u.stone&&"Stone Flesh",u.iron&&"Iron Flesh",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.rope>0&&"roped −"+(u.rope+1)+" DX",u.air&&"flying",u.fly&&!u.air&&"taking off",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.shield&&"Spell Shield",u.rev&&"Reverse Missiles",u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"")+(fx(u).length?" ["+fx(u).join(", ")+"]":"");
-  const st=`<b>You</b> ST ${Math.max(A.hp,0)}/${me.st}${flags(A)} · <b>${esc(foe.name)}</b> ST ${Math.max(B.hp,0)}/${foe.st}${flags(B)}<br>You are ${isEngaged(A,B)?"<b>engaged</b>":"not engaged"}; ${esc(foe.name)} is ${isEngaged(B,A)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).${(MWid(A)||[A.right,A.left].some(k=>W[k]&&W[k].th))&&!inFront(A,B)?" The enemy is not in front of you, so you cannot shoot or throw at it.":""}`;
+  const st=allU().filter(u=>u.hp>0||!u.minion).map(u=>`<b>${u===A?"You":esc(u.p.name)+(u.minion&&sideOf(u)==="me"?" (yours)":"")}</b> ST ${Math.max(u.hp,0)}/${u.p.st}${flags(u)}`).join(" · ")+`<br>You are ${engagedAny(A)?"<b>engaged</b>":"not engaged"}; ${esc(B.p.name)} is ${isEngaged(B,A)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).${(MWid(A)||[A.right,A.left].some(k=>W[k]&&W[k].th))&&!inFront(A,B)?" The enemy is not in front of you, so you cannot shoot or throw at it.":""}`;
   if(G.phase==="choose"){ t="You won the initiative roll. Move first or second?"; b=`<button class="pri" id="b1">Move first</button><button id="b2">Move second</button>`; }
   else if(G.phase==="move"){
     t=(G.eng?"You are engaged: you may shift one hex (staying next to the enemy). ":`Click a highlighted hex to move up to ${MAu(G.me)} hexes. Entering an enemy front hex stops you. Moving more than half your MA (${Math.floor(MAu(G.me)/2)}) means no attack this turn, and firing a missile weapon allows only 1 hex of movement. `)+"Click a small circle beside your counter to change facing.";
@@ -814,10 +840,10 @@ function ui(){
   else if(G.phase==="pick"){
     t="Choose your action. The computer picks its own without seeing yours.";
     b=G.opts.length?G.opts.map((o,i)=>`<button data-opt="${i}"${i===0&&o.t!=="none"?' class="pri"':""}>${esc(o.label)}</button>`).join(""):`<button class="pri" data-opt="-1">Continue</button>`; }
-  else if(G.phase==="renew"){ t="Renew your spells? Each costs 1 ST this turn. Spells you do not renew end now."; b=G.rlist.map((r,i)=>`<button data-rn="${i}"${r.on?' class="pri"':""}>${r.on?"Keep ":"Drop "}${CONTN[r.k]} (1 ST)</button>`).join("")+`<button class="pri" id="bRn">Done</button>`; }
+  else if(G.phase==="renew"){ t="Renew your spells? Each costs 1 ST this turn. Spells you do not renew end now."; b=G.rlist.map((r,i)=>`<button data-rn="${i}"${r.on?' class="pri"':""}>${r.on?"Keep ":"Drop "}${rname(r)} (1 ST)</button>`).join("")+`<button class="pri" id="bRn">Done</button>`; }
   else if(G.phase==="spells"){ t="Choose a spell. A thrown spell that misses costs 1 ST, a missile spell costs everything you put into it, and a roll of 17 or 18 costs the full price."; b=G.sopts.map((x,i)=>`<button data-sp="${i}">${esc(x.label)}</button>`).join("")+`<button id="bBack">Back</button>`; }
   else if(G.phase==="dest"){ t="Click the highlighted hex on the map that you want to disengage or teleport into (on a phone, scroll to the map)."; b=`<button id="bBack">Back</button>`; }
-  else if(G.phase==="retreat"){ t=`You hit ${esc(foe.name)} and took no hits, so you may force a retreat: click a highlighted hex on the map to push them there (on a phone, scroll to the map). Or skip it.`; b=`<button id="bSkip">Skip the retreat</button>`; }
+  else if(G.phase==="retreat"){ t=`You hit ${esc(G.rd.p.name)} and took no hits, so you may force a retreat: click a highlighted hex on the map to push ${esc(G.rd.p.name)} there (on a phone, scroll to the map). Or skip it.`; b=`<button id="bSkip">Skip the retreat</button>`; }
   else if(G.phase==="advance"){ t="Move into the hex they left, or hold your ground?"; b=`<button class="pri" id="bAdv">Advance</button><button id="bStay">Stay</button>`; }
   else if(G.phase==="over"){ t=A.hp<=0?(A.hp<0?"You have fallen.":"You fall unconscious at ST 0. You live, but this fight is lost (no EP)."):`Victory! +${G.gain||50} EP.`;
     if(G.exhib) t=(A.hp>0?"You won the exhibition.":"You lost the exhibition.")+" Nothing is recorded.";
@@ -831,7 +857,7 @@ function ui(){
   c.querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>{ const x=G.sopts[+e.dataset.sp]; if(x.hexsel){ G.destT="cast"; G.destX={sp:x.sp}; G.phase="dest"; G.dopts=new Map(creaHexes(G.me,G.foe,x.hexsel).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } if(x.tele){ const U=G.me, V=G.foe; G.destT="cast"; G.destX={sp:"Teleport"}; G.phase="dest"; G.dopts=new Map(P.filter(h=>!same(h,U)&&!same(h,V)&&Math.max(1,mhDist(U,h))<=U.hp).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } resolveTurn({t:"cast",sp:x.sp,n:x.n,on:x.on,objId:x.objId}); });
   c.querySelectorAll("[data-opt]").forEach(e=>e.onclick=()=>{
     const o=G.opts[+e.dataset.opt]||{t:"none"};
-    if(o.t==="cast"){ G.sopts=castList(G.me,G.foe); G.phase="spells"; ui(); drawMap(); }
+    if(o.t==="cast"){ G.sopts=castList(G.me,other(G.me)); G.phase="spells"; ui(); drawMap(); }
     else if(o.t==="disengage"||o.t==="hesc"){ G.destT=o.t; G.phase="dest"; G.dopts=new Map(freeNeighbors(G.me).map(h=>[key(h.q,h.r),h])); if(!G.dopts.size){G.phase="pick";lg("There is no free hex to disengage into.");} ui(); drawMap(); }
     else resolveTurn(o);
   });
@@ -875,7 +901,7 @@ function drawMap(){
       layer=pk+tokn(fm,"var(--me)",me)+tokn(ff,"var(--foe)",foe); }
     else layer=P.filter(h=>h.e).map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
   } else {
-    for(const [f,c] of [[G.me,"--me"],[G.foe,"--foe"]]) if(!f.down&&f.low!=="prone"&&f.hp>0) for(const k of [-1,0,1]){ const n=nbr(f,(f.f+k+6)%6); if(n) layer+=`<polygon points="${poly(n)}" fill="var(${c})" fill-opacity=".13" pointer-events="none"/>`; }
+    for(const [f,c] of allU().map(x=>[x,sideOf(x)==="me"?"--me":"--foe"])) if(!f.down&&f.low!=="prone"&&f.hp>0) for(const k of [-1,0,1]){ const n=nbr(f,(f.f+k+6)%6); if(n) layer+=`<polygon points="${poly(n)}" fill="var(${c})" fill-opacity=".13" pointer-events="none"/>`; }
     if(G.phase==="move"){
       for(const r of G.reach.values()){ const h=M.get(key(r.q,r.r)); layer+=`<polygon data-go="${key(r.q,r.r)}" points="${poly(h)}" fill="var(--acc)" fill-opacity="${same(r,G.me)?0:.22}" stroke="var(--acc)" stroke-width=".05" style="cursor:pointer"/>`; }
     }
@@ -883,7 +909,8 @@ function drawMap(){
     if(G.phase==="retreat") layer+=hl(G.ropts,"data-ret","--acc");
     layer+=(G.objs||[]).map(o=>{ const h=M.get(key(o.q,o.r)); if(!h) return ""; const [x,y]=h.p, col=o.t==="fire"?"#e8590c":o.t==="shadow"?"#111":"#6b7280"; return `<polygon points="${poly(h)}" fill="${col}" fill-opacity="${o.t==="wall"?.92:.5}" stroke="${col}" stroke-width=".06" pointer-events="none"/><text x="${x}" y="${y+.3}" text-anchor="middle" font-size=".8" pointer-events="none">${o.t==="fire"?"🔥":o.t==="wall"?"▦":""}</text>`; }).join("");
     layer+=G.floor.map(f=>{ const [x,y]=M.get(key(f.q,f.r)).p; return `<path d="M${x-.35} ${y+.45} L${x+.35} ${y+.25}" stroke="var(--mut)" stroke-width=".07" stroke-linecap="round" pointer-events="none"/>`; }).join("");
-    layer+=tokn(G.foe,"var(--foe)",foe)+tokn(G.me,"var(--me)",me);
+    layer+=allU().filter(u=>u.hp>0||!u.minion).map(u=>tokn(u,sideOf(u)==="me"?"var(--me)":"var(--foe)",u.p)).join("");
+    { const E=enemiesOf(G.me); if(E.length>1&&G.phase!=="over"){ const T=other(G.me); layer+=E.map(e=>{ const [x,y]=M.get(key(e.q,e.r)).p; return `<circle cx="${x}" cy="${y}" r=".72" fill="none" stroke="var(--acc)" stroke-width="${e===T?.12:.03}" stroke-dasharray=".2 .15" pointer-events="none"/><circle data-tgt="${allU().indexOf(e)}" cx="${x}" cy="${y}" r=".7" fill="transparent" style="cursor:pointer"/>`; }).join(""); } }
     if(G.phase==="move"){ const [x,y]=M.get(key(G.me.q,G.me.r)).p;
       for(let d=0;d<6;d++){ const a=SCR[d]*Math.PI/180; const cx=(x+Math.cos(a)*.98).toFixed(2), cy=(y+Math.sin(a)*.98).toFixed(2);
         layer+=`<circle data-face="${d}" cx="${cx}" cy="${cy}" r=".2" fill="${d===G.me.f?"var(--me)":"var(--card)"}" stroke="var(--me)" stroke-width=".07" style="cursor:pointer"/><circle data-face="${d}" cx="${cx}" cy="${cy}" r=".42" fill="transparent" style="cursor:pointer"/>`; } }
@@ -892,6 +919,7 @@ function drawMap(){
   /* the map stays pinned on screen next to the buttons, so no scrolling is needed */
   m.querySelectorAll("polygon[data-k]").forEach(e=>e.onclick=()=>{myStart=e.dataset.k;drawMap();});
   m.querySelectorAll("[data-go]").forEach(e=>e.onclick=()=>{ const r=G.reach.get(e.dataset.go); G.me.q=r.q; G.me.r=r.r; G.moved=r.c; ui(); drawMap(); });
+  m.querySelectorAll("[data-tgt]").forEach(e=>e.onclick=()=>{ G.tgt=allU()[+e.dataset.tgt]; if(G.phase==="pick") G.opts=options(G.me,other(G.me)); ui(); drawMap(); });
   m.querySelectorAll("[data-face]").forEach(e=>e.onclick=()=>{ G.me.f=+e.dataset.face; drawMap(); });
   m.querySelectorAll("[data-dest]").forEach(e=>e.onclick=()=>{ resolveTurn(Object.assign({t:G.destT||"disengage",dest:G.dopts.get(e.dataset.dest)},G.destX||{}));  G.destX=null; });
   m.querySelectorAll("[data-ret]").forEach(e=>e.onclick=()=>{ doRetreat(G.ropts.get(e.dataset.ret)); });
@@ -948,7 +976,7 @@ function matched(P,total){ const R=RACES[P.race]; let st=R.st,dx=R.dx,extra=Math
   return {name:P.n+" "+pick(["Brann","Silvo","Orsk","Tamar","Karg","Ilsa","Morn","Zed"]),race:P.race,cls:"fighter",st,dx,iq:R.iq,a:P.a,b:P.b,s1:P.s1||"none",armor:P.armor,d1:"dagger",silver:true}; }
 function makeWizard(){
   const R=RACES.human, iq=Math.min(14,Math.max(11,Math.round(me.total/3)+ri(2))), rest=Math.max(16,me.total-iq), st=Math.max(R.st,Math.round(rest*.46)), dx=Math.max(R.dx,rest-st);
-  const sp=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Reverse Missiles","Rope"].filter(n=>n==="Staff"||(({"Magic Fist":8,"Blur":8,"Drop Weapon":8,"Slow Movement":8,"Clumsiness":9,"Aid":9,"Trip":10,"Sleep":11,"Fireball":12,"Freeze":12,"Stone Flesh":13,"Stop":13,"Lightning":14,"Iron Flesh":15,"Speed Movement":10,"Dazzle":10,"Blast":12,"Break Weapon":12,"Remove Thrown Spell":14,"Spell Shield":14,"Reverse Missiles":11,"Rope":11})[n]<=iq));
+  const sp=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Reverse Missiles","Rope","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant"].filter(n=>n==="Staff"||(({"Magic Fist":8,"Blur":8,"Drop Weapon":8,"Slow Movement":8,"Clumsiness":9,"Aid":9,"Trip":10,"Sleep":11,"Fireball":12,"Freeze":12,"Stone Flesh":13,"Stop":13,"Lightning":14,"Iron Flesh":15,"Speed Movement":10,"Dazzle":10,"Blast":12,"Break Weapon":12,"Remove Thrown Spell":14,"Spell Shield":14,"Reverse Missiles":11,"Rope":11,"Summon Wolf":9,"Summon Myrmidon":10,"Summon Bear":11,"Summon Gargoyle":13,"Summon Giant":14})[n]<=iq));
   const f=fromBuilder({name:pick(["Morvane","Elowen","Sethric","Ilvara","Zorn","Kaleth"])+" the "+pick(["Mage","Sorcerer","Hedge Wizard","Enchanter"]),race:"human",cls:"wizard",st,dx,iq,a:"none",b:"none",armor:"none",d1:"dagger",silver:true,spells:sp,total:me.total});
   return f; }
 function buildFoe(){
@@ -974,10 +1002,10 @@ function renderFoeCfg(v){
     c.innerHTML=ks.length?`<div class="row"><select id="rfSel">${ks.map(k=>`<option value="${esc(k)}">${esc(REC[k].name)} (ST ${REC[k].st} / DX ${REC[k].dx})</option>`).join("")}</select><button id="rfGo" class="pri">Fight this fighter</button></div><div class="mut">You fight the fighter as it stands now, with its saved gear. Its own record is not changed.</div>`:`<div class="mut">You need at least one other saved fighter with gear.</div>`;
     const go=$("rfGo"); if(go) go.onclick=()=>{ const r=REC[$("rfSel").value]; foeMode={k:"fixed",src:"roster",o:Object.assign({},r.src,{st:r.st,dx:r.dx,name:r.name})}; newFoe(); }; }
   else if(v==="custom"){
-    const wl=Object.keys(W).filter(k=>k!=="mg"&&k!=="staff");
+    const wl=Object.keys(W).filter(k=>k!=="mg"&&k!=="staff"&&!W[k].hid);
     c.innerHTML=`<div class="row"><label>Race <select id="cRace">${Object.entries(RACES).filter(([k])=>k!=="orc").map(([k,r])=>`<option value="${k}">${r.n}</option>`).join("")}</select></label>
     <label>ST <input type="number" id="cST" value="12" min="1" max="40" style="width:64px"></label><label>DX <input type="number" id="cDX" value="12" min="1" max="40" style="width:64px"></label></div>
-    <div class="row"><label>Armor <select id="cAr">${Object.entries(ARMOR).map(([k,a])=>`<option value="${k}">${a.n}</option>`).join("")}</select></label>
+    <div class="row"><label>Armor <select id="cAr">${Object.entries(ARMOR).filter(([k,a])=>!a.hid).map(([k,a])=>`<option value="${k}">${a.n}</option>`).join("")}</select></label>
     <label>Weapon <select id="cW">${wl.map(k=>`<option value="${k}">${W[k].n}</option>`).join("")}</select></label>
     <label>Other hand <select id="cL"><option value="none">nothing</option><option value="small">Small shield</option><option value="large">Large shield</option><option value="mg">Main-gauche</option></select></label></div>
     <div class="row"><button id="cGo" class="pri">Fight this opponent</button><span id="cMsg" class="mut"></span></div>`;

@@ -124,3 +124,10 @@ Creation spells need the to-hit roll on your adjDX with no range penalty; a miss
 - **Rope** (2 ST, IQ 11): on an enemy in range, ST under 20. MA halved, DX −2, one worse each turn; a figure that stands still and does nothing else may roll its adjDX or less on 3 dice to break free; DX 2 or less leaves it helpless. The computer wizard uses Rope and struggles free. Another figure freeing a roped one is not in.
 - **Destroy Creation** (1 ST, IQ 11, thrown): removes one fire, shadow or wall.
 Not yet: summoning spells, images and illusions, the multi-hex versions. The picks for these spells use the same map-click step as Teleport. Tests S44 to S50.
+
+## Many figures, and summoned creatures (Wizard arena only so far)
+The Wizard arena now holds a list of figures (G.units) instead of just you and one enemy. Each has a side, finds its nearest living enemy as its target (other(u)), and the movement code treats every figure as an obstacle. The Melee arena and the duel are unchanged. This is the base for team play later (two players against three creatures): the creatures are computer-run figures just like the summons.
+- **Summons** (Wolf 2 ST IQ 9, Myrmidon 2 ST IQ 10, Bear 4 ST IQ 11, Gargoyle 4 ST IQ 13, Giant 4 ST IQ 14, each +1 ST a turn): a creation spell, so a to-hit roll with no range penalty and a free hex in your megahex or next to it. The creature cannot move or fight on the turn it appears. It is run by the computer on its owner's side. When you do not pay its 1 ST in the renew step it vanishes; at 0 ST it dies. The Gargoyle does not fly yet. Dragons are not in.
+- **Targets:** with more than one enemy on the map, the nearest is your default target; click another enemy counter (dashed ring) to change it. Spells, missiles and attacks go at the chosen target.
+- **Not in for minions:** hand-to-hand (they cannot grapple and cannot be grappled), forced-retreat choices for your own minions (done automatically), controlling a creature yourself (they attack the nearest enemy), and dragons.
+- Tests S51 to S55.
