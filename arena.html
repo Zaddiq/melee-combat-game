@@ -88,36 +88,40 @@ const iname=k=>k==="none"?"nothing":(W[k]||SHIELDS[k]).n;
 function dmg(f,k){ if(!W[k]||W[k].miss)return""; let m=W[k].m; return dice(W[k].d,m); }
 
 /* ---- opponent: same ST+DX total as the player ---- */
+/* Arena opponents follow two rules: (1) carry the weapon that does the most damage for its ST, (2) wear as much armor and shield as it can while keeping adjDX 11 or more. */
+const wavg=k=>W[k].d*3.5+W[k].m;
+function bestGear(f,hands){   /* f has race/st/dx and a right-hand weapon; returns the most protection that keeps adjDX >= 11 (or the best DX if none does) */
+  const lefts=hands?["none","small","large","mg"]:["none"]; let best=null;
+  for(const ar of Object.keys(ARMOR)) for(const l of lefts){
+    const g=Object.assign({},f,{armor:ar,left:l}); const a=adjDX(g), stp=ARMOR[ar].stops+(SHIELDS[l]?SHIELDS[l].stops:0)+(l==="mg"?1:0);
+    const sc=(a>=11?100:a*3)+stp+(l==="none"?0:.01);
+    if(!best||sc>best.sc) best={sc,ar,l,a,stp}; }
+  return best;
+}
 function makeOpponent(total){
-  const races=Object.keys(RACES).filter(k=>RACES[k].st+RACES[k].dx<=total&&k!=="orc");
-  let best=null;
-  for(let t=0;t<300;t++){
-    const rk=pick(races), R=RACES[rk]; let st=R.st, dx=R.dx, extra=total-st-dx;
-    while(extra-->0){ if(Math.random()<.5)st++; else dx++; }
-    const armor=pick(["none","cloth","leather","leather","chain","chain","halfplate","plate"]);
-    const f={name:"",race:rk,cls:"fighter",st,dx,iq:R.iq,armor,silver:true,right:"none",left:"none",slung:"none",dag:["dagger"]};
-    const ms=Object.keys(W).filter(k=>W[k].miss&&k!=="sling"&&W[k].st<=st);
-    if(ms.length&&Math.random()<.3){   /* an archer, with a one-handed weapon slung for when it is engaged */
-      f.right=pick(ms); const sw2=MELEE.filter(k=>!W[k].two&&W[k].st<=st&&k!=="dagger"); if(sw2.length) f.slung=pick(sw2);
-    } else {
-    const ws=MELEE.filter(k=>W[k].st<=st&&k!=="dagger"); if(!ws.length)continue;
-    f.right=pick(ws);
-    if(!W[f.right].two){ const r=Math.random(); f.left=r<.5?pick(["small","large"]):r<.7?"mg":"none"; }
+  const races=Object.keys(RACES).filter(k=>RACES[k].st+RACES[k].dx<=total&&k!=="orc").sort(()=>Math.random()-.5);
+  const myMax=Math.max(6,...[me.right,me.left,me.slung,...me.dag].filter(k=>isW(k)).map(k=>W[k].d*6+W[k].m));
+  const myStops=ARMOR[me.armor].stops+Math.max(0,...[me.left,me.slung].map(k=>SHIELDS[k]?SHIELDS[k].stops:0));
+  const cands=[];
+  for(const rk of races){
+    const R=RACES[rk], extra=total-R.st-R.dx; let top=null;
+    const archer=Math.random()<.15;
+    for(let add=0;add<=extra;add++){
+      const st=R.st+add, dx=R.dx+extra-add; let ws, w;
+      if(archer){ ws=Object.keys(W).filter(k=>W[k].miss&&k!=="sling"&&W[k].st<=st); if(!ws.length) continue; w=ws.sort((x,y)=>wavg(y)-wavg(x))[0]; }
+      else { ws=MELEE.filter(k=>W[k].st<=st&&k!=="dagger"); if(!ws.length) continue; const mx=Math.max(...ws.map(wavg)); w=pick(ws.filter(k=>wavg(k)===mx)); }
+      const f={name:"",race:rk,cls:"fighter",st,dx,iq:R.iq,silver:true,right:w,left:"none",slung:"none",dag:["dagger"]};
+      const g=bestGear(f,!archer&&!W[w].two); f.armor=g.ar; f.left=g.l;
+      if(archer){ const sw=MELEE.filter(k=>!W[k].two&&W[k].st<=st&&k!=="dagger").sort((x,y)=>wavg(y)-wavg(x))[0]; if(sw) f.slung=sw; }
+      const score=wavg(w)+g.stp+st*.4+(g.a>=11?7:0)+Math.random()*.8;
+      if(!top||score>top.score) top={f,score,a:g.a,stp:g.stp,mx:W[w].d*6+W[w].m};
     }
-    const a=adjDX(f);
-    if(a<8) continue;
-    /* keep the fight winnable for both sides: each must be able to get hits past the other's armor */
-    if(t<150){
-      const myMax=Math.max(6,...[me.right,me.left,me.slung,...me.dag].filter(k=>isW(k)).map(k=>W[k].d*6+W[k].m));
-      const myStops=ARMOR[me.armor].stops+Math.max(0,...[me.left,me.slung].map(k=>SHIELDS[k]?SHIELDS[k].stops:0));
-      const foeStops=ARMOR[f.armor].stops+(SHIELDS[f.left]?SHIELDS[f.left].stops:0)+(f.left==="mg"?1:0);
-      const foeMax=W[f.right].d*6+W[f.right].m;
-      if(foeStops>myMax-3||foeMax<myStops+3) continue;
-    }
-    if(!best||a>best.a-3&&Math.random()<.35) best={f,a};
-    if(best&&t>60) break;
+    if(top) cands.push(top);
   }
-  if(!best){const R=RACES.human; const f={race:"human",cls:"fighter",st:Math.max(8,Math.ceil(total/2)),dx:total-Math.max(8,Math.ceil(total/2)),iq:8,armor:"none",silver:true,right:"dagger",left:"none",slung:"none",dag:["dagger"]}; best={f};}
+  /* keep the fight winnable for both sides: each must be able to get hits past the other's armor */
+  let ok=cands.filter(c=>c.a>=8&&c.stp<=myMax-3&&c.mx>=myStops+3); if(!ok.length) ok=cands.filter(c=>c.a>=8); if(!ok.length) ok=cands;
+  let best=ok.length?ok[ri(ok.length)]:null;
+  if(!best){ const f={race:"human",cls:"fighter",st:Math.max(8,Math.ceil(total/2)),dx:total-Math.max(8,Math.ceil(total/2)),iq:8,armor:"none",silver:true,right:"dagger",left:"none",slung:"none",dag:["dagger"]}; best={f}; }
   const n=["Grak","Brann","Silvo","Orsk","Vesh","Tamar","Dunn","Karg","Ilsa","Morn","Zed","Haldor"];
   best.f.name=pick(n)+" the "+pick(["Gladiator","Sellsword","Brawler","Veteran","Duelist","Pit Fighter"]);
   return best.f;
