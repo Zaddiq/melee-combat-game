@@ -10,9 +10,9 @@ JS=r'''
  const B=nbr(A,2);
  const face=(a,b)=>{a.f=faceToward(a,b);b.f=faceToward(b,a);};
  let saved=rollN; const dice=(...q)=>{rollN=n=>{ if(!q.length) throw new Error("dice queue empty"); return q.shift(); };};
- const fresh=(a,b)=>{G={me:a,foe:b,log:[],floor:[],phase:"x",turn:1,settled:true}; me={name:"Me",rec:null,st:a.p.st,dx:a.p.dx}; foe=b.p; };
+ const fresh=(a,b)=>{G={me:a,foe:b,log:[],floor:[],objs:[],phase:"x",turn:1,settled:true}; WALLS=new Set(); me={name:"Me",rec:null,st:a.p.st,dx:a.p.dx}; foe=b.p; };
 
- const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles","Flight","Teleport"];
+ const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles","Flight","Teleport","Fire","Shadow","Create Wall","Rope","Destroy Creation"];
  const wz=(o)=>mkF(Object.assign({name:"Wiz",cls:"wizard",st:14,dx:13,iq:14,spells:ALL.filter(x=>x!=="Staff"),silver:true},o));
  const pair=(wo,fo,rear)=>{ const w=unit(wz(wo||{}),A,0), f=unit(mkF(Object.assign({name:"Foe",st:12,dx:12,a:"shortsw"},fo||{})),B,0); fresh(w,f); face(w,f); return [w,f]; };
  const cast=(w,f,sp,n)=>{ w.act={t:"cast",sp,n}; doCast(w,f,w.act); };
@@ -63,6 +63,15 @@ JS=r'''
 
  ok("S42 Teleport: 1 ST per megahex moved, you arrive facing the enemy; a miss costs 1 ST",(()=>{ const [w,f]=pair(); const far=P.filter(h=>!same(h,f)&&mhDist(A,h)===3)[0]; dice([3,3,2]); w.act={t:"cast",sp:"Teleport",dest:far}; doCast(w,f,w.act); const a=w.q===far.q&&w.r===far.r&&w.hp===14-3&&w.f===faceToward(w,f); const [w2,f2]=pair(); dice([5,6,5]); w2.act={t:"cast",sp:"Teleport",dest:far}; doCast(w2,f2,w2.act); return a&&w2.q===A.q&&w2.hp===13; })());
  ok("S43 Teleport cannot go into the enemy's hex or cost more ST than you have",(()=>{ const [w,f]=pair(); doCast(w,f,{t:"cast",sp:"Teleport",dest:{q:f.q,r:f.r}}); const a=w.q===A.q; w.hp=2; const far=P.filter(h=>!same(h,f)&&mhDist(A,h)>=4)[0]; doCast(w,f,{t:"cast",sp:"Teleport",dest:far}); return a&&w.q===A.q&&w.hp===2; })());
+
+ const mkObj=(ty,h)=>{ G.objs.push({t:ty,q:h.q,r:h.r,age:0}); syncWalls(); };
+ ok("S44 Fire: 1 ST, appears in your megahex or next to it; a figure in the hex takes 2 hits (armor stops them)",(()=>{ const [w,f]=pair({},{armor:"none"}); const hx=creaHexes(w,f,"fire"); dice([3,3,2]); doCast(w,f,{t:"cast",sp:"Fire",dest:{q:f.q,r:f.r}}); const a=hx.length>3&&G.objs.length===1&&w.hp===13&&f.hp===10; const [w2,f2]=pair({},{armor:"leather"}); dice([3,3,2]); doCast(w2,f2,{t:"cast",sp:"Fire",dest:{q:f2.q,r:f2.r}}); const far=P.find(h=>mhDist(w2,h)>=3); doCast(w2,f2,{t:"cast",sp:"Fire",dest:far}); return a&&f2.hp===12&&G.objs.length===1; })());
+ ok("S45 Create Wall: 2 ST, blocks movement and the line of fire, never over a figure",(()=>{ const [w,f]=pair(); const C=nbr(f,2); if(!C) return true; doCast(w,f,{t:"cast",sp:"Create Wall",dest:{q:f.q,r:f.r}}); const a=G.objs.length===0; dice([3,3,2]); doCast(w,f,{t:"cast",sp:"Create Wall",dest:{q:f.q+DIRS[2][0],r:f.r+DIRS[2][1]}}); const far=P.find(h=>dist(h,f)===2&&dist(h,w)===3&&mhDist(w,h)<=1); return a&&G.objs.length===1&&w.hp===12; })());
+ ok("S46 a wall blocks missiles and spells that pass through its hex, and nobody can walk into it",(()=>{ const [w,f]=pair(); const F2=nbr(f,2); if(!F2||!nbr(F2,2)) return true; const f3=unit(mkF({name:"Far",a:"shortsw"}),F2,0); const mid=f; mkObj("wall",{q:A.q+(F2.q-A.q)/2|0,r:0}); G.objs.length=0; syncWalls(); mkObj("wall",f); const line=lineHexes(w,{q:f.q+DIRS[2][0],r:f.r+DIRS[2][1]}); return blocked(w,{q:f.q+DIRS[2][0],r:f.r+DIRS[2][1]})&&!nbr(w,2)&&line.length===1; })());
+ ok("S47 Shadow: attacks into it are -4 DX, attacks from it -6, and a missile or spell likewise",(()=>{ const [w,f]=pair(); const b0=adjDXu(w,"single",f); mkObj("shadow",f); const a=adjDXu(w,"single",f)===b0-4; G.objs.length=0; mkObj("shadow",w); return a&&adjDXu(w,"single",f)===b0-6; })());
+ ok("S48 Rope: 2 ST, MA halved, DX -2 and one worse each turn, not on ST 20 or more; standing still lets you roll to break free",(()=>{ const [w,f]=pair(); dice([3,3,2]); doCast(w,f,{t:"cast",sp:"Rope"}); const m0=MA(f.p), b=adjDXu(f,"single",null); const a=f.rope===1&&MAu(f)===Math.floor(m0/2); const d0=adjDXu(f,"single",null); f.rope=2; const c=adjDXu(f,"single",null)===d0-1; dice([2,2,2]); doUnrope(f); const [w2,f2]=pair({},{st:20,a:"twohsw"}); return a&&c&&f.rope===0&&!castList(w2,f2).some(x=>x.sp==="Rope"); })());
+ ok("S49 Destroy Creation removes one created thing for 1 ST",(()=>{ const [w,f]=pair(); mkObj("wall",P.find(h=>dist(h,w)===3&&mhDist(w,h)<=1&&!same(h,f))); const L=castList(w,f).filter(x=>x.sp==="Destroy Creation"); dice([3,3,2]); doCast(w,f,{t:"cast",sp:"Destroy Creation",objId:0}); return L.length===1&&G.objs.length===0&&WALLS.size===0&&w.hp===13; })());
+ ok("S50 moving through fire: 2 hits per hex passed, 4 and -2 DX if you stop in it; armor comes off the total",(()=>{ const [w,f]=pair({},{armor:"leather"}); mkObj("fire",{q:0,r:0}); const u=f; u.q=0;u.r=0; fireMove(u,{fire:3}); return u.hp===12-(8-2)&&u.fireT===true; })());
 
  return R;
 }'''

@@ -104,7 +104,7 @@ makeOpponent follows two rules: (1) the weapon that does the most damage for its
 Added to the Wizard arena and the duel: Speed Movement (self, 2 ST, doubles MA for 4 turns; cancels Slow Movement), Dazzle (special, 3 ST, −3 DX for 3 turns, within 5 megahexes; not added on top of Blur's −4), Blast (special, 2 ST, 1 die to the enemy next to you, armor and Stone/Iron Flesh stop it), Break Weapon (3 ST, weapon does half damage, shield or staff is destroyed), Remove Thrown Spell (2 ST, on the enemy or on yourself: ends Blur, Stone/Iron Flesh, Slow, Stop, Speed, Clumsiness, Aid, Sleep, Freeze), Spell Shield (3 ST +1 a turn, nothing can be cast on you, and you cannot cast on yourself; a spell that is stopped still costs the caster its full price) and Death Spell (the weaker of the two dies, the stronger loses the weaker's ST; equal ST kills both; a Spell Shield costs the caster just 1 ST).
 - Special spells (Blast, Dazzle) are like thrown spells: a miss costs 1 ST.
 - In the duel, Spell Shield is secret like Stone and Iron Flesh and is renewed in secret.
-- Broken weapons are tracked by weapon id, so picking up another weapon of the same kind keeps the break. Shock Shield and Confusion are still to do.
+- Broken weapons are tracked by weapon id, so picking up another weapon of the same kind keeps the break. Shock Shield and Confusion are still to do, as are the summoning spells and images and illusions.
 - Tests: S25 to S35 in tests/spells_test.py.
 
 ### Reverse Missiles
@@ -115,3 +115,12 @@ Added to the Wizard arena and the duel: Speed Movement (self, 2 ST, doubles MA f
 
 ### Teleport
 Special spell, IQ 15. You pick the hex on the map after choosing the spell; it costs 1 ST per megahex moved (at least 1) and needs a to-hit roll on your adjDX with no range penalty (a miss costs 1 ST, a fizzle the full price). You arrive facing the enemy and leave any hand-to-hand. You cannot pick the enemy's hex (the rules would kill both of you), and nothing else on this map is solid. Spell Shield does not stop it, since it only moves you. The computer wizard does not cast it. Tests S42 and S43.
+
+### Creation spells (first part: Fire, Shadow, Create Wall, Rope, Destroy Creation)
+Creation spells need the to-hit roll on your adjDX with no range penalty; a miss costs 1 ST. A thing can appear in the caster's megahex or any megahex next to it, in a hex the caster can see into (a wall hex blocks the view). You choose the hex on the map. Created things last 12 turns (the optional time limit).
+- **Fire** (1 ST, IQ 9): passing through a fire hex is 2 hits, stopping in one is 4 hits and −2 DX that turn; armor and Stone/Iron Flesh come off the total. A figure in the hex when it appears takes 2. The computer will not walk into fire. Fire is worked out for the end hex of a move by the shortest path found, so a route is not chosen to avoid it.
+- **Shadow** (1 ST, IQ 10): attacks into it are −4 DX, attacks from it −6 (melee, missiles and spells).
+- **Create Wall** (2 ST, IQ 11): a solid hex nobody can enter, and it blocks missiles, thrown weapons and spells aimed past it. It cannot be put on a figure. Lightning does not blast through it yet.
+- **Rope** (2 ST, IQ 11): on an enemy in range, ST under 20. MA halved, DX −2, one worse each turn; a figure that stands still and does nothing else may roll its adjDX or less on 3 dice to break free; DX 2 or less leaves it helpless. The computer wizard uses Rope and struggles free. Another figure freeing a roped one is not in.
+- **Destroy Creation** (1 ST, IQ 11, thrown): removes one fire, shadow or wall.
+Not yet: summoning spells, images and illusions, the multi-hex versions. The picks for these spells use the same map-click step as Teleport. Tests S44 to S50.
