@@ -26,7 +26,7 @@ svg{width:100%;height:auto;max-height:80vh}
 </style></head><body><main>
 <h1>Melee Duel</h1>
 <p style="margin:0 0 6px"><a href="index.html" style="color:var(--acc)">← Menu</a> · <a href="arena.html" style="color:var(--acc)">Solo arena</a> · <a href="builder.html" style="color:var(--acc)">Character builder</a></p>
-<p class="mut">Two players, one screen. Movement is in the open; each turn the two players pick their actions in secret, one after the other, and the tablet is passed between them. Nothing is recorded: it is a friendly duel.</p>
+<p class="mut">Two players, one screen. Movement is in the open; each turn the two players pick their actions in secret, one after the other, and the tablet is passed between them. Experience is awarded (30 for the winner, 20 for the loser) and added to each fighter's arena EP, but nobody can die for good and no win or loss is marked. Either player may surrender, or escape through their door.</p>
 <div class="grid"><div>
  <div class="card"><h2>Duel</h2><div id="ctl" class="mut">Load both fighters first (the boxes below).</div></div>
  <details class="setup" id="setup" open><summary>The two fighters</summary>
@@ -148,10 +148,11 @@ function card(f,cls){
 let me=null, foe=null, myStart=null, foeStart=null, placeStep=0;
 const slot=[null,null];
 function showSlot(i){ $(i?"foe":"me").innerHTML=slot[i]?card(slot[i],i?"foe":"me"):""; showStats(); }
-function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot[0]||slot[1]?`<div class="two">${[0,1].map(i=>slot[i]?`<div>${card(slot[i],i?"foe":"me")}</div>`:"").join("")}</div>`:`<div class="mut">Load both fighters to see their stats here.</div>`); }
+function epLine(f){ const r=loadRec()[rkey(f)]; return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/100 EP${r&&r.pend>0?" · attribute point waiting (spend it in the solo arena)":""}</div>`; }
+function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot[0]||slot[1]?`<div class="two">${[0,1].map(i=>slot[i]?`<div>${card(slot[i],i?"foe":"me")}${epLine(slot[i])}</div>`:"").join("")}</div>`:`<div class="mut">Load both fighters to see their stats here.</div>`); }
 function setP(i,f,msg){
   if(G&&G.phase!=="over"&&!confirm("Leave the duel in progress?")) return; G=null;
-  placeStep=0; slot[i]=f; const o=slot[1-i]; if(o&&o.name.trim().toLowerCase()===f.name.trim().toLowerCase()) f.name+=" II";
+  placeStep=0; f.rname=f.name; { const r0=loadRec()[rkey(f)]; if(r0){ f.st=r0.st; f.dx=r0.dx; } } slot[i]=f; const o=slot[1-i]; if(o&&o.name.trim().toLowerCase()===f.name.trim().toLowerCase()) f.name+=" II";
   me=slot[0]; foe=slot[1]; $("msg"+i).textContent=msg||""; showSlot(i); showSlot(1-i); $("setup").open=true; ui(); drawMap();
 }
 function loadBuilder(i){ let t=null; try{t=localStorage.getItem(KEY);}catch(e){}
@@ -164,8 +165,19 @@ for(const i of [0,1]){
   $("pg"+i).onclick=()=>{ try{ setP(i,fromBuilder(JSON.parse($("paste"+i).value)),"Loaded pasted fighter."); }catch(e){ $("msg"+i).textContent="That does not look like a builder fighter."; } };
   $("rg"+i).onclick=()=>{ const r=REC[$("rs"+i).value]; if(r&&r.src) setP(i,fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx,name:r.name})),"Loaded from your arena roster (its own record is not touched)."); };
 }
-/* the solo arena's saved fighters can be borrowed (read only) */
-let REC={}; try{ REC=JSON.parse(localStorage.getItem("melee-arena-v1")||"{}")||{}; }catch(e){ REC={}; }
+/* the solo arena's saved fighters can be borrowed; duel XP is written to the same record */
+const RKEY="melee-arena-v1";
+const loadRec=()=>{ try{ return JSON.parse(localStorage.getItem(RKEY)||"{}")||{}; }catch(e){ return {}; } };
+let REC=loadRec();
+const rkey=f=>(f.rname||f.name).trim().toLowerCase();
+function awardXp(f,x){   /* friendly duel: XP only, never a death or a win/loss mark */
+  const R=loadRec(), k=rkey(f); let r=R[k];
+  if(!r) r={name:f.rname||f.name,st:f.st,dx:f.dx,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false,src:f.src||null};
+  r.ep=Math.max(0,r.ep+x);
+  while(r.ep>=100&&r.pend===0&&r.pts<8&&!r.retired){ r.ep-=100; if(r.banked){ r.pend=2; r.must=true; r.banked=false; } else { r.pend=1; r.must=false; } }
+  if(r.pts>=8||r.retired) r.ep=Math.min(r.ep,99);
+  R[k]=r; try{ localStorage.setItem(RKEY,JSON.stringify(R)); }catch(e){} REC=R; return r;
+}
 for(const i of [0,1]){ const ks=Object.keys(REC).filter(k=>REC[k]&&REC[k].src&&!REC[k].dead);
   $("rs"+i).innerHTML=ks.length?ks.map(k=>`<option value="${esc(k)}">${esc(REC[k].name)} (ST ${REC[k].st} / DX ${REC[k].dx})</option>`).join(""):`<option value="">No saved arena fighters</option>`; }
 /* ---- board geometry: pointy-top, turned so the entrances are at top and bottom ---- */
@@ -209,7 +221,22 @@ function reach(a,b,ma,eng){
 }
 
 
-function settle(){ if(G.settled) return; G.settled=true; }   /* friendly duel: nothing is recorded */
+/* Melee 2018 p. 22, arena combat: winner 30 XP, defeated survivor 20, a runaway who is unhurt loses 10; the side that is 3+ weaker in ST+DX gets 10 extra.
+   House rule from the players: if someone gives up or flees unhurt, the other gets 0. A friendly duel never kills a fighter. */
+function settle(){
+  if(G.settled) return; G.settled=true; const A=G.me,B=G.foe;
+  const sa=me.st+me.dx, sb=foe.st+foe.dx, bonus=u=>(u===A?sb-sa>=3:sa-sb>=3)?10:0;
+  let xa,xb, why;
+  if(G.end==="fight"){ if(!G.winner){ xa=20+bonus(A); xb=20+bonus(B); why="Both fighters went down: 20 XP each."; }
+    else { const w=G.winner, l=other(w), xw=30+bonus(w), xl=20+bonus(l); xa=w===A?xw:xl; xb=w===B?xw:xl; why=`Winner 30 XP, loser 20 XP${bonus(w)||bonus(l)?" (+10 for the side that was 3 or more points weaker)":""}.`; } }
+  else { const q=G.quitter, w=other(q), unhurt=q.hp>=q.p.st, xq=unhurt?-10:20+bonus(q), xw=unhurt?0:30+bonus(w);
+    xa=q===A?xq:xw; xb=q===B?xq:xw; why=unhurt?`${q.p.name} quit without taking a hit: −10 XP, and ${w.p.name} gets 0.`:`${q.p.name} quit after being hurt: 20 XP, and ${w.p.name} gets 30.`; }
+  const ra=awardXp(me,xa), rb=awardXp(foe,xb);
+  G.xp=[`${me.name}: ${xa>=0?"+":""}${xa} XP (now ${ra.ep}/100)${ra.pend>0?", attribute point earned":""}`,`${foe.name}: ${xb>=0?"+":""}${xb} XP (now ${rb.ep}/100)${rb.pend>0?", attribute point earned":""}`];
+  lg(why); G.xp.forEach(x=>lg(x)); showStats();
+}
+function quitDuel(u,type){ if(G.phase==="over") return; G.quitter=u; G.end=type; G.winner=other(u); G.phase="over";
+  lg(type==="escape"?`${u.p.name} escapes through the door.`:`${u.p.name} surrenders.`); settle(); ui(); drawMap(); }
 /* ---- the fight ---- */
 let G=null;
 const d6=()=>1+ri(6);
@@ -492,7 +519,7 @@ function endCheck(){
     G.phase="over"; const down=u=>`${u.p.name} ${u.hp<0?"is dead":"falls unconscious at ST 0"}`;
     if(a.hp<=0&&b.hp<=0){ lg(`${down(a)}, and ${down(b)}. Nobody wins.`); G.winner=null; }
     else { const w=a.hp>0?a:b, l=w===a?b:a; lg(`${down(l)}. ${w.p.name} wins the duel!`); G.winner=w; }
-    settle();
+    G.end="fight"; settle();
   }
 }
 function resolveTurn(pa,pb){
@@ -552,13 +579,16 @@ function endTurn(){ nextTurn(); }
 function ui(){
   const c=$("ctl"); if(!c)return;
   if(!G){ if(me&&foe){ const pn=placeStep?foe:me;
-    c.innerHTML=`<div><b class="${placeStep?"foe":"me"}">${esc(pn.name)}</b> (Player ${placeStep+1}): tap one of your four outlined hexes on the map to choose where to start. The open hex is your current choice.</div><div style="margin-top:6px">${placeStep?`<button class="pri" id="bGo">Done: start the duel</button> <button id="bPrev">Back to Player 1</button>`:`<button class="pri" id="bNext">Done: pass to Player 2</button>`}</div><div class="mut" style="margin-top:6px">Nothing is recorded.</div>`;
+    c.innerHTML=`<div><b class="${placeStep?"foe":"me"}">${esc(pn.name)}</b> (Player ${placeStep+1}): tap one of your four outlined hexes on the map to choose where to start. The open hex is your current choice.</div><div style="margin-top:6px">${placeStep?`<button class="pri" id="bGo">Done: start the duel</button> <button id="bPrev">Back to Player 1</button>`:`<button class="pri" id="bNext">Done: pass to Player 2</button>`}</div><div class="mut" style="margin-top:6px">XP is awarded when the duel ends; nobody dies for good.</div>`;
     if($("bNext")) $("bNext").onclick=()=>{ placeStep=1; ui(); drawMap(); }; if($("bPrev")) $("bPrev").onclick=()=>{ placeStep=0; ui(); drawMap(); };
     if($("bGo")) $("bGo").onclick=startFight; } else c.innerHTML="Load both fighters first (the boxes below)."; return; }
   const A=G.me,B=G.foe,cur=G.cur; let t="",b="";
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"");
   const nm=u=>`<b class="${u===A?"me":"foe"}">${esc(u.p.name)}</b>`;
   const st=`${nm(A)} ST ${Math.max(A.hp,0)}/${me.st}${flags(A)} · ${nm(B)} ST ${Math.max(B.hp,0)}/${foe.st}${flags(B)}<br>${esc(A.p.name)} is ${isEngaged(A,B)?"<b>engaged</b>":"not engaged"}; ${esc(B.p.name)} is ${isEngaged(B,A)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).`;
+  const live=["move","cover","pick"].includes(G.phase);
+  if(live){ const sh=startHexes(), own=(cur===G.me?sh.bottom:sh.top).some(h=>same(h,cur));
+    b="";  G.qb=`<div style="margin-top:6px"><button id="bSur">${esc(cur.p.name)} surrenders</button>${G.phase==="move"&&own&&!G.eng?` <button id="bEsc">${esc(cur.p.name)} escapes through the door</button>`:""}</div>`; } else G.qb="";
   if(G.phase==="choose"){ const w=G[G.chooser]; t=`${nm(w)} won the initiative roll. Move first or second?`; b=`<button class="pri" id="b1">Move first</button><button id="b2">Move second</button>`; }
   else if(G.phase==="move"){
     t=`${nm(cur)} to move. `+(G.eng?"Engaged: you may shift one hex (staying next to the enemy). ":`Click a highlighted hex to move up to ${MA(cur.p)} hexes. Entering an enemy front hex stops you. Moving more than half your MA (${Math.floor(MA(cur.p)/2)}) means no attack this turn, and firing a missile weapon allows only 1 hex of movement. `)+"Click a small circle beside the counter to change facing.";
@@ -570,12 +600,13 @@ function ui(){
   else if(G.phase==="dest"){ t=`${nm(cur)}: click the highlighted hex on the map that you want to move into (on a phone, scroll to the map).`; b=`<button id="bBack">Back</button>`; }
   else if(G.phase==="retreat"){ const d=other(G.rdec); t=`${nm(G.rdec)} hit ${esc(d.p.name)} and took no hits, so may force a retreat: click a highlighted hex on the map to push ${esc(d.p.name)} there (on a phone, scroll to the map). Or skip it.`; b=`<button id="bSkip">Skip the retreat</button>`; }
   else if(G.phase==="advance"){ t=`${nm(G.rdec)}: move into the hex they left, or hold your ground?`; b=`<button class="pri" id="bAdv">Advance</button><button id="bStay">Stay</button>`; }
-  else if(G.phase==="over"){ t=G.winner?`<b>${esc(G.winner.p.name)} wins the duel!</b>`:"Nobody wins."; b=`<button class="pri" id="bNew">Rematch</button> <a href="index.html"><button>Back to menu</button></a>`; }
-  c.innerHTML=`<div class="mut" style="margin-bottom:4px">Turn ${G.turn}</div><div>${t}</div><div class="mut" style="margin:4px 0">${st}</div><div>${b}</div><div id="log">${(G.phase==="cover"||G.phase==="pick"?G.log.slice(-60):G.log.slice(-60)).map(esc).join("<br>")}</div>`;
+  else if(G.phase==="over"){ t=(G.winner?`<b>${esc(G.winner.p.name)} wins the duel!</b>`:"Nobody wins.")+`<br><span class="mut">${(G.xp||[]).map(esc).join("<br>")}</span>`; b=`<button class="pri" id="bNew">Rematch</button> <a href="index.html"><button>Back to menu</button></a>`; }
+  c.innerHTML=`<div class="mut" style="margin-bottom:4px">Turn ${G.turn}</div><div>${t}</div><div class="mut" style="margin:4px 0">${st}</div><div>${b}</div>${G.qb||""}<div id="log">${(G.phase==="cover"||G.phase==="pick"?G.log.slice(-60):G.log.slice(-60)).map(esc).join("<br>")}</div>`;
   const lgE=$("log"); if(lgE) lgE.scrollTop=lgE.scrollHeight;
   const on=(id,f)=>{const e=$(id); if(e)e.onclick=f;};
   on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bUn",undoMove); on("bShow",showPick);
   on("bSkip",()=>{lg(`${G.rdec.p.name} does not force a retreat.`);endTurn();ui();drawMap();}); on("bBack",()=>{G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false));
+  on("bSur",()=>{ if(confirm(cur.p.name+" surrenders? This ends the duel.")) quitDuel(cur,"surrender"); }); on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door? This ends the duel.")) quitDuel(cur,"escape"); });
   on("bNew",()=>{ G=null; placeStep=0; $("setup").open=true; ui(); drawMap(); });
   c.querySelectorAll("[data-opt]").forEach(e=>e.onclick=()=>{
     const o=G.opts[+e.dataset.opt]||{t:"none"};
