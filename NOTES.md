@@ -95,3 +95,7 @@ makeOpponent follows two rules: (1) the weapon that does the most damage for its
 ## Wizard map (maps.js)
 - `maps.js` holds WIZARD_HEXES, traced from the Wizard 2018 map PDF (166 hexes: 21 full and 4 partial megahexes, 4 starred entrance hexes in each of two opposite corners, 6 shaded megahexes that are only walls in tunnel play; the shaded flag is stored but not used). Format `[q, r, megahex, entrance, shaded]` in the same axial system as the Melee map, shifted so the megahex lattice matches `mhCell`.
 - duel.html and wizard-arena.html have a Map picker (remembered in localStorage `melee-map`); it can only be changed between fights. arena.html keeps the Melee map only.
+
+## Wizards in the duel
+- duel.html now has the same spell engine as wizard-arena.html (same first batch of spells). Differences: each player picks spells in secret behind the cover screen; Stone Flesh and Iron Flesh are "secret protection" (the log only says an attempt was made, the status line hides them, and the owner sees their own on their pick screen); continuing spells are renewed one wizard at a time behind a cover screen at the start of each turn.
+- Wizards can duel on either map. XP rules are unchanged.
