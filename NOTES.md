@@ -134,3 +134,7 @@ The Wizard arena now holds a list of figures (G.units) instead of just you and o
 
 ## Random opponents, eased back
 The "always the best weapon, always the most armor at adjDX 11" rule made the arena too hard. The arena and Wizard arena now use the original random generator again, but keep three acceptable fighters and take the best of them (more damage plus 0.7 per hit stopped). That is a little tougher than a pure random pick, not a maximised build. The "winnable for both sides" checks are unchanged.
+
+### Summons and many figures in the duel
+The duel now uses the same figure list as the Wizard arena. Summoned creatures are run by the computer on their owner's side, move after their owner moves, and pick their own actions. Each player has a default target (the nearest enemy) and can click another enemy counter, with the dashed rings, while moving or choosing an action. Creature upkeep (1 ST each, in the secret renew step), vanishing, and retreat rules are as in the Wizard arena. XP, escape and "quit" still only involve the two players' own figures. Tests: tests/duel_summon_test.py (D1 to D5).
+Still not in: giving orders to a creature, creatures in hand-to-hand, dragons, flying gargoyles.
