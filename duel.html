@@ -229,8 +229,8 @@ function settle(){
   let xa,xb, why;
   if(G.end==="fight"){ if(!G.winner){ xa=20+bonus(A); xb=20+bonus(B); why="Both fighters went down: 20 XP each."; }
     else { const w=G.winner, l=other(w), xw=30+bonus(w), xl=20+bonus(l); xa=w===A?xw:xl; xb=w===B?xw:xl; why=`Winner 30 XP, loser 20 XP${bonus(w)||bonus(l)?" (+10 for the side that was 3 or more points weaker)":""}.`; } }
-  else { const q=G.quitter, w=other(q), unhurt=q.hp>=q.p.st, xq=unhurt?-10:20+bonus(q), xw=unhurt?0:30+bonus(w);
-    xa=q===A?xq:xw; xb=q===B?xq:xw; why=unhurt?`${q.p.name} quit without taking a hit: −10 XP, and ${w.p.name} gets 0.`:`${q.p.name} quit after being hurt: 20 XP, and ${w.p.name} gets 30.`; }
+  else { const q=G.quitter, w=other(q), lost=q.p.st-q.hp, unhurt=lost<Math.ceil(q.p.st/3), xq=unhurt?-10:20+bonus(q), xw=unhurt?0:30+bonus(w);
+    xa=q===A?xq:xw; xb=q===B?xq:xw; why=unhurt?`${q.p.name} quit before losing a third of ${q.p.st>0?"their":"their"} ST (lost ${lost}, needed ${Math.ceil(q.p.st/3)}): −10 XP, and ${w.p.name} gets 0.`:`${q.p.name} quit after losing ${lost} of ${q.p.st} ST: 20 XP, and ${w.p.name} gets 30.`; }
   const ra=awardXp(me,xa), rb=awardXp(foe,xb);
   G.xp=[`${me.name}: ${xa>=0?"+":""}${xa} XP (now ${ra.ep}/100)${ra.pend>0?", attribute point earned":""}`,`${foe.name}: ${xb>=0?"+":""}${xb} XP (now ${rb.ep}/100)${rb.pend>0?", attribute point earned":""}`];
   lg(why); G.xp.forEach(x=>lg(x)); showStats();
