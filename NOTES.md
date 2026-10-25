@@ -91,3 +91,7 @@ makeOpponent follows two rules: (1) the weapon that does the most damage for its
 - localStorage key `melee-bench-v1` holds `{a:<builder fighter>, b:<builder fighter>}`. The builder's Save and load box has "Send to bench as A / B".
 - sim.html fills Fighter A and B from the bench on load (name, ST, DX, main weapon, shield, armor; two-handers drop the shield; bows and others it cannot model become a dagger) and says so. Empty bench means the Flavius and Wulf defaults.
 - duel.html has "Load bench A / B" buttons that load the full builder fighter.
+
+## Wizard map (maps.js)
+- `maps.js` holds WIZARD_HEXES, traced from the Wizard 2018 map PDF (166 hexes: 21 full and 4 partial megahexes, 4 starred entrance hexes in each of two opposite corners, 6 shaded megahexes that are only walls in tunnel play; the shaded flag is stored but not used). Format `[q, r, megahex, entrance, shaded]` in the same axial system as the Melee map, shifted so the megahex lattice matches `mhCell`.
+- duel.html and wizard-arena.html have a Map picker (remembered in localStorage `melee-map`); it can only be changed between fights. arena.html keeps the Melee map only.
