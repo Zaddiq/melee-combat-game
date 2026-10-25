@@ -26,7 +26,7 @@ svg{width:100%;height:auto;max-height:80vh}
 </style></head><body><main>
 <h1>Melee Duel</h1>
 <p style="margin:0 0 6px"><a href="index.html" style="color:var(--acc)">← Menu</a> · <a href="arena.html" style="color:var(--acc)">Solo arena</a> · <a href="builder.html" style="color:var(--acc)">Character builder</a></p>
-<p class="mut">Two players, one screen. Movement is in the open; each turn the two players pick their actions in secret, one after the other, and the tablet is passed between them. Experience is awarded (30 for the winner, 20 for the loser) and added to each fighter's arena EP, but nobody can die for good and no win or loss is marked. Either player may surrender, or escape through their door.</p>
+<p class="mut">Two players, one screen. Movement is in the open; each turn the two players pick their actions in secret, one after the other, and the tablet is passed between them. Experience is awarded (30 for the winner, 20 for the loser) and added to each fighter's arena EP, but nobody can die for good and no win or loss is marked. Either player may escape through their own door (stand on one of your four entrance hexes at the start of your move).</p>
 <div class="grid"><div>
  <div class="card"><h2>Duel</h2><div id="ctl" class="mut">Load both fighters first (the boxes below).</div></div>
  <details class="setup" id="setup" open><summary>The two fighters</summary>
@@ -589,7 +589,7 @@ function ui(){
   const st=`${nm(A)} ST ${Math.max(A.hp,0)}/${me.st}${flags(A)} · ${nm(B)} ST ${Math.max(B.hp,0)}/${foe.st}${flags(B)}<br>${esc(A.p.name)} is ${isEngaged(A,B)?"<b>engaged</b>":"not engaged"}; ${esc(B.p.name)} is ${isEngaged(B,A)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).`;
   const live=["move","cover","pick"].includes(G.phase);
   if(live){ const sh=startHexes(), own=(cur===G.me?sh.bottom:sh.top).some(h=>same(h,cur));
-    b="";  G.qb=`<div style="margin-top:6px"><button id="bSur">${esc(cur.p.name)} surrenders</button>${G.phase==="move"&&own&&!G.eng?` <button id="bEsc">${esc(cur.p.name)} escapes through the door</button>`:""}</div>`; } else G.qb="";
+    b="";  G.qb=`<div style="margin-top:6px">${G.phase==="move"&&own&&!G.eng?`<button id="bEsc">${esc(cur.p.name)} escapes through the door</button>`:""}</div>`; } else G.qb="";
   if(G.phase==="choose"){ const w=G[G.chooser]; t=`${nm(w)} won the initiative roll. Move first or second?`; b=`<button class="pri" id="b1">Move first</button><button id="b2">Move second</button>`; }
   else if(G.phase==="move"){
     t=`${nm(cur)} to move. `+(G.eng?"Engaged: you may shift one hex (staying next to the enemy). ":`Click a highlighted hex to move up to ${MA(cur.p)} hexes. Entering an enemy front hex stops you. Moving more than half your MA (${Math.floor(MA(cur.p)/2)}) means no attack this turn, and firing a missile weapon allows only 1 hex of movement. `)+"Click a small circle beside the counter to change facing.";
@@ -607,7 +607,7 @@ function ui(){
   const on=(id,f)=>{const e=$(id); if(e)e.onclick=f;};
   on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bUn",undoMove); on("bShow",showPick);
   on("bSkip",()=>{lg(`${G.rdec.p.name} does not force a retreat.`);endTurn();ui();drawMap();}); on("bBack",()=>{G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false));
-  on("bSur",()=>{ if(confirm(cur.p.name+" surrenders? This ends the duel.")) quitDuel(cur,"surrender"); }); on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door? This ends the duel.")) quitDuel(cur,"escape"); });
+  on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door? This ends the duel.")) quitDuel(cur,"escape"); });
   on("bNew",()=>{ G=null; placeStep=0; $("setup").open=true; ui(); drawMap(); });
   c.querySelectorAll("[data-opt]").forEach(e=>e.onclick=()=>{
     const o=G.opts[+e.dataset.opt]||{t:"none"};
