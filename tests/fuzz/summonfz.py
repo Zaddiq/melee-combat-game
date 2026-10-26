@@ -3,7 +3,7 @@ JS=r'''
 ()=>{
  const rnd=a=>a[Math.floor(Math.random()*a.length)];
  const out={games:0,over:0,errors:[],casts:0,renew:0,foeCasts:0,wizFoe:0};
- const SPN=["Staff","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Magic Fist"];
+ const SPN=["Staff","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Magic Fist","Control Person","Control Animal"];
  for(let g=0;g<40;g++){
   try{
    me=fromBuilder({name:"W"+g,race:"human",cls:"wizard",st:14+ri(5),dx:11+ri(3),iq:14,a:"none",b:"none",armor:rnd(["none","cloth","leather"]),d1:"dagger",silver:true,spells:SPN.slice()});

@@ -281,7 +281,14 @@ const sum=a=>a.reduce((x,y)=>x+y,0);
 const isW=id=>!!(W[id]&&!W[id].miss);                 /* a usable melee weapon (main-gauche included) */
 const sub=u=>u===G.me?"You":u.p.name, vb=(u,a,b)=>u===G.me?a:b;
 const allU=()=>G.units||[G.me,G.foe];
-const sideOf=u=>u.side||(u===G.me?"me":"foe");
+const CTLMAIN=true;   /* may a Control Person spell take over the opposing main figure? (arena yes; duel no, both are players) */
+const sideOf=u=>(u.ctl&&u.ctl.hp>0)?sideOf(u.ctl):(u.side||(u===G.me?"me":"foe"));
+const ctlsOf=u=>allU().filter(x=>x.ctl===u&&!x.minion&&x.hp>0);
+const ANIMAL=["wolf","bear"], PERSON=["myrmidon","gargoyle","giant"];
+function ctlOK(u,o,kind){ if(!o||o.hp<=0||sideOf(o)===sideOf(u)) return false;
+  const k=o.kind; if(o.minion||o.fake) return (kind==="animal"?ANIMAL:PERSON).includes(k);
+  return kind==="person"&&CTLMAIN&&o===G.foe; }
+function releaseCtl(x,why){ x.ctl=null; if(x.minion){ x.hp=0; } lg(`${x.p.name} is free of the control spell${x.minion?" and vanishes":""}${why?" ("+why+")":""}.`); }
 const enemiesOf=u=>allU().filter(x=>x!==u&&x.hp>0&&sideOf(x)!==sideOf(u));
 const engagedAny=u=>enemiesOf(u).some(e=>isEngaged(u,e));
 function other(u){ const E=enemiesOf(u); if(!E.length) return u===G.me?G.foe:G.me; if(u===G.me&&G.tgt&&E.includes(G.tgt)) return G.tgt;
@@ -322,13 +329,13 @@ function nextTurn(){
   for(const x of allU()) if(x.avert&&x.avert.hp<=0) x.avert=null;
   for(const v of avertsOf(G.foe)){ if(G.foe.hp-1>=4&&Math.random()<.8){ G.foe.hp--; } else { v.avert=null; lg(`The Avert on ${sub(v)==='You'?'you':sub(v)} ends.`); } }
   for(const m of allU().filter(x=>x.minion&&!x.fake&&x.hp>0&&sideOf(x)==="foe")){ if(G.foe.hp-1>=4&&Math.random()<.9){ G.foe.hp--; } else { m.hp=0; endCheck(); } }
-  const act=CONT.filter(k=>G.me[k]), mins=allU().filter(x=>x.minion&&!x.fake&&x.hp>0&&sideOf(x)==="me"), avs=avertsOf(G.me);
-  if((act.length||mins.length||avs.length)&&G.me.hp>0){ G.phase="renew"; G.rlist=act.map(k=>({k,on:G.me.hp>=3})).concat(mins.map(m=>({k:"minion",m,on:G.me.hp>=3}))).concat(avs.map(m=>({k:"avert",m,on:G.me.hp>=3}))); G.afterRenew=go; } else go();
+  const act=CONT.filter(k=>G.me[k]), mins=allU().filter(x=>x.minion&&!x.fake&&x.hp>0&&sideOf(x)==="me"), avs=avertsOf(G.me), cts=ctlsOf(G.me);
+  if((act.length||mins.length||avs.length||cts.length)&&G.me.hp>0){ G.phase="renew"; G.rlist=act.map(k=>({k,on:G.me.hp>=3})).concat(mins.map(m=>({k:"minion",m,on:G.me.hp>=3}))).concat(avs.map(m=>({k:"avert",m,on:G.me.hp>=3}))).concat(cts.map(m=>({k:"control",m,on:G.me.hp>=3}))); G.afterRenew=go; } else go();
 }
 const CONT=["blur","stone","iron","shield","rev","fly","shock"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield",rev:"Reverse Missiles",fly:"Flight",shock:"Shock Shield"};
-const rname=r=>r.k==="minion"?r.m.p.name:r.k==="avert"?"Avert on "+r.m.p.name:CONTN[r.k];
+const rname=r=>r.k==="minion"?r.m.p.name:r.k==="avert"?"Avert on "+r.m.p.name:r.k==="control"?"Control on "+r.m.p.name:CONTN[r.k];
 const avertsOf=u=>allU().filter(x=>x.avert===u&&x.hp>0&&!x.fake);
-function doRenew(){ const u=G.me; for(const r of G.rlist){ if(r.on&&u.hp>=1){ u.hp--; lg(`You keep ${rname(r)} going (1 ST).`); } else if(r.k==="minion"){ r.m.hp=0; endCheck(); } else if(r.k==="avert"){ r.m.avert=null; lg(`Your Avert on ${r.m.p.name} ends.`); } else { u[r.k]=false; if(r.k==="fly") land(u); lg(`Your ${CONTN[r.k]} ends.`); } } G.phase="";
+function doRenew(){ const u=G.me; for(const r of G.rlist){ if(r.on&&u.hp>=1){ u.hp--; lg(`You keep ${rname(r)} going (1 ST).`); } else if(r.k==="minion"){ r.m.hp=0; endCheck(); } else if(r.k==="control"){ releaseCtl(r.m,"you stopped paying"); } else if(r.k==="avert"){ r.m.avert=null; lg(`Your Avert on ${r.m.p.name} ends.`); } else { u[r.k]=false; if(r.k==="fly") land(u); lg(`Your ${CONTN[r.k]} ends.`); } } G.phase="";
   endCheck(); if(G.phase!=="over"){ const f=G.afterRenew; f(); } }
 function choose(first){ G.order=first?["me","foe"]:["foe","me"]; G.idx=0; lg(first?"You move first.":"You move second."); advance(); ui(); drawMap(); }
 function minionMove(side){ for(const m of allU().filter(x=>x.minion&&x.hp>0&&sideOf(x)===side)) aiMove(m); }
@@ -343,7 +350,7 @@ function advance(){
   G.reach=reach(G.start,enemiesOf(u),MAu(G.me),G.avertOn?false:G.eng); G.avertFall=G.avertOn&&avertFilter(u,G.reach,G.start);
 }
 function aiMove(a){
-  a=a||G.foe; const b=other(a);
+  a=a||G.foe; if(!enemiesOf(a).length){ lg(`${a.p.name} holds.`); return; } const b=other(a);
   if(a.fresh||a.hth||a.low||a.sleep||a.frozen>0) return;
   if(a.down){ a.standUp=true; lg(`${a.p.name} starts to stand up.`); return; }
   const av=!!(a.avert&&a.avert.hp>0), eng=engagedAny(a), R=reach(a,enemiesOf(a),MAu(a),av?false:eng); let best=null, avFall=av&&avertFilter(a,R,{q:a.q,r:a.r});
@@ -478,7 +485,7 @@ function lowOpts(u,o){
   return L.filter(x=>!x.off);
 }
 /* ---- creation spells: fire, shadow, walls and rope (Wizard 2018 p. 15) ---- */
-const SPIQ={"Staff":8,"Magic Fist":8,"Blur":8,"Slow Movement":8,"Drop Weapon":8,"Image":8,"Clumsiness":9,"Confusion":9,"Avert":9,"Aid":9,"Summon Wolf":9,"Reveal Magic":9,"Fire":9,"Trip":10,"Speed Movement":10,"Summon Myrmidon":10,"Dazzle":10,"Shadow":10,"Shock Shield":10,"Sleep":11,"Summon Bear":11,"Control Animal":11,"Illusion":11,"Reverse Missiles":11,"Rope":11,"Create Wall":11,"Destroy Creation":11,"Freeze":12,"Fireball":12,"Invisibility":12,"Blast":12,"Mage Sight":12,"Break Weapon":12,"3-Hex Fire":12,"3-Hex Shadow":12,"Flight":13,"Summon Gargoyle":13,"Control Person":13,"Stone Flesh":13,"Slippery Floor":13,"Stop":13,"4-Hex Image":13,"3-Hex Wall":13,"Lightning":14,"Summon Giant":14,"4-Hex Illusion":14,"Remove Thrown Spell":14,"Dispel Illusions":14,"Spell Shield":14,"Iron Flesh":15,"Teleport":15,"Summon Small Dragon":15,"Giant Rope":15,"7-Hex Shadow":15,"7-Hex Image":15,"Megahex Avert":15,"7-Hex Illusion":16,"Summon Dragon":16,"Death Spell":16,"7-Hex Fire":16,"7-Hex Wall":16,"Megahex Sleep":16};
+const SPIQ={"Staff":8,"Magic Fist":8,"Blur":8,"Slow Movement":8,"Drop Weapon":8,"Image":8,"Clumsiness":9,"Confusion":9,"Avert":9,"Aid":9,"Summon Wolf":9,"Reveal Magic":9,"Fire":9,"Trip":10,"Speed Movement":10,"Summon Myrmidon":10,"Dazzle":10,"Shadow":10,"Shock Shield":10,"Sleep":11,"Summon Bear":11,"Control Animal":11,"Illusion":11,"Reverse Missiles":11,"Rope":11,"Create Wall":11,"Destroy Creation":11,"Freeze":12,"Fireball":12,"Invisibility":12,"Blast":12,"Mage Sight":12,"Break Weapon":12,"3-Hex Fire":12,"3-Hex Shadow":12,"Flight":13,"Summon Gargoyle":13,"Control Person":13,"Stone Flesh":13,"Slippery Floor":13,"Stop":13,"4-Hex Image":13,"3-Hex Wall":13,"Lightning":14,"Summon Giant":14,"4-Hex Illusion":14,"Remove Thrown Spell":14,"Dispel Illusions":14,"Control Animal":11,"Control Person":13,"Spell Shield":14,"Iron Flesh":15,"Teleport":15,"Summon Small Dragon":15,"Giant Rope":15,"7-Hex Shadow":15,"7-Hex Image":15,"Megahex Avert":15,"7-Hex Illusion":16,"Summon Dragon":16,"Death Spell":16,"7-Hex Fire":16,"7-Hex Wall":16,"Megahex Sleep":16};
 const effIQ=u=>u.p.iq-(u.conf>0?u.confN:0);
 const OBJN={fire:"fire",shadow:"shadow",wall:"wall"};
 const objAt=(h,t)=>(G&&G.objs||[]).find(o=>o.t===t&&o.q===h.q&&o.r===h.r);
@@ -493,7 +500,7 @@ function creaHexes(u,o,t){ const occ=h=>allU().some(x=>x.hp>0&&same(x,h)), solid
   return P.filter(h=>mhDist(u,h)<=1&&!blocked(u,h)&&!G.objs.some(x=>same(x,h)&&(solid||x.t===t||x.t==="wall"))&&(!solid||!occ(h))&&(t!=="fire"||!same(h,u))); }
 function summonMinion(u,kind,h){ const C=CRE[kind], n=allU().filter(x=>x.minion&&x.p.name.indexOf(C.name)===0).length;
   const p=fromBuilder({name:C.name+(n?" "+(n+1):""),race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"});
-  const m=mk(h,p); m.minion=true; m.side=sideOf(u); m.owner=u; m.fresh=true; m.f=faceToward(m,other(u)); if(!G.units) G.units=[G.me,G.foe]; G.units.push(m); return m; }
+  const m=mk(h,p); m.minion=true; m.kind=kind; m.side=sideOf(u); m.owner=u; m.fresh=true; m.f=faceToward(m,other(u)); if(!G.units) G.units=[G.me,G.foe]; G.units.push(m); return m; }
 function fireHits(u,total){ const prot=ARMOR[u.p.armor].stops+(u.iron?6:u.stone?4:0), h=Math.max(0,total-prot);
   lg(`${sub(u)} ${vb(u,"take","takes")} ${total} hits of fire; protection stops ${Math.min(prot,total)}. ${h?sub(u)+" "+vb(u,"take","takes")+" "+h+" hit"+(h>1?"s":""):"No damage gets through"}.`);
   if(h>0){ u.hp-=h; u.hits+=h; u.tookHit=true; u.sleep=false; lg(`${vb(u,"Your","Its")} ST is now ${Math.max(u.hp,0)}.`); } endCheck(); }
@@ -524,6 +531,8 @@ const SP={
  "Summon Giant":{k:"C",cost:()=>4,obj:"summon",summon:"giant"},
  "Confusion":{k:"T",v:1},
  "Avert":{k:"T",cost:()=>2},
+ "Control Person":{k:"T",cost:()=>3,ctl:"person"},
+ "Control Animal":{k:"T",cost:()=>2,ctl:"animal"},
  "Shock Shield":{k:"T",cost:()=>2,self:1,cont:"shock"},
  "Image":{k:"C",cost:()=>1,obj:"summon",fake:"image"},
  "Illusion":{k:"C",cost:()=>2,obj:"summon",fake:"illusion"},
@@ -566,7 +575,7 @@ function castList(u,o){
     if(name==="Death Spell"){ if(!(front||near)) continue; const dxd=base+fy-dist(u,o)+(o.blur?-4:0)+(o.blur&&u.daz>0?3:0); L.push({sp:name,cost:0,dx:dxd,label:`${name} (needs ${dxd} or less; the weaker of you two dies and the stronger loses the weaker's ST: yours is ${u.hp}, theirs ${o.hp})`}); continue; }
     if(d.cont&&u[d.cont]) continue; if(d.cont==="stone"&&u.iron) continue;
     if(d.self&&u.shield) continue;   /* a Spell Shield keeps out the wizard's own spells too */
-    if(!d.self){ if(!(front||near)) continue; if(d.ok&&!d.ok(o)) continue; }
+    if(!d.self){ if(!(front||near)) continue; if(d.ok&&!d.ok(o)) continue; if(d.ctl&&!ctlOK(u,o,d.ctl)) continue; }
     const dx=base+(d.self?(u.air?2:0):fy-dist(u,o))+(d.self||!o.blur?0:-4)+(!d.self&&o.blur&&u.daz>0?3:0);
     if(d.v){ for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less)${name==="Clumsiness"?`: −${2*n} DX for ${o.p.st>=30?1:3} turns`:name==="Confusion"?`: −${2*n} IQ for 3 turns`:`: +${n} DX for 2 turns`}`}); }
     else { const c=d.cost(o); if(c>mx) continue; L.push({sp:name,cost:c,dx,label:`${name} (${c} ST${d.cont?", +1 each turn":""}; needs ${dx} or less)`}); }
@@ -625,6 +634,11 @@ function doCast(u,o,pa){
     case "Death Spell": { if(o.fake==="image"){ o.hp=0; payST(u,1); msg=`${sub(o)} was only an image and vanishes (it costs ${sub(u)} 1 ST).`; break; } const A=u.hp, B=o.hp; if(A>B){ o.hp=-1; u.hp-=B; msg=`${sub(o)} ${vb(o,"die","dies")}. ${sub(u)} ${vb(u,"lose","loses")} ${B} ST.`; } else if(A<B){ u.hp=-1; msg=`${sub(u)} ${vb(u,"are","is")} the weaker and ${vb(u,"die","dies")}!`; } else { u.hp=-1; o.hp=-1; msg="Equal strength: both fall dead."; } break; }
     case "Iron Flesh": u.iron=true; u.stone=false; msg=sub(u)+"'s body stops 6 hits per attack."; break;
     case "Aid": u.aid=2*m; u.aidN=nn; msg=`${sub(u)} gets +${nn} DX for ${2*m} turns.`; break;
+    case "Control Person": case "Control Animal": { const kind=SP[c.sp].ctl;
+      if(o.fake){ o.hp=0; msg=`${sub(o)} was only an ${o.fake} and vanishes.`; break; }
+      const sv=sum(rollN(3)), iq=effIQ(o);
+      if(sv<=iq){ u.hp+=c.cost-1; msg=`${sub(o)} resist${o===G.me?"":"s"} (rolled ${sv} against IQ ${iq}). ${sub(u)} ${vb(u,"lose","loses")} only 1 ST.`; break; }
+      o.ctl=u; msg=`${sub(o)} fail${o===G.me?"":"s"} the saving roll (${sv} against IQ ${iq}) and ${o===G.me?"are":"is"} now under ${sub(u)==="You"?"your":sub(u)+"'s"} control for as long as ${sub(u)==="You"?"you pay":"it is paid"} 1 ST a turn.`; break; }
     case "Avert": o.avert=u; msg=`${sub(o)} ${vb(o,"must","must")} end each move at least 2 hexes farther from ${sub(u)==="You"?"you":sub(u)} while it lasts (${sub(u)} pay${sub(u)==="You"?"":"s"} 1 ST a turn).`; break;
     case "Confusion": o.conf=3*m; o.confN=2*nn; msg=`${sub(o)} ${vb(o,"get","gets")} −${2*nn} IQ for ${o.conf} turns (spells above the lowered IQ cannot be cast; running spells can still be renewed).`; break;
     case "Shock Shield": u.shock=true; break;
@@ -714,6 +728,7 @@ function aiCast(u,o){
       case "Illusion": { const own=allU().filter(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(u)).length; v=own===0&&u.hp>=x.cost+5?({wolf:2.2,myrmidon:2.6,bear:3.6,gargoyle:3.2,giant:4.0})[x.form]:0; break; }
       case "Image": { const own=allU().filter(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(u)).length; v=own===0&&u.hp>=6&&x.form==="giant"?1.5:0; break; }
       case "Dispel Illusions": v=enemiesOf(u).some(e=>e.fake)?0:0; break;
+      case "Control Person": case "Control Animal": v=o.minion&&!o.fake&&o.hp>3?p*(o.p.st>=20?3.6:2.2):o===G.me?0:0; break;
       case "Avert": v=!o.avert&&!(o.p.cls==="wizard")&&dist(u,o)<=4?p*2.4:0; break;
       case "Confusion": v=o.p.cls==="wizard"&&!(o.conf>0)?p*x.n*1.7:0; break;
       case "Rope": v=p*(armed?3.4:2.4); break;
@@ -725,7 +740,9 @@ function aiCast(u,o){
   if(!best||best.v<=1.1) return null; const pk={t:"cast",sp:best.x.sp,n:best.x.n}; if(best.x.form) pk.form=best.x.form; if(best.x.hexsel){ const H=creaHexes(u,o,best.x.hexsel).sort((a,b)=>dist(a,o)-dist(b,o)); if(!H.length) return null; pk.dest=H[Math.min(1,H.length-1)]; } return pk;
 }
 function aiAct(u,o){
+  if(!enemiesOf(u||G.foe).length) return {t:"none"};
   u=u||G.foe; o=o||other(u); if(u.standUp||u.fresh) return {t:"none"};
+  if(u.ctl&&u.ctl.hp>0&&o.p.st>2*u.p.st){ const sv=sum(rollN(3)), iq=effIQ(u); if(sv<=iq){ releaseCtl(u,"it refused to attack a far stronger foe"); return {t:"none"}; } }
   if(u.sleep||u.frozen>0) return {t:"none"};
   const L=options(u,o), has=t=>L.find(x=>x.t===t);
   if(has("cast")){ const c=aiCast(u,o); if(c) return c; }
@@ -791,6 +808,7 @@ function doAttack(a,d,wid,mode,kind){
 }
 const dice_txt=r=>`(${r.dice.join("+")}${r.m?(r.m>0?"+":"−")+Math.abs(r.m):""} = ${r.total})`;
 function endCheck(){
+  for(const x of allU()) if(x.ctl&&x.hp>0&&x.ctl.hp<=0) releaseCtl(x,"its controller is down");
   for(const m of allU()) if(m.minion&&m.hp<=0&&!m.gone){ m.gone=true; lg(`${m.p.name} ${m.hp<0?"is slain":"falls and vanishes"}.`); }
   if(G.phase==="over") return;
   const a=G.me,b=G.foe;
@@ -1019,7 +1037,7 @@ function matched(P,total){ const R=RACES[P.race]; let st=R.st,dx=R.dx,extra=Math
   return {name:P.n+" "+pick(["Brann","Silvo","Orsk","Tamar","Karg","Ilsa","Morn","Zed"]),race:P.race,cls:"fighter",st,dx,iq:R.iq,a:P.a,b:P.b,s1:P.s1||"none",armor:P.armor,d1:"dagger",silver:true}; }
 function makeWizard(){
   const R=RACES.human, iq=Math.min(14,Math.max(11,Math.round(me.total/3)+ri(2))), rest=Math.max(16,me.total-iq), st=Math.max(R.st,Math.round(rest*.46)), dx=Math.max(R.dx,rest-st);
-  const sp=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Reverse Missiles","Rope","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion","Avert"].filter(n=>n==="Staff"||(({"Magic Fist":8,"Blur":8,"Drop Weapon":8,"Slow Movement":8,"Clumsiness":9,"Aid":9,"Trip":10,"Sleep":11,"Fireball":12,"Freeze":12,"Stone Flesh":13,"Stop":13,"Lightning":14,"Iron Flesh":15,"Speed Movement":10,"Dazzle":10,"Blast":12,"Break Weapon":12,"Remove Thrown Spell":14,"Spell Shield":14,"Reverse Missiles":11,"Rope":11,"Summon Wolf":9,"Summon Myrmidon":10,"Summon Bear":11,"Summon Gargoyle":13,"Summon Giant":14,"Image":8,"Illusion":11,"Dispel Illusions":14,"Confusion":9,"Avert":9})[n]<=iq));
+  const sp=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Reverse Missiles","Rope","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion","Avert","Control Animal","Control Person"].filter(n=>n==="Staff"||(({"Magic Fist":8,"Blur":8,"Drop Weapon":8,"Slow Movement":8,"Clumsiness":9,"Aid":9,"Trip":10,"Sleep":11,"Fireball":12,"Freeze":12,"Stone Flesh":13,"Stop":13,"Lightning":14,"Iron Flesh":15,"Speed Movement":10,"Dazzle":10,"Blast":12,"Break Weapon":12,"Remove Thrown Spell":14,"Spell Shield":14,"Reverse Missiles":11,"Rope":11,"Summon Wolf":9,"Summon Myrmidon":10,"Summon Bear":11,"Summon Gargoyle":13,"Summon Giant":14,"Image":8,"Illusion":11,"Dispel Illusions":14,"Confusion":9,"Avert":9})[n]<=iq));
   const f=fromBuilder({name:pick(["Morvane","Elowen","Sethric","Ilvara","Zorn","Kaleth"])+" the "+pick(["Mage","Sorcerer","Hedge Wizard","Enchanter"]),race:"human",cls:"wizard",st,dx,iq,a:"none",b:"none",armor:"none",d1:"dagger",silver:true,spells:sp,total:me.total});
   return f; }
 function buildFoe(){

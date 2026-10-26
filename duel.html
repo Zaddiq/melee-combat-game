@@ -267,7 +267,14 @@ const sum=a=>a.reduce((x,y)=>x+y,0);
 const isW=id=>!!(W[id]&&!W[id].miss);                 /* a usable melee weapon (main-gauche included) */
 const sub=u=>u.p.name, vb=(u,a,b)=>b;
 const allU=()=>G.units||[G.me,G.foe];
-const sideOf=u=>u.side||(u===G.me?"me":"foe");
+const CTLMAIN=false;   /* may a Control Person spell take over the opposing main figure? (arena yes; duel no, both are players) */
+const sideOf=u=>(u.ctl&&u.ctl.hp>0)?sideOf(u.ctl):(u.side||(u===G.me?"me":"foe"));
+const ctlsOf=u=>allU().filter(x=>x.ctl===u&&!x.minion&&x.hp>0);
+const ANIMAL=["wolf","bear"], PERSON=["myrmidon","gargoyle","giant"];
+function ctlOK(u,o,kind){ if(!o||o.hp<=0||sideOf(o)===sideOf(u)) return false;
+  const k=o.kind; if(o.minion||o.fake) return (kind==="animal"?ANIMAL:PERSON).includes(k);
+  return kind==="person"&&CTLMAIN&&o===G.foe; }
+function releaseCtl(x,why){ x.ctl=null; if(x.minion){ x.hp=0; } lg(`${x.p.name} is free of the control spell${x.minion?" and vanishes":""}${why?" ("+why+")":""}.`); }
 const opp=u=>sideOf(u)==="me"?G.foe:G.me;   /* the other player's own figure */
 const enemiesOf=u=>allU().filter(x=>x!==u&&x.hp>0&&sideOf(x)!==sideOf(u));
 const engagedAny=u=>enemiesOf(u).some(e=>isEngaged(u,e));
@@ -325,7 +332,7 @@ function advance(){
   G.reach=reach(G.start,enemiesOf(u),MAu(u),G.avertOn?false:G.eng); G.avertFall=G.avertOn&&avertFilter(u,G.reach,G.start);
 }
 function aiMove(a){
-  const b=other(a);
+  if(!enemiesOf(a).length){ lg(`${a.p.name} holds.`); return; } const b=other(a);
   if(a.fresh||a.hth||a.low||a.sleep||a.frozen>0) return;
   if(a.down){ a.standUp=true; lg(`${a.p.name} starts to stand up.`); return; }
   const av=!!(a.avert&&a.avert.hp>0), eng=engagedAny(a), R=reach(a,enemiesOf(a),MAu(a),av?false:eng); let best=null, avFall=av&&avertFilter(a,R,{q:a.q,r:a.r});
@@ -474,7 +481,7 @@ function creaHexes(u,o,t){ const occ=h=>allU().some(x=>x.hp>0&&same(x,h)), solid
   return P.filter(h=>mhDist(u,h)<=1&&!blocked(u,h)&&!G.objs.some(x=>same(x,h)&&(solid||x.t===t||x.t==="wall"))&&(!solid||!occ(h))&&(t!=="fire"||!same(h,u))); }
 function summonMinion(u,kind,h){ const C=CRE[kind], n=allU().filter(x=>x.minion&&x.p.name.indexOf(C.name)===0).length;
   const p=fromBuilder({name:C.name+(n?" "+(n+1):""),race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"});
-  const m=mk(h,p); m.minion=true; m.side=sideOf(u); m.owner=u; m.fresh=true; m.f=faceToward(m,other(u)); if(!G.units) G.units=[G.me,G.foe]; G.units.push(m); return m; }
+  const m=mk(h,p); m.minion=true; m.kind=kind; m.side=sideOf(u); m.owner=u; m.fresh=true; m.f=faceToward(m,other(u)); if(!G.units) G.units=[G.me,G.foe]; G.units.push(m); return m; }
 function fireHits(u,total){ const prot=ARMOR[u.p.armor].stops+(u.iron?6:u.stone?4:0), h=Math.max(0,total-prot);
   lg(`${sub(u)} ${vb(u,"take","takes")} ${total} hits of fire; protection stops ${Math.min(prot,total)}. ${h?sub(u)+" "+vb(u,"take","takes")+" "+h+" hit"+(h>1?"s":""):"No damage gets through"}.`);
   if(h>0){ u.hp-=h; u.hits+=h; u.tookHit=true; u.sleep=false; lg(`${vb(u,"Your","Its")} ST is now ${Math.max(u.hp,0)}.`); } endCheck(); }
@@ -505,6 +512,8 @@ const SP={
  "Summon Giant":{k:"C",cost:()=>4,obj:"summon",summon:"giant"},
  "Confusion":{k:"T",v:1},
  "Avert":{k:"T",cost:()=>2},
+ "Control Person":{k:"T",cost:()=>3,ctl:"person"},
+ "Control Animal":{k:"T",cost:()=>2,ctl:"animal"},
  "Shock Shield":{k:"T",cost:()=>2,self:1,cont:"shock"},
  "Image":{k:"C",cost:()=>1,obj:"summon",fake:"image"},
  "Illusion":{k:"C",cost:()=>2,obj:"summon",fake:"illusion"},
@@ -547,7 +556,7 @@ function castList(u,o){
     if(name==="Death Spell"){ if(!(front||near)) continue; const dxd=base+fy-dist(u,o)+(o.blur?-4:0)+(o.blur&&u.daz>0?3:0); L.push({sp:name,cost:0,dx:dxd,label:`${name} (needs ${dxd} or less; the weaker of you two dies and the stronger loses the weaker's ST: yours is ${u.hp}, theirs ${o.hp})`}); continue; }
     if(d.cont&&u[d.cont]) continue; if(d.cont==="stone"&&u.iron) continue;
     if(d.self&&u.shield) continue;   /* a Spell Shield keeps out the wizard's own spells too */
-    if(!d.self){ if(!(front||near)) continue; if(d.ok&&!d.ok(o)) continue; }
+    if(!d.self){ if(!(front||near)) continue; if(d.ok&&!d.ok(o)) continue; if(d.ctl&&!ctlOK(u,o,d.ctl)) continue; }
     const dx=base+(d.self?(u.air?2:0):fy-dist(u,o))+(d.self||!o.blur?0:-4)+(!d.self&&o.blur&&u.daz>0?3:0);
     if(d.v){ for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less)${name==="Clumsiness"?`: −${2*n} DX for ${o.p.st>=30?1:3} turns`:name==="Confusion"?`: −${2*n} IQ for 3 turns`:`: +${n} DX for 2 turns`}`}); }
     else { const c=d.cost(o); if(c>mx) continue; L.push({sp:name,cost:c,dx,label:`${name} (${c} ST${d.cont?", +1 each turn":""}; needs ${dx} or less)`}); }
@@ -607,6 +616,11 @@ function doCast(u,o,pa){
     case "Death Spell": { if(o.fake==="image"){ o.hp=0; payST(u,1); msg=`${sub(o)} was only an image and vanishes (it costs ${sub(u)} 1 ST).`; break; } const A=u.hp, B=o.hp; if(A>B){ o.hp=-1; u.hp-=B; msg=`${sub(o)} ${vb(o,"die","dies")}. ${sub(u)} ${vb(u,"lose","loses")} ${B} ST.`; } else if(A<B){ u.hp=-1; msg=`${sub(u)} ${vb(u,"are","is")} the weaker and ${vb(u,"die","dies")}!`; } else { u.hp=-1; o.hp=-1; msg="Equal strength: both fall dead."; } break; }
     case "Iron Flesh": u.iron=true; u.stone=false; msg=sub(u)+"'s body stops 6 hits per attack."; break;
     case "Aid": u.aid=2*m; u.aidN=nn; msg=`${sub(u)} gets +${nn} DX for ${2*m} turns.`; break;
+    case "Control Person": case "Control Animal": { const kind=SP[c.sp].ctl;
+      if(o.fake){ o.hp=0; msg=`${sub(o)} was only an ${o.fake} and vanishes.`; break; }
+      const sv=sum(rollN(3)), iq=effIQ(o);
+      if(sv<=iq){ u.hp+=c.cost-1; msg=`${sub(o)} resist${o===G.me?"":"s"} (rolled ${sv} against IQ ${iq}). ${sub(u)} ${vb(u,"lose","loses")} only 1 ST.`; break; }
+      o.ctl=u; msg=`${sub(o)} fail${o===G.me?"":"s"} the saving roll (${sv} against IQ ${iq}) and ${o===G.me?"are":"is"} now under ${sub(u)==="You"?"your":sub(u)+"'s"} control for as long as ${sub(u)==="You"?"you pay":"it is paid"} 1 ST a turn.`; break; }
     case "Avert": o.avert=u; msg=`${sub(o)} ${vb(o,"must","must")} end each move at least 2 hexes farther from ${sub(u)==="You"?"you":sub(u)} while it lasts (${sub(u)} pay${sub(u)==="You"?"":"s"} 1 ST a turn).`; break;
     case "Confusion": o.conf=3*m; o.confN=2*nn; msg=`${sub(o)} ${vb(o,"get","gets")} −${2*nn} IQ for ${o.conf} turns (spells above the lowered IQ cannot be cast; running spells can still be renewed).`; break;
     case "Shock Shield": u.shock=true; break;
@@ -669,6 +683,8 @@ function applyReady(u,it){
   else { put(u.right); u.right=id; if(W[id].two){ put(u.left); u.left="none"; } }
 }
 function aiAct(u,o){
+  if(!enemiesOf(u).length) return {t:"none"};
+  if(u.ctl&&u.ctl.hp>0&&o&&o.p.st>2*u.p.st){ const sv=sum(rollN(3)), iq=effIQ(u); if(sv<=iq){ releaseCtl(u,"it refused to attack a far stronger foe"); return {t:"none"}; } }
   if(u.standUp||u.fresh||u.sleep||u.frozen>0) return {t:"none"};
   const L=options(u,o), has=t=>L.find(x=>x.t===t);
   if(u.low){ if(dist(u,o)<=2&&has("rise")) return has("rise"); const sh=has("fire")||has("last"); return sh||(u.cool>0?{t:"none"}:has("rise"));}
@@ -731,6 +747,7 @@ function doAttack(a,d,wid,mode,kind){
 }
 const dice_txt=r=>`(${r.dice.join("+")}${r.m?(r.m>0?"+":"−")+Math.abs(r.m):""} = ${r.total})`;
 function endCheck(){
+  for(const x of allU()) if(x.ctl&&x.hp>0&&x.ctl.hp<=0) releaseCtl(x,"its controller is down");
   for(const m of allU()) if(m.minion&&m.hp<=0&&!m.gone){ m.gone=true; lg(`${m.p.name} ${m.hp<0?"is slain":"falls and vanishes"}.`); }
   if(G.phase==="over") return;
   const a=G.me,b=G.foe;

@@ -163,3 +163,11 @@ Thrown at a victim, 2 ST to cast and 1 ST a turn to keep (shown in the caster's 
 - Random opponents (arena and duel) could be handed the creature natural weapons (Bite, Club 3 dice, Fist 2 dice), so hobbits bit and some foes did almost nothing. The melee weapon list now skips creature weapons.
 - Automatic targeting now prefers an enemy in the figure's front hex (an attack is impossible against one at the side or rear), so your minions and you less often "can't attack".
 - When you cannot attack because the target is not in front, or cannot cast because you moved more than 1 hex, the log now says so.
+
+## Control Person and Control Animal
+- Thrown spells: Control Person IQ 13, 3 ST + 1/turn; Control Animal IQ 11, 2 ST + 1/turn. Person works on humanoids (men, Myrmidon, Gargoyle, Giant), Animal on Wolf and Bear. Neither on a dragon (none exist yet).
+- To-hit as for other thrown spells; then the victim rolls 3 dice against IQ (lowered IQ if confused). Saves: the caster loses only 1 ST and nothing happens. Fails: the figure joins the caster's side while he pays 1 ST per turn (renew step). An image or illusion that is hit simply vanishes.
+- The computer runs controlled figures (it picks their moves and attacks). A controlled figure ordered to attack a foe with more than twice its ST gets another IQ save each turn; passing breaks the spell.
+- A controlled summoned creature vanishes when its new master stops paying (or dies, or it is killed); its original summoner stops paying. Control can be taken over by another wizard.
+- Arena: Control Person may also be cast on the computer's main fighter. While controlled he has no friends to attack, so he simply holds still. Duel: only creatures can be controlled, not the other player's wizard. Computer wizards cast it only on creatures.
+- Tests S71–S77.
