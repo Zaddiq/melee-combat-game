@@ -218,7 +218,8 @@ function applyRecord(f){
   const k=recKey(f); let r=REC[k];
   if(!r){ r={name:f.name,st:f.st,dx:f.dx,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false,src:f.src||null}; REC[k]=r; saveRec(); }
   if(f.src&&JSON.stringify(r.src)!==JSON.stringify(f.src)){ r.src=f.src; saveRec(); }   /* always keep the gear as it is in the builder now */
-  f.st=r.st; f.dx=r.dx; f.rec=r; return f;
+  if(r.iq==null){ r.iq=f.iq; saveRec(); }
+  f.st=r.st; f.dx=r.dx; f.iq=r.iq; f.rec=r; return f;
 }
 function recBlock(){
   const r=me&&me.rec; if(!r) return "";
@@ -227,7 +228,7 @@ function recBlock(){
   if(r.dead) h+=`<br><b class="foe">Dead. This fighter's run is over.</b>`;
   if(r.retired) h+=`<br><b class="me">Retired champion!</b> Started at ${r.total0}, now ${r.total0+r.pts} (+8). Carry this total into Advanced Melee.`;
   if(r.pend>0) h+=`<div style="margin:6px 0"><b>You earned an attribute point.</b> ${r.pend} to spend${r.must?" (you hold a banked point too, so you must spend both)":""}:<br>
-    <button data-sp="st">+1 ST</button><button data-sp="dx">+1 DX</button>${r.pend===1&&!r.must&&r.wins<16?'<button data-sp="bank">Bank it for later</button>':''}</div>`;
+    <button data-sp="st">+1 ST</button><button data-sp="dx">+1 DX</button>${me.cls==="wizard"?'<button data-sp="iq">+1 IQ</button>':''}${r.pend===1&&!r.must&&r.wins<16?'<button data-sp="bank">Bank it for later</button>':''}</div>`;
   h+=`<div class="row"><button id="bSend" class="pri">Send to builder (with XP)</button><button id="bCopy">Copy updated fighter</button><button id="bReset">Reset record</button></div><textarea id="exp" style="display:none" readonly></textarea></div>`;
   return h;
 }
@@ -235,14 +236,14 @@ function renderMe(){
   if(!me) return; $("me").innerHTML=card(me,"me")+warn(me)+recBlock();
   $("me").querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>spend(e.dataset.sp));
   const sb=$("bSend"); if(sb) sb.onclick=()=>{ if(sendToBuilder(updated(me.rec))) $("msg").innerHTML="Sent. Open the <a href=\"builder.html\" style=\"color:var(--acc)\">character builder</a> and press its load button to see "+esc(me.name)+" with the new stats."; };
-  const c=$("bCopy"); if(c) c.onclick=()=>{ const r=me.rec; const o=Object.assign({},me.src,{st:r.st,dx:r.dx,total:r.total0+r.pts,ep:r.ep,arenaWins:r.wins,arenaRetired:r.retired});
+  const c=$("bCopy"); if(c) c.onclick=()=>{ const r=me.rec; const o=Object.assign({},me.src,{st:r.st,dx:r.dx,iq:r.iq,total:r.total0+r.pts,ep:r.ep,arenaWins:r.wins,arenaRetired:r.retired});
     const t=JSON.stringify(o), ta=$("exp"); ta.style.display="block"; ta.value=t; ta.select(); copyText(t); $("msg").textContent="Copied. Paste it into the builder's save/load box to update your fighter."; };
   const x=$("bReset"); if(x) x.onclick=()=>{ if(confirm("Erase the arena record for "+me.name+"? Wins, EP and gained points are lost.")){ delete REC[recKey(me)]; saveRec(); const o=me.src; setMe(fromBuilder(o),"Record erased. Starting fresh from the builder's version."); } };
 }
 function spend(k){
   const r=me.rec;
   if(k==="bank"){ r.banked=true; r.pend=0; r.must=false; }
-  else { r[k]++; me[k]++; r.pts++; r.pend--; if(r.pend===0) r.must=false; }
+  else { r[k]=(r[k]==null?me[k]:r[k])+1; me[k]++; r.pts++; r.pend--; if(r.pend===0) r.must=false; }
   if(r.pend===0&&r.wins>=16){ r.retired=true; hofAdd(r); }
   saveRec(); renderMe(); renderRoster();
   if(r.pend===0){ newFoe(); } else ui();
@@ -953,7 +954,7 @@ function copyText(t){ try{ const pr=navigator.clipboard&&navigator.clipboard.wri
 const HKEY="melee-hof-v1";
 let HOF=[]; try{ HOF=JSON.parse(localStorage.getItem(HKEY)||"[]")||[]; if(!Array.isArray(HOF))HOF=[]; }catch(e){ HOF=[]; }
 function saveHof(){ try{ localStorage.setItem(HKEY,JSON.stringify(HOF)); }catch(e){} }
-function updated(r){ return Object.assign({},r.src||{},{name:r.name,st:r.st,dx:r.dx,total:r.total0+r.pts,ep:r.ep,arenaWins:r.wins,arenaRetired:!!r.retired}); }
+function updated(r){ return Object.assign({},r.src||{},{name:r.name,st:r.st,dx:r.dx,iq:r.iq,total:r.total0+r.pts,ep:r.ep,arenaWins:r.wins,arenaRetired:!!r.retired}); }
 function hofAdd(r){
   const o=updated(r), e={id:r.name.trim().toLowerCase(),name:r.name,race:o.race||"human",cls:o.cls||"fighter",st:r.st,dx:r.dx,total0:r.total0,total:r.total0+r.pts,wins:r.wins,losses:r.losses,date:new Date().toISOString().slice(0,10),src:o};
   const i=HOF.findIndex(x=>x.id===e.id); if(i>=0)HOF[i]=e; else HOF.push(e); saveHof(); renderHof();
