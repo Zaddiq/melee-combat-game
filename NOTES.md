@@ -127,7 +127,7 @@ Not yet: summoning spells, images and illusions, the multi-hex versions. The pic
 
 ## Many figures, and summoned creatures (Wizard arena only so far)
 The Wizard arena now holds a list of figures (G.units) instead of just you and one enemy. Each has a side, finds its nearest living enemy as its target (other(u)), and the movement code treats every figure as an obstacle. The Melee arena and the duel are unchanged. This is the base for team play later (two players against three creatures): the creatures are computer-run figures just like the summons.
-- **Summons** (Wolf 2 ST IQ 9, Myrmidon 2 ST IQ 10, Bear 4 ST IQ 11, Gargoyle 4 ST IQ 13, Giant 4 ST IQ 14, each +1 ST a turn): a creation spell, so a to-hit roll with no range penalty and a free hex in your megahex or next to it. The creature cannot move or fight on the turn it appears. It is run by the computer on its owner's side. When you do not pay its 1 ST in the renew step it vanishes; at 0 ST it dies. The Gargoyle does not fly yet. Dragons are not in.
+- **Summons** (Wolf 2 ST IQ 9, Myrmidon 2 ST IQ 10, Bear 4 ST IQ 11, Gargoyle 4 ST IQ 13, Giant 4 ST IQ 14, each +1 ST a turn): a creation spell, so a to-hit roll with no range penalty and a free hex in your megahex or next to it. The creature cannot move or fight on the turn it appears. It is run by the computer on its owner's side. When you do not pay its 1 ST in the renew step it vanishes; at 0 ST it dies. The Gargoyle flies (see Flying Gargoyle below). Dragons are not in.
 - **Targets:** with more than one enemy on the map, the nearest is your default target; click another enemy counter (dashed ring) to change it. Spells, missiles and attacks go at the chosen target.
 - **Not in for minions:** hand-to-hand (they cannot grapple and cannot be grappled), forced-retreat choices for your own minions (done automatically), controlling a creature yourself (they attack the nearest enemy), and dragons.
 - Tests S51 to S55.
@@ -137,7 +137,7 @@ The "always the best weapon, always the most armor at adjDX 11" rule made the ar
 
 ### Summons and many figures in the duel
 The duel now uses the same figure list as the Wizard arena. Summoned creatures are run by the computer on their owner's side, move after their owner moves, and pick their own actions. Each player has a default target (the nearest enemy) and can click another enemy counter, with the dashed rings, while moving or choosing an action. Creature upkeep (1 ST each, in the secret renew step), vanishing, and retreat rules are as in the Wizard arena. XP, escape and "quit" still only involve the two players' own figures. Tests: tests/duel_summon_test.py (D1 to D5).
-Still not in: giving orders to a creature, creatures in hand-to-hand, dragons, flying gargoyles.
+Still not in: giving orders to a creature, creatures in hand-to-hand, dragons.
 
 ### Images and illusions (one-hex versions)
 - **Image** (1 ST, IQ 8) and **Illusion** (2 ST, IQ 11): a creation spell like the summons, so a to-hit roll, no range penalty, and a free hex in your megahex or next to it. You pick which creature it looks like (Wolf, Myrmidon, Bear, Gargoyle, Giant). The log says only "a creation spell", so the other side cannot tell a summon from an illusion or an image. Nothing here costs upkeep.
@@ -197,3 +197,9 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Arena: the result goes in the log. Protections are already shown in the arena's status lines, so in practice it is the slippery floors that it uncovers; the floor is drawn for you only and the computer does not learn of it.
 - Duel: the log only says the spell worked. The caster alone is told what it found, in the note at the top of their pick screen on the next turn (it lasts that one turn), and any floors are drawn for that player only (`o.g.seen` lists the sides that were shown a floor). Not told: Mage Sight, Invisibility, Blur (not secret or not in the spell's list).
 - The computer wizard never casts it (not in its spell list). Tests S98-S101, D7, D8.
+
+## Flying Gargoyle
+- Wizard 2018 monster table: Gargoyle MA 8 on the ground, 16 in the air. A Gargoyle (real, illusory, or the copy of one) is a natural flier: `m.natFly`.
+- It uses the same "in the air" state as the Flight spell (attacks on it -4, no engagement between fliers and ground figures, cannot be tripped or grappled), but: MA is 16 from the first turn (the Flight spell's 6 then 12 is only for the spell), it takes off and lands at no cost and without losing its move, and it has no -2 handicap of its own (the booklet puts "not used to flight" on the Flight spell only; this is our reading).
+- The computer decides at the start of its movement: foe 3 or more hexes away, it takes to the air; closer than that, it lands to fight. It attacks from the air on the turn it closes in, so its first blow lands with the -4 cover. The log says when it takes off or lands.
+- It still cannot fly over another figure (known limit; it paths around). Natural fliers are not slowed by landing. Not in: orders to a Gargoyle (none for any creature yet), a human choosing when it flies. Tests S102-S105, D9.

@@ -94,9 +94,9 @@ function adjDX(f){ /* starting gear, old Melee/Wizard penalties as the builder c
   return a;
 }
 const MA=f=>{let m=ARMOR[f.armor].ma; if(f.race==="elf"){ if(f.armor==="none"||f.armor==="cloth")m=12; else if(f.armor==="leather")m=10; } return m;};
-const land=u=>{ if(u.air||u.fly){ u.fly=false; u.air=false; u.airN=0; u.stop=Math.max(u.stop,1); } };
+const land=u=>{ if(u.air||u.fly){ u.fly=false; u.air=false; u.airN=0; if(!u.natFly) u.stop=Math.max(u.stop,1); } };
 const ropeNum=u=>u.rope>0?(u.ropeN||1):0;   /* how many magic ropes hold this figure (Giant Rope on a weaker creature is two) */
-const MAu=u=>{ if(u.stop>0) return 0; let m=u.air?(u.airN<=1?6:12):MA(u.p); if(u.spd>0) m*=2; if(u.slow>0) m=Math.floor(m/2); for(let i=ropeNum(u);i>0;i--) m=Math.floor(m/2); return m; };
+const MAu=u=>{ if(u.stop>0) return 0; let m=u.air?(u.natFly?16:(u.airN<=1?6:12)):MA(u.p); if(u.spd>0) m*=2; if(u.slow>0) m=Math.floor(m/2); for(let i=ropeNum(u);i>0;i--) m=Math.floor(m/2); return m; };
 const stops=f=>ARMOR[f.armor].stops+[f.right,f.left].reduce((t,k)=>t+(SHIELDS[k]?SHIELDS[k].stops:0),0)+(f.left==="mg"?1:0);
 const iname=k=>k==="none"?"nothing":(W[k]||SHIELDS[k]).n;
 function dmg(f,k){ if(!W[k]||W[k].miss)return""; let m=W[k].m; return dice(W[k].d,m); }
@@ -217,7 +217,7 @@ const mhPen=n=>n<=2?0:-Math.ceil((n-2)/2);   /* 3-4 MH: -1, 5-6 MH: -2 */
 function inFront(a,b){ if(a.down||blocked(a,b)) return false; const A=pt(a.q,a.r),B=pt(b.q,b.r),f=SCR[a.f]*Math.PI/180; return (B[0]-A[0])*Math.cos(f)+(B[1]-A[1])*Math.sin(f)>-0.85; }
 const isMW=id=>!!(W[id]&&W[id].miss), isBow=id=>id==="sbow"||id==="hbow"||id==="lbow";
 const xb=(u,w)=>u.low==="prone"&&(w==="lxbow"||w==="hxbow")?1:0;   /* crossbowman lying prone +1 DX */
-const shotDX=(u,o,wid,kind)=>adjDXu(u,"single",null)-(shadowAt(o)?4:0)-(shadowAt(u)?6:0)-(u.air?4:0)-(o.air?4:0)+(kind==="thrown"?-dist(u,o):mhPen(mhDist(u,o))+xb(u,wid));
+const shotDX=(u,o,wid,kind)=>adjDXu(u,"single",null)-(shadowAt(o)?4:0)-(shadowAt(u)?6:0)-(u.air&&!u.natFly?4:0)-(o.air?4:0)+(kind==="thrown"?-dist(u,o):mhPen(mhDist(u,o))+xb(u,wid));
 const MWid=u=>isMW(u.right)?u.right:(isMW(u.left)&&!SHIELDS[u.left]?u.left:null);
 const isEngaged=(a,b)=>!!a.air===!!b.air&&relOf(b,a)==="front";   /* a stands in one of b's front hexes */
 function faceToward(a,b){ const A=pt(a.q,a.r),B=pt(b.q,b.r); const ang=Math.atan2(B[1]-A[1],B[0]-A[0])*180/Math.PI;
@@ -336,6 +336,7 @@ function aiMove(a){
   if(!enemiesOf(a).length){ lg(`${a.p.name} holds.`); return; } const b=other(a);
   if(a.fresh||a.hth||a.low||a.sleep||a.frozen>0) return;
   if(a.down){ if(slickAt(a)&&!slickStand(a)) return; a.standUp=true; lg(`${a.p.name} starts to stand up.`); return; }
+  if(a.natFly){ const up=dist(a,b)>=3; if(up!==!!a.air){ a.air=up; if(!up) a.airN=0; lg(`${a.p.name} ${up?"takes to the air":"lands"}.`); } }   /* a gargoyle flies to close a gap and lands to fight */
   const av=!!(a.avert&&a.avert.hp>0), eng=engagedAny(a), R=reach(a,enemiesOf(a),MAu(a),av?false:eng); let best=null, avFall=av&&avertFilter(a,R,{q:a.q,r:a.r});
   for(const [k,h] of [...R]) if((h.fire||(slickAt(h)&&(slickAt(h).g.shown||sideOf(slickAt(h).owner)===sideOf(a))))&&!same(h,a)) R.delete(k);   /* the computer will not walk into fire */
   if(MWid(a)&&!eng){ for(const h of R.values()){ if(h.c>1)continue; const s=Math.min(dist(h,b),4)*2-(relOf(b,h)==="front"?9:0)+(h.c===0?0.4:0)+Math.random()*0.3; if(!best||s>best.s) best={h,s}; } }
@@ -364,7 +365,7 @@ function adjDXu(u,mode,tgt0){
   if(p.cls==="wizard"){ if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4 }
   if(u.wound2) a-=2;
   if(u.aid>0) a+=u.aidN; if(u.clum>0) a-=u.clumN; if(u.daz>0&&!(tgt&&(tgt.blur||tgt.inv))) a-=3; if(u.rope>0) a-=ropeNum(u)*(u.rope+1); if(u.fireT) a-=2; if(tgt&&shadowAt(tgt)&&!tgt.inv) a-=4; if(tgt&&shadowAt(u)) a-=6;   /* Dazzle -3, but not on top of Blur's -4 */
-  if(tgt&&tgt.inv) a-=6; else if(tgt&&tgt.blur) a-=4; if(tgt&&tgt.air) a-=4; if(tgt&&u.air) a-=2;   /* Blur: -4 to every attack against the subject */
+  if(tgt&&tgt.inv) a-=6; else if(tgt&&tgt.blur) a-=4; if(tgt&&tgt.air) a-=4; if(tgt&&u.air&&!u.natFly) a-=2;   /* Blur: -4 to every attack against the subject */
   if(u.poleVs) a+=2;   /* pole weapon, standing still, against a charge */
   if(u.hp<=3) a-=3;
   if(tgt){ const r=relOf(tgt,u); if(r==="side")a+=2; else if(r==="rear")a+=4; }
@@ -493,7 +494,7 @@ function creaHexes(u,o,t){ if(t==="slick") return P.filter(h=>dist(u,h)<=Math.ma
   return P.filter(h=>mhDist(u,h)<=1&&!blocked(u,h)&&!G.objs.some(x=>x.t!=="slick"&&same(x,h)&&(solid||x.t===t||x.t==="wall"))&&(!solid||!occ(h))&&(t!=="fire"||!same(h,u))); }
 function summonMinion(u,kind,h){ const C=CRE[kind], n=allU().filter(x=>x.minion&&x.p.name.indexOf(C.name)===0).length;
   const p=fromBuilder({name:C.name+(n?" "+(n+1):""),race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"});
-  const m=mk(h,p); m.minion=true; m.kind=kind; m.side=sideOf(u); m.owner=u; m.fresh=true; m.f=faceToward(m,other(u)); if(!G.units) G.units=[G.me,G.foe]; G.units.push(m); return m; }
+  const m=mk(h,p); m.minion=true; m.kind=kind; if(kind==="gargoyle") m.natFly=true; m.side=sideOf(u); m.owner=u; m.fresh=true; m.f=faceToward(m,other(u)); if(!G.units) G.units=[G.me,G.foe]; G.units.push(m); return m; }
 function fireHits(u,total){ const prot=ARMOR[u.p.armor].stops+(u.iron?6:u.stone?4:0), h=Math.max(0,total-prot);
   lg(`${sub(u)} ${vb(u,"take","takes")} ${total} hits of fire; protection stops ${Math.min(prot,total)}. ${h?sub(u)+" "+vb(u,"take","takes")+" "+h+" hit"+(h>1?"s":""):"No damage gets through"}.`);
   if(h>0){ u.hp-=h; u.hits+=h; u.tookHit=true; u.sleep=false; lg(`${vb(u,"Your","Its")} ST is now ${Math.max(u.hp,0)}.`); } endCheck(); }
@@ -749,7 +750,7 @@ function takePick(act){ G.picks[G.pi?"foe":"me"]=act; G.pi++; if(G.pi>=2) resolv
 function doAttack(a,d,wid,mode,kind){
   let dx=adjDXu(a,mode,kind?null:d);
   if(kind==="thrown") dx-=dist(a,d); else if(kind==="missile") dx+=mhPen(mhDist(a,d))+xb(a,wid);
-  if(kind&&!a.sight&&shadowAt(d)&&!d.inv) dx-=4; if(kind&&shadowAt(a)) dx-=6; if(kind&&a.air) dx-=4; if(kind&&d.air) dx-=4;
+  if(kind&&!a.sight&&shadowAt(d)&&!d.inv) dx-=4; if(kind&&shadowAt(a)) dx-=6; if(kind&&a.air&&!a.natFly) dx-=4; if(kind&&d.air) dx-=4;
   if(kind&&!a.sight&&d.inv) dx-=6; else if(kind&&!a.sight&&d.blur){ dx-=4; if(a.daz>0) dx+=3; }
   if(a.wound2){ a.wound2=false; }   /* the -2 DX from 5+ hits lasts for the next attack only */
   const defend=(kind==="missile"||kind==="thrown")?d.dodging:d.defending, n=defend?4:3, dice=rollN(n), t=sum(dice);
