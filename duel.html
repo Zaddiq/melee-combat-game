@@ -292,7 +292,7 @@ function startHexes(){
   const theirs=top.find(h=>key(h.q,h.r)===foeStart)||front(top,-1); foeStart=key(theirs.q,theirs.r);
   return {bottom,top,mine,theirs};
 }
-const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,conf:0,confN:0,shock:false,avert:null,fresh:false,gone:false,tgtSel:null,rev:false,revHit:false,rope:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,pn:[],cool:0,usedLast:false,dodging:false,
+const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,conf:0,confN:0,shock:false,inv:false,avert:null,fresh:false,gone:false,tgtSel:null,rev:false,revHit:false,rope:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,pn:[],cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
 function startFight(){
   if(!me||!foe)return; const s=startHexes();
@@ -314,7 +314,7 @@ function nextTurn(){
   G.rq=[G.me,G.foe].filter(u=>(CONT.some(k=>u[k])||avertsOf(u).length||allU().some(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(u)))&&u.hp>0);   /* step 2: each wizard with continuing spells decides, in secret */
   if(G.rq.length) nextRenew();
 }
-const CONT=["blur","stone","iron","shield","rev","fly","shock"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield",rev:"Reverse Missiles",fly:"Flight",shock:"Shock Shield"};
+const CONT=["blur","stone","iron","shield","rev","fly","shock","inv"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield",rev:"Reverse Missiles",fly:"Flight",shock:"Shock Shield",inv:"Invisibility"};
 function nextRenew(){ if(!G.rq.length){ G.phase="choose"; return; } G.rcur=G.rq.shift(); G.rlist=CONT.filter(k=>G.rcur[k]).map(k=>({k,on:G.rcur.hp>=3})).concat(allU().filter(m=>m.minion&&!m.fake&&m.hp>0&&sideOf(m)===sideOf(G.rcur)).map(m=>({k:"minion",m,on:G.rcur.hp>=3}))).concat(avertsOf(G.rcur).map(m=>({k:"avert",m,on:G.rcur.hp>=3}))); G.cur=G.rcur; G.oth=other(G.rcur); G.phase="rcover"; }
 const rname=r=>r.k==="minion"?r.m.p.name:r.k==="avert"?"Avert on "+r.m.p.name:CONTN[r.k];
 const avertsOf=u=>allU().filter(x=>x.avert===u&&x.hp>0&&!x.fake);
@@ -362,8 +362,8 @@ function adjDXu(u,mode,tgt){
   const wp=[u.right,u.left].filter(isW);
   if(p.cls==="wizard"){ if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4 }
   if(u.wound2) a-=2;
-  if(u.aid>0) a+=u.aidN; if(u.clum>0) a-=u.clumN; if(u.daz>0&&!(tgt&&tgt.blur)) a-=3; if(u.rope>0) a-=u.rope+1; if(u.fireT) a-=2; if(tgt&&shadowAt(tgt)) a-=4; if(tgt&&shadowAt(u)) a-=6;   /* Dazzle -3, but not on top of Blur's -4 */
-  if(tgt&&tgt.blur) a-=4; if(tgt&&tgt.air) a-=4; if(tgt&&u.air) a-=2;   /* Blur: -4 to every attack against the subject */
+  if(u.aid>0) a+=u.aidN; if(u.clum>0) a-=u.clumN; if(u.daz>0&&!(tgt&&(tgt.blur||tgt.inv))) a-=3; if(u.rope>0) a-=u.rope+1; if(u.fireT) a-=2; if(tgt&&shadowAt(tgt)&&!tgt.inv) a-=4; if(tgt&&shadowAt(u)) a-=6;   /* Dazzle -3, but not on top of Blur's -4 */
+  if(tgt&&tgt.inv) a-=6; else if(tgt&&tgt.blur) a-=4; if(tgt&&tgt.air) a-=4; if(tgt&&u.air) a-=2;   /* Blur: -4 to every attack against the subject */
   if(u.poleVs) a+=2;   /* pole weapon, standing still, against a charge */
   if(u.hp<=3) a-=3;
   if(tgt){ const r=relOf(tgt,u); if(r==="side")a+=2; else if(r==="rear")a+=4; }
@@ -512,6 +512,7 @@ const SP={
  "Summon Giant":{k:"C",cost:()=>4,obj:"summon",summon:"giant"},
  "Confusion":{k:"T",v:1},
  "Avert":{k:"T",cost:()=>2},
+ "Invisibility":{k:"T",cost:()=>3,self:1,cont:"inv"},
  "Control Person":{k:"T",cost:()=>3,ctl:"person"},
  "Control Animal":{k:"T",cost:()=>2,ctl:"animal"},
  "Shock Shield":{k:"T",cost:()=>2,self:1,cont:"shock"},
@@ -530,16 +531,16 @@ const SP={
  "Blast":{k:"S",cost:()=>2,rng:1},
  "Dazzle":{k:"S",cost:()=>3,rng:5}
 };
-const RMV=["avert","fly","blur","stone","iron","slow","stop","spd","clum","aid","sleep","frozen"];
+const RMV=["avert","fly","blur","inv","stone","iron","slow","stop","spd","clum","aid","sleep","frozen"];
 const rmCount=u=>RMV.filter(k=>u[k]).length;
 function brkItem(o){ const w=[o.right,o.left].find(k=>isW(k)&&!SHIELDS[k]&&k!==o.brkW); if(w) return w; const sh=[o.left,o.right].find(k=>SHIELDS[k]); return sh||null; }
 const ironU=u=>u.p.cls==="wizard"&&!u.p.silver&&(["chain","halfplate","plate"].includes(u.p.armor)||[u.right,u.left].some(k=>isW(k)&&k!=="staff"));
 function castBase(u){ return adjDXu(u,"single",null)-(ironU(u)?4:0); }
 function castList(u,o){
   const L=[]; if(u.p.cls!=="wizard"||u.down||u.hp<=0) return L;
-  const known=new Set(u.p.spells||[]), front=inFront(u,o), near=dist(u,o)<=1, base=castBase(u)-(u.air?2:0), fy=(o.air?-4:0)+(shadowAt(o)?-4:0)+(shadowAt(u)?-6:0), mx=u.hp;
+  const known=new Set(u.p.spells||[]), front=inFront(u,o), near=dist(u,o)<=1, base=castBase(u)-(u.air?2:0), fy=(o.air?-4:0)+(shadowAt(o)&&!o.inv?-4:0)+(shadowAt(u)?-6:0), mx=u.hp;
   for(const name of Object.keys(SP)){ if(!known.has(name)) continue; const d=SP[name]; if(u.conf>0&&(SPIQ[name]||0)>effIQ(u)) continue;   /* a confused wizard cannot cast spells above his lowered IQ */
-    if(d.k==="M"){ if(!front) continue; const mh=mhDist(u,o), dx=base+fy+mhPen(mh)+(o.blur?-4+(u.daz>0?3:0):0);
+    if(d.k==="M"){ if(!front) continue; const mh=mhDist(u,o), dx=base+fy+mhPen(mh)+(o.inv?-6:o.blur?-4+(u.daz>0?3:0):0);
       for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less; ${mh} megahex${mh===1?"":"es"} away)`}); continue; }
     if(d.k==="C"){ const cc=d.cost(o); if(cc>mx) continue;
       if(d.rope){ if(mhDist(u,o)<=1&&o.p.st<20&&!o.rope&&!blocked(u,o)) L.push({sp:name,cost:cc,dx:base,label:`Rope (${cc} ST; needs ${base} or less): halves the enemy's MA, −2 DX and one worse each turn; it must stand still and roll to get free`}); continue; }
@@ -550,14 +551,14 @@ function castList(u,o){
     if(d.k==="S"&&d.tele){ L.push({sp:name,cost:1,dx:base,tele:1,label:`Teleport (1 ST per megahex moved, at least 1; needs ${base} or less; you choose the hex next and face the enemy there)`}); continue; }
     if(d.k==="S"){ const mhd=mhDist(u,o); if(d.rng===1?dist(u,o)>1:mhd>d.rng) continue;
       const dx=base+(d.rng===1?fy-dist(u,o):0)+(o.blur&&u.daz>0?3:0); L.push({sp:name,cost:d.cost(o),dx,label:`${name} (${d.cost(o)} ST; needs ${dx} or less${name==="Dazzle"?"; −3 DX for 3 turns to everyone with eyes within 5 megahexes":"; 1 die of damage to everything in your hex and the hexes next to you"})`}); continue; }
-    if(d.rm){ const dxr=base+fy-dist(u,o)+(o.blur?-4:0)+(o.blur&&u.daz>0?3:0);
+    if(d.rm){ const dxr=base+fy-dist(u,o)+(o.inv?-6:o.blur?-4+(u.daz>0?3:0):0);
       if(!u.shield&&(rmCount(u)&&["slow","stop","clum","spd","aid"].some(k=>u[k]))) L.push({sp:name,on:"self",cost:2,dx:base+(u.air?2:0),label:`${name} on yourself (2 ST; needs ${base+(u.air?2:0)} or less): ends your own thrown spells`});
       if((front||near)&&rmCount(o)) L.push({sp:name,on:"foe",cost:2,dx:dxr,label:`${name} on the enemy (2 ST; needs ${dxr} or less): ends its thrown spells`}); continue; }
-    if(name==="Death Spell"){ if(!(front||near)) continue; const dxd=base+fy-dist(u,o)+(o.blur?-4:0)+(o.blur&&u.daz>0?3:0); L.push({sp:name,cost:0,dx:dxd,label:`${name} (needs ${dxd} or less; the weaker of you two dies and the stronger loses the weaker's ST: yours is ${u.hp}, theirs ${o.hp})`}); continue; }
+    if(name==="Death Spell"){ if(!(front||near)) continue; const dxd=base+fy-dist(u,o)+(o.inv?-6:o.blur?-4+(u.daz>0?3:0):0); L.push({sp:name,cost:0,dx:dxd,label:`${name} (needs ${dxd} or less; the weaker of you two dies and the stronger loses the weaker's ST: yours is ${u.hp}, theirs ${o.hp})`}); continue; }
     if(d.cont&&u[d.cont]) continue; if(d.cont==="stone"&&u.iron) continue;
     if(d.self&&u.shield) continue;   /* a Spell Shield keeps out the wizard's own spells too */
     if(!d.self){ if(!(front||near)) continue; if(d.ok&&!d.ok(o)) continue; if(d.ctl&&!ctlOK(u,o,d.ctl)) continue; }
-    const dx=base+(d.self?(u.air?2:0):fy-dist(u,o))+(d.self||!o.blur?0:-4)+(!d.self&&o.blur&&u.daz>0?3:0);
+    const dx=base+(d.self?(u.air?2:0):fy-dist(u,o))+(d.self?0:o.inv?-6:o.blur?-4+(u.daz>0?3:0):0);
     if(d.v){ for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less)${name==="Clumsiness"?`: −${2*n} DX for ${o.p.st>=30?1:3} turns`:name==="Confusion"?`: −${2*n} IQ for 3 turns`:`: +${n} DX for 2 turns`}`}); }
     else { const c=d.cost(o); if(c>mx) continue; L.push({sp:name,cost:c,dx,label:`${name} (${c} ST${d.cont?", +1 each turn":""}; needs ${dx} or less)`}); }
   }
@@ -604,6 +605,7 @@ function doCast(u,o,pa){
     if(hits>0){ o.hp-=hits; o.hits+=hits; o.tookHit=true; o.sleep=false; lg(`${o.p.name}'s ST is now ${Math.max(o.hp,0)}.`); if(o.hits>=8&&o.hp>0&&!o.down){ o.down=true; o.low=null; lg(`${sub(o)} ${vb(o,"are","is")} knocked down by ${o.hits} hits!`); } }
     endCheck(); return; }
   switch(c.sp){
+    case "Invisibility": u.inv=true; msg=`${sub(u)} ${vb(u,"vanish","vanishes")} from sight: attacks and spells against ${vb(u,"you","it")} are at −6 DX (not added to Blur, Dazzle or Shadow).`; break;
     case "Blur": u.blur=true; msg="A blur surrounds "+sub(u)+": attacks and spells against it are at −4 DX."; break;
     case "Stone Flesh": u.stone=true; msg=sub(u)+"'s body stops 4 hits per attack."; break;
     case "Flight": u.fly=true; msg=sub(u)+" will be in the air from the start of next turn (MA 12, half on the first turn): attacks on a flier are at −4 DX, and a flier attacks at −2 (−4 with missile or thrown weapons)."; break;
@@ -718,8 +720,8 @@ function takePick(act){ G.picks[G.pi?"foe":"me"]=act; G.pi++; if(G.pi>=2) resolv
 function doAttack(a,d,wid,mode,kind){
   let dx=adjDXu(a,mode,kind?null:d);
   if(kind==="thrown") dx-=dist(a,d); else if(kind==="missile") dx+=mhPen(mhDist(a,d))+xb(a,wid);
-  if(kind&&shadowAt(d)) dx-=4; if(kind&&shadowAt(a)) dx-=6; if(kind&&a.air) dx-=4; if(kind&&d.air) dx-=4;
-  if(kind&&d.blur){ dx-=4; if(a.daz>0) dx+=3; }
+  if(kind&&shadowAt(d)&&!d.inv) dx-=4; if(kind&&shadowAt(a)) dx-=6; if(kind&&a.air) dx-=4; if(kind&&d.air) dx-=4;
+  if(kind&&d.inv) dx-=6; else if(kind&&d.blur){ dx-=4; if(a.daz>0) dx+=3; }
   if(a.wound2){ a.wound2=false; }   /* the -2 DX from 5+ hits lasts for the next attack only */
   const defend=(kind==="missile"||kind==="thrown")?d.dodging:d.defending, n=defend?4:3, dice=rollN(n), t=sum(dice);
   let hit,mult=1,fumble=null;
@@ -825,7 +827,7 @@ function ui(){
     if($("bNext")) $("bNext").onclick=()=>{ placeStep=1; ui(); drawMap(); }; if($("bPrev")) $("bPrev").onclick=()=>{ placeStep=0; ui(); drawMap(); };
     if($("bGo")) $("bGo").onclick=startFight; } else c.innerHTML="Load both fighters first (the boxes below)."; return; }
   const A=G.me,B=G.foe,cur=G.cur; let t="",b="";
-  const fx=u=>[u.blur&&"Blur",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.conf>0&&"confused −"+u.confN+" IQ",u.avert&&"averted",u.rope>0&&"roped −"+(u.rope+1)+" DX",u.air&&"flying",u.fly&&!u.air&&"taking off",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
+  const fx=u=>[u.blur&&"Blur",u.inv&&"Invisible",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.conf>0&&"confused −"+u.confN+" IQ",u.avert&&"averted",u.rope>0&&"roped −"+(u.rope+1)+" DX",u.air&&"flying",u.fly&&!u.air&&"taking off",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"")+(fx(u).length?" ["+fx(u).join(", ")+"]":"");
   const nm=u=>`<b class="${sideOf(u)==="me"?"me":"foe"}">${esc(u.p.name)}</b>`;
   const st=allU().filter(u=>u.hp>0||!u.minion).map(u=>`${nm(u)}${u.fake&&sideOf(u)===sideOf(cur)&&["pick","spells","dest"].includes(G.phase)?" (your "+u.fake+")":""} ST ${Math.max(u.hp,0)}/${u.p.st}${flags(u)}`).join(" · ")+`<br>${esc(A.p.name)} is ${engagedAny(A)?"<b>engaged</b>":"not engaged"}; ${esc(B.p.name)} is ${engagedAny(B)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).`;
@@ -890,7 +892,7 @@ function drawMap(){
       <path d="M.14 -.15 L.25 -.02" stroke="${c}" stroke-width=".07" stroke-linecap="round" fill="none"/>
       ${w?`<path d="M.25 -.02 L.36 -.40" stroke="${c}" stroke-width=".045" stroke-linecap="round"/><path d="M.21 -.12 L.31 -.07" stroke="${c}" stroke-width=".04" stroke-linecap="round"/>`:""}
       ${SHIELDS[Lh]?`<ellipse cx="-.3" cy=".0" rx=".1" ry=".15" fill="${c}" opacity=".85"/>`:""}`;
-    return `<g transform="translate(${x.toFixed(2)},${y.toFixed(2)}) rotate(${rot}) scale(${f.hth?.8:1.12})" pointer-events="none" opacity="${(f.down||f.low==='prone')&&!dead?.6:1}">
+    return `<g transform="translate(${x.toFixed(2)},${y.toFixed(2)}) rotate(${rot}) scale(${f.hth?.8:1.12})" pointer-events="none" opacity="${f.inv&&!dead?.4:(f.down||f.low==='prone')&&!dead?.6:1}">
       <rect x="-.56" y="-.56" width="1.12" height="1.12" rx=".09" fill="var(--card)" stroke="${c}" stroke-width=".07"/>${fig}
       <text x="-.46" y=".5" font-size=".26" font-weight="700" fill="${c}" transform="rotate(${-rot} -.46 .5)" text-anchor="middle">${L}</text></g>`; };
   let layer="";

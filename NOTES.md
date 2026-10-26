@@ -171,3 +171,7 @@ Thrown at a victim, 2 ST to cast and 1 ST a turn to keep (shown in the caster's 
 - A controlled summoned creature vanishes when its new master stops paying (or dies, or it is killed); its original summoner stops paying. Control can be taken over by another wizard.
 - Arena: Control Person may also be cast on the computer's main fighter. While controlled he has no friends to attack, so he simply holds still. Duel: only creatures can be controlled, not the other player's wizard. Computer wizards cast it only on creatures.
 - Tests S71–S77.
+
+## Invisibility (simple version)
+- IQ 12, 3 ST + 1/turn, on yourself only (not on allies yet). Attacks and spells at the invisible figure are −6 DX; this does not add to Blur, Dazzle or Shadow (the worst applies). Remove Thrown Spell ends it. The figure's token stays on the map but is drawn faint.
+- The book's hidden movement (counter removed from the map, revealed when adjacent, attacking, wounded or in fire) and Mage Sight are not in. Tests S78–S81.
