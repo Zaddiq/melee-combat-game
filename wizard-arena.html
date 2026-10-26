@@ -851,7 +851,7 @@ function ui(){
   const on=(id,f)=>{const e=$(id); if(e)e.onclick=f;};
   on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bUn",undoMove);
   on("bSkip",()=>{lg("You do not force a retreat.");endTurn();ui();drawMap();}); on("bBack",()=>{G.destX=null;G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false)); on("bNew",()=>newFoe());
-  c.querySelectorAll("[data-rn]").forEach(e=>e.onclick=()=>{ const r=G.rlist[+e.dataset.rn]; r.on=!r.on; ui(); }); on("bRn",doRenew);
+  c.querySelectorAll("[data-rn]").forEach(e=>e.onclick=()=>{ const r=G.rlist[+e.dataset.rn]; r.on=!r.on; ui(); }); on("bRn",()=>{ doRenew(); ui(); drawMap(); });
   c.querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>{ const x=G.sopts[+e.dataset.sp]; if(x.hexsel){ G.destT="cast"; G.destX={sp:x.sp}; G.phase="dest"; G.dopts=new Map(creaHexes(G.me,G.foe,x.hexsel).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } if(x.tele){ const U=G.me, V=G.foe; G.destT="cast"; G.destX={sp:"Teleport"}; G.phase="dest"; G.dopts=new Map(P.filter(h=>!same(h,U)&&!same(h,V)&&Math.max(1,mhDist(U,h))<=U.hp).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } resolveTurn({t:"cast",sp:x.sp,n:x.n,on:x.on,objId:x.objId}); });
   c.querySelectorAll("[data-opt]").forEach(e=>e.onclick=()=>{
     const o=G.opts[+e.dataset.opt]||{t:"none"};
