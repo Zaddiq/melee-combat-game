@@ -3,7 +3,7 @@ JS=r'''
 ()=>{
  const rnd=a=>a[Math.floor(Math.random()*a.length)];
  const out={games:0,over:0,errors:[],casts:0,renew:0,foeCasts:0,wizFoe:0};
- const SPN=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles","Flight","Teleport","Fire","Shadow","Create Wall","Rope","Destroy Creation","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion","Shock Shield"];
+ const SPN=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles","Flight","Teleport","Fire","Shadow","Create Wall","Rope","Destroy Creation","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion","Shock Shield","Avert"];
  for(let g=0;g<40;g++){
   try{
    me=fromBuilder({name:"W"+g,race:"human",cls:"wizard",st:9+ri(5),dx:11+ri(3),iq:14,a:"none",b:"none",armor:rnd(["none","cloth","leather"]),d1:"dagger",silver:true,spells:SPN.slice()});

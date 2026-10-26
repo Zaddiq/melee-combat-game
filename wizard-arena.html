@@ -197,6 +197,14 @@ function faceToward(a,b){ const A=pt(a.q,a.r),B=pt(b.q,b.r); const ang=Math.atan
   let best=0,bd=999; SCR.forEach((s,i)=>{const dd=Math.abs((ang-s+540)%360-180); if(dd<bd){bd=dd;best=i;}}); return best; }
 /* hexes a figure may end its movement in. Engaged: shift one hex, staying next to the enemy. Otherwise up to MA hexes,
    and movement must stop on entering any enemy front hex. */
+/* Avert: the victim must end his move at least 2 hexes farther from the caster; if he cannot, as far as he can; if he cannot get any farther he must save against DX or fall */
+function avertFilter(u,R,startPos){
+  const c=u.avert; if(!c||c.hp<=0||u.avert===u) return false; const d0=dist(startPos,c); let best=-1;
+  for(const h of R.values()) best=Math.max(best,dist(h,c));
+  if(best<=d0){ for(const [k,h] of [...R]) if(!(h.q===startPos.q&&h.r===startPos.r)) R.delete(k); return true; }
+  const need=Math.min(d0+2,best);
+  for(const [k,h] of [...R]) if(dist(h,c)<need) R.delete(k);
+  return false; }
 function reach(a,B,ma,eng){
   const E=[].concat(B), occ=allU().filter(x=>x.hp>0&&!same(x,a)), free=n=>n&&!occ.some(x=>same(x,n));
   const out=new Map([[key(a.q,a.r),{q:a.q,r:a.r,c:0,fire:0}]]);
@@ -289,7 +297,7 @@ function startHexes(){
   myStart=key(mine.q,mine.r);
   return {bottom,top,mine,theirs:front(top,-1)};
 }
-const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,conf:0,confN:0,shock:false,fresh:false,gone:false,rev:false,revHit:false,rope:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,cool:0,usedLast:false,dodging:false,
+const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,conf:0,confN:0,shock:false,avert:null,fresh:false,gone:false,rev:false,revHit:false,rope:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
 function startFight(){
   if(!me||!foe)return; const s=startHexes();
@@ -311,13 +319,16 @@ function nextTurn(){
   const go=()=>{ if(G.phase==="over") return; if(a>b){ G.phase="choose"; } else { lg(`${foe.name} wins it and moves second.`); G.order=["me","foe"]; G.idx=0; advance(); } };
   /* step 2: renew continuing spells (the computer decides now; you are asked) */
   for(const k of CONT){ if(G.foe[k]){ if(G.foe.hp-1>=4&&Math.random()<.9){ G.foe.hp--; lg(`${foe.name} keeps ${CONTN[k]} going.`); } else { G.foe[k]=false; if(k==="fly") land(G.foe); lg(`${foe.name}'s ${CONTN[k]} ends.`); } } }
+  for(const x of allU()) if(x.avert&&x.avert.hp<=0) x.avert=null;
+  for(const v of avertsOf(G.foe)){ if(G.foe.hp-1>=4&&Math.random()<.8){ G.foe.hp--; } else { v.avert=null; lg(`The Avert on ${sub(v)==='You'?'you':sub(v)} ends.`); } }
   for(const m of allU().filter(x=>x.minion&&!x.fake&&x.hp>0&&sideOf(x)==="foe")){ if(G.foe.hp-1>=4&&Math.random()<.9){ G.foe.hp--; } else { m.hp=0; endCheck(); } }
-  const act=CONT.filter(k=>G.me[k]), mins=allU().filter(x=>x.minion&&!x.fake&&x.hp>0&&sideOf(x)==="me");
-  if((act.length||mins.length)&&G.me.hp>0){ G.phase="renew"; G.rlist=act.map(k=>({k,on:G.me.hp>=3})).concat(mins.map(m=>({k:"minion",m,on:G.me.hp>=3}))); G.afterRenew=go; } else go();
+  const act=CONT.filter(k=>G.me[k]), mins=allU().filter(x=>x.minion&&!x.fake&&x.hp>0&&sideOf(x)==="me"), avs=avertsOf(G.me);
+  if((act.length||mins.length||avs.length)&&G.me.hp>0){ G.phase="renew"; G.rlist=act.map(k=>({k,on:G.me.hp>=3})).concat(mins.map(m=>({k:"minion",m,on:G.me.hp>=3}))).concat(avs.map(m=>({k:"avert",m,on:G.me.hp>=3}))); G.afterRenew=go; } else go();
 }
 const CONT=["blur","stone","iron","shield","rev","fly","shock"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield",rev:"Reverse Missiles",fly:"Flight",shock:"Shock Shield"};
-const rname=r=>r.k==="minion"?r.m.p.name:CONTN[r.k];
-function doRenew(){ const u=G.me; for(const r of G.rlist){ if(r.on&&u.hp>=1){ u.hp--; lg(`You keep ${rname(r)} going (1 ST).`); } else if(r.k==="minion"){ r.m.hp=0; endCheck(); } else { u[r.k]=false; if(r.k==="fly") land(u); lg(`Your ${CONTN[r.k]} ends.`); } } G.phase="";
+const rname=r=>r.k==="minion"?r.m.p.name:r.k==="avert"?"Avert on "+r.m.p.name:CONTN[r.k];
+const avertsOf=u=>allU().filter(x=>x.avert===u&&x.hp>0&&!x.fake);
+function doRenew(){ const u=G.me; for(const r of G.rlist){ if(r.on&&u.hp>=1){ u.hp--; lg(`You keep ${rname(r)} going (1 ST).`); } else if(r.k==="minion"){ r.m.hp=0; endCheck(); } else if(r.k==="avert"){ r.m.avert=null; lg(`Your Avert on ${r.m.p.name} ends.`); } else { u[r.k]=false; if(r.k==="fly") land(u); lg(`Your ${CONTN[r.k]} ends.`); } } G.phase="";
   endCheck(); if(G.phase!=="over"){ const f=G.afterRenew; f(); } }
 function choose(first){ G.order=first?["me","foe"]:["foe","me"]; G.idx=0; lg(first?"You move first.":"You move second."); advance(); ui(); drawMap(); }
 function minionMove(side){ for(const m of allU().filter(x=>x.minion&&x.hp>0&&sideOf(x)===side)) aiMove(m); }
@@ -328,14 +339,14 @@ function advance(){
   if(u.sleep||u.frozen>0){ lg(`You cannot move (${u.sleep?"asleep":"frozen"}).`); skip(); return; }
   if(u.hth||u.low){ skip(); return; }   /* grappling or kneeling/prone figures do not move */
   if(u.down){ u.standUp=true; lg("You start to stand up: no other action, and you stay on the floor until the end of the combat phase."); skip(); return; }
-  G.phase="move"; G.start={q:u.q,r:u.r,air:u.air}; G.eng=engagedAny(u); G.moved=0;
-  G.reach=reach(G.start,enemiesOf(u),MAu(G.me),G.eng);
+  G.phase="move"; G.start={q:u.q,r:u.r,air:u.air}; G.eng=engagedAny(u); G.moved=0; G.avertOn=!!(u.avert&&u.avert.hp>0);
+  G.reach=reach(G.start,enemiesOf(u),MAu(G.me),G.avertOn?false:G.eng); G.avertFall=G.avertOn&&avertFilter(u,G.reach,G.start);
 }
 function aiMove(a){
   a=a||G.foe; const b=other(a);
   if(a.fresh||a.hth||a.low||a.sleep||a.frozen>0) return;
   if(a.down){ a.standUp=true; lg(`${a.p.name} starts to stand up.`); return; }
-  const eng=engagedAny(a), R=reach(a,enemiesOf(a),MAu(a),eng); let best=null;
+  const av=!!(a.avert&&a.avert.hp>0), eng=engagedAny(a), R=reach(a,enemiesOf(a),MAu(a),av?false:eng); let best=null, avFall=av&&avertFilter(a,R,{q:a.q,r:a.r});
   for(const [k,h] of [...R]) if(h.fire&&!same(h,a)) R.delete(k);   /* the computer will not walk into fire */
   if(MWid(a)&&!eng){   /* an archer holds its ground, steps back if the enemy gets within 2 hexes, and never walks into the enemy's front */
     for(const h of R.values()){ if(h.c>1)continue; const s=Math.min(dist(h,b),4)*2-(relOf(b,h)==="front"?9:0)+(h.c===0?0.4:0)+Math.random()*0.3; if(!best||s>best.s) best={h,s}; }
@@ -347,10 +358,12 @@ function aiMove(a){
     s+=Math.random()*1.5;
     if(!best||s<best.s) best={h,s};
   }
+  if(avFall){ const sv=sum(rollN(3)), lim=adjDXu(a,"single",null); if(sv>lim){ a.down=true; a.low=null; lg(`${a.p.name} cannot get away from the Avert and falls down (rolled ${sv} against DX ${lim}).`); } else lg(`${a.p.name} cannot get away from the Avert but keeps his feet (rolled ${sv}).`); }
   const moved=!same(best.h,a); a.q=best.h.q; a.r=best.h.r; a.f=faceToward(a,b); a.engStart=eng; a.moved=best.h.c||0;
   lg(`${a.p.name} ${eng?(moved?"shifts":"holds"):(moved?"moves "+best.h.c+" hex"+(best.h.c>1?"es":""):"holds")}.`);
 }
-function confirmMove(){ minionMove("me"); G.me.engStart=G.eng; G.me.moved=G.moved; lg(`You ${G.moved?"moved "+G.moved+" hex"+(G.moved>1?"es":""):"stayed put"}.`); fireMove(G.me,G.reach&&G.reach.get(key(G.me.q,G.me.r))); if(G.phase==="over"){ ui(); drawMap(); return; } G.idx++; advance(); ui(); drawMap(); }
+function avertSave(u,nm){ if(!G.avertFall) return; G.avertFall=false; const sv=sum(rollN(3)), lim=adjDXu(u,"single",null); if(sv>lim){ u.down=true; u.low=null; lg(`${nm} cannot get away from the Avert and falls down (rolled ${sv} against DX ${lim}).`); } else lg(`${nm} cannot get away from the Avert but keeps ${nm==="You"?"your":"his"} feet (rolled ${sv}).`); }
+function confirmMove(){ avertSave(G.me,"You"); minionMove("me"); G.me.engStart=G.eng; G.me.moved=G.moved; lg(`You ${G.moved?"moved "+G.moved+" hex"+(G.moved>1?"es":""):"stayed put"}.`); fireMove(G.me,G.reach&&G.reach.get(key(G.me.q,G.me.r))); if(G.phase==="over"){ ui(); drawMap(); return; } G.idx++; advance(); ui(); drawMap(); }
 function undoMove(){ G.me.q=G.start.q; G.me.r=G.start.r; G.moved=0; ui(); drawMap(); }
 
 /* ---- attack rules ---- */
@@ -510,6 +523,7 @@ const SP={
  "Summon Gargoyle":{k:"C",cost:()=>4,obj:"summon",summon:"gargoyle"},
  "Summon Giant":{k:"C",cost:()=>4,obj:"summon",summon:"giant"},
  "Confusion":{k:"T",v:1},
+ "Avert":{k:"T",cost:()=>2},
  "Shock Shield":{k:"T",cost:()=>2,self:1,cont:"shock"},
  "Image":{k:"C",cost:()=>1,obj:"summon",fake:"image"},
  "Illusion":{k:"C",cost:()=>2,obj:"summon",fake:"illusion"},
@@ -526,7 +540,7 @@ const SP={
  "Blast":{k:"S",cost:()=>2,rng:1},
  "Dazzle":{k:"S",cost:()=>3,rng:5}
 };
-const RMV=["fly","blur","stone","iron","slow","stop","spd","clum","aid","sleep","frozen"];
+const RMV=["avert","fly","blur","stone","iron","slow","stop","spd","clum","aid","sleep","frozen"];
 const rmCount=u=>RMV.filter(k=>u[k]).length;
 function brkItem(o){ const w=[o.right,o.left].find(k=>isW(k)&&!SHIELDS[k]&&k!==o.brkW); if(w) return w; const sh=[o.left,o.right].find(k=>SHIELDS[k]); return sh||null; }
 const ironU=u=>u.p.cls==="wizard"&&!u.p.silver&&(["chain","halfplate","plate"].includes(u.p.armor)||[u.right,u.left].some(k=>isW(k)&&k!=="staff"));
@@ -607,10 +621,11 @@ function doCast(u,o,pa){
     case "Speed Movement": u.spd=(u.spd||0)+4*m; msg=`${sub(u)}'s MA is doubled for ${u.spd} turns.`; break;
     case "Dazzle": o.daz=3*m; msg=`${sub(o)} ${vb(o,"are","is")} dazzled: −3 DX for ${o.daz} turns.`; break;
     case "Break Weapon": { const id=brkItem(o); if(!id){ msg="There is nothing to break."; break; } if(SHIELDS[id]||id==="staff"){ if(o.right===id) o.right="none"; else o.left="none"; msg=`${sub(o)}'s ${iname(id).toLowerCase()} shatters and is useless.`; } else { o.brkW=id; msg=`${sub(o)}'s ${iname(id).toLowerCase()} is broken: it now does half damage.`; } break; }
-    case "Remove Thrown Spell": { const X=c.on==="self"?u:o, gone=[]; for(const k of RMV){ if(X[k]){ gone.push(k); X[k]=k==="sleep"?false:(typeof X[k]==="number"?0:false); } } land(X); X.clumN=0; X.aidN=0; msg=`${X===u?sub(u)+"'s":sub(o)+"'s"} thrown spells end (${gone.length}).`; break; }
+    case "Remove Thrown Spell": { const X=c.on==="self"?u:o, gone=[]; for(const k of RMV){ if(X[k]){ gone.push(k); X[k]=k==="avert"?null:k==="sleep"?false:(typeof X[k]==="number"?0:false); } } land(X); X.clumN=0; X.aidN=0; msg=`${X===u?sub(u)+"'s":sub(o)+"'s"} thrown spells end (${gone.length}).`; break; }
     case "Death Spell": { if(o.fake==="image"){ o.hp=0; payST(u,1); msg=`${sub(o)} was only an image and vanishes (it costs ${sub(u)} 1 ST).`; break; } const A=u.hp, B=o.hp; if(A>B){ o.hp=-1; u.hp-=B; msg=`${sub(o)} ${vb(o,"die","dies")}. ${sub(u)} ${vb(u,"lose","loses")} ${B} ST.`; } else if(A<B){ u.hp=-1; msg=`${sub(u)} ${vb(u,"are","is")} the weaker and ${vb(u,"die","dies")}!`; } else { u.hp=-1; o.hp=-1; msg="Equal strength: both fall dead."; } break; }
     case "Iron Flesh": u.iron=true; u.stone=false; msg=sub(u)+"'s body stops 6 hits per attack."; break;
     case "Aid": u.aid=2*m; u.aidN=nn; msg=`${sub(u)} gets +${nn} DX for ${2*m} turns.`; break;
+    case "Avert": o.avert=u; msg=`${sub(o)} ${vb(o,"must","must")} end each move at least 2 hexes farther from ${sub(u)==="You"?"you":sub(u)} while it lasts (${sub(u)} pay${sub(u)==="You"?"":"s"} 1 ST a turn).`; break;
     case "Confusion": o.conf=3*m; o.confN=2*nn; msg=`${sub(o)} ${vb(o,"get","gets")} −${2*nn} IQ for ${o.conf} turns (spells above the lowered IQ cannot be cast; running spells can still be renewed).`; break;
     case "Shock Shield": u.shock=true; break;
     case "Clumsiness": o.clum=(o.p.st>=30?1:3)*m; o.clumN=2*nn; msg=`${sub(o)} ${vb(o,"get","gets")} −${2*nn} DX for ${o.clum} turns.`; break;
@@ -699,6 +714,7 @@ function aiCast(u,o){
       case "Illusion": { const own=allU().filter(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(u)).length; v=own===0&&u.hp>=x.cost+5?({wolf:2.2,myrmidon:2.6,bear:3.6,gargoyle:3.2,giant:4.0})[x.form]:0; break; }
       case "Image": { const own=allU().filter(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(u)).length; v=own===0&&u.hp>=6&&x.form==="giant"?1.5:0; break; }
       case "Dispel Illusions": v=enemiesOf(u).some(e=>e.fake)?0:0; break;
+      case "Avert": v=!o.avert&&!(o.p.cls==="wizard")&&dist(u,o)<=4?p*2.4:0; break;
       case "Confusion": v=o.p.cls==="wizard"&&!(o.conf>0)?p*x.n*1.7:0; break;
       case "Rope": v=p*(armed?3.4:2.4); break;
       case "Reverse Missiles": v=(MWid(o)||o.p.cls==="wizard")&&u.hp>=7?2.4:0; break;
@@ -854,7 +870,7 @@ function ui(){
   if(!G){ c.innerHTML=`<button class="pri" id="bGo">Start fight</button> <span class="mut">You and ${esc(foe?foe.name:"")} enter at opposite ends.</span>`; $("bGo").onclick=startFight; return; }
   const A=G.me,B=other(G.me); let t="",b="";
   if(G.phase==="over") $("setup").open=true;   /* show the fighter box again (attribute points, next opponent) */
-  const fx=u=>[u.blur&&"Blur",u.stone&&"Stone Flesh",u.iron&&"Iron Flesh",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.conf>0&&"confused −"+u.confN+" IQ",u.shock&&"Shock Shield",u.rope>0&&"roped −"+(u.rope+1)+" DX",u.air&&"flying",u.fly&&!u.air&&"taking off",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.shield&&"Spell Shield",u.rev&&"Reverse Missiles",u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
+  const fx=u=>[u.blur&&"Blur",u.stone&&"Stone Flesh",u.iron&&"Iron Flesh",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.conf>0&&"confused −"+u.confN+" IQ",u.shock&&"Shock Shield",u.avert&&"averted",u.rope>0&&"roped −"+(u.rope+1)+" DX",u.air&&"flying",u.fly&&!u.air&&"taking off",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.shield&&"Spell Shield",u.rev&&"Reverse Missiles",u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"")+(fx(u).length?" ["+fx(u).join(", ")+"]":"");
   const st=allU().filter(u=>u.hp>0||!u.minion).map(u=>`<b>${u===A?"You":esc(u.p.name)+(u.minion&&sideOf(u)==="me"?" (yours"+(u.fake?", an "+u.fake:"")+")":"")}</b> ST ${Math.max(u.hp,0)}/${u.p.st}${flags(u)}`).join(" · ")+`<br>You are ${engagedAny(A)?"<b>engaged</b>":"not engaged"}; ${esc(B.p.name)} is ${isEngaged(B,A)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).${(MWid(A)||[A.right,A.left].some(k=>W[k]&&W[k].th))&&!inFront(A,B)?" The enemy is not in front of you, so you cannot shoot or throw at it.":""}`;
   if(G.phase==="choose"){ t="You won the initiative roll. Move first or second?"; b=`<button class="pri" id="b1">Move first</button><button id="b2">Move second</button>`; }
@@ -1000,7 +1016,7 @@ function matched(P,total){ const R=RACES[P.race]; let st=R.st,dx=R.dx,extra=Math
   return {name:P.n+" "+pick(["Brann","Silvo","Orsk","Tamar","Karg","Ilsa","Morn","Zed"]),race:P.race,cls:"fighter",st,dx,iq:R.iq,a:P.a,b:P.b,s1:P.s1||"none",armor:P.armor,d1:"dagger",silver:true}; }
 function makeWizard(){
   const R=RACES.human, iq=Math.min(14,Math.max(11,Math.round(me.total/3)+ri(2))), rest=Math.max(16,me.total-iq), st=Math.max(R.st,Math.round(rest*.46)), dx=Math.max(R.dx,rest-st);
-  const sp=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Reverse Missiles","Rope","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion"].filter(n=>n==="Staff"||(({"Magic Fist":8,"Blur":8,"Drop Weapon":8,"Slow Movement":8,"Clumsiness":9,"Aid":9,"Trip":10,"Sleep":11,"Fireball":12,"Freeze":12,"Stone Flesh":13,"Stop":13,"Lightning":14,"Iron Flesh":15,"Speed Movement":10,"Dazzle":10,"Blast":12,"Break Weapon":12,"Remove Thrown Spell":14,"Spell Shield":14,"Reverse Missiles":11,"Rope":11,"Summon Wolf":9,"Summon Myrmidon":10,"Summon Bear":11,"Summon Gargoyle":13,"Summon Giant":14,"Image":8,"Illusion":11,"Dispel Illusions":14,"Confusion":9})[n]<=iq));
+  const sp=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Reverse Missiles","Rope","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion","Avert"].filter(n=>n==="Staff"||(({"Magic Fist":8,"Blur":8,"Drop Weapon":8,"Slow Movement":8,"Clumsiness":9,"Aid":9,"Trip":10,"Sleep":11,"Fireball":12,"Freeze":12,"Stone Flesh":13,"Stop":13,"Lightning":14,"Iron Flesh":15,"Speed Movement":10,"Dazzle":10,"Blast":12,"Break Weapon":12,"Remove Thrown Spell":14,"Spell Shield":14,"Reverse Missiles":11,"Rope":11,"Summon Wolf":9,"Summon Myrmidon":10,"Summon Bear":11,"Summon Gargoyle":13,"Summon Giant":14,"Image":8,"Illusion":11,"Dispel Illusions":14,"Confusion":9,"Avert":9})[n]<=iq));
   const f=fromBuilder({name:pick(["Morvane","Elowen","Sethric","Ilvara","Zorn","Kaleth"])+" the "+pick(["Mage","Sorcerer","Hedge Wizard","Enchanter"]),race:"human",cls:"wizard",st,dx,iq,a:"none",b:"none",armor:"none",d1:"dagger",silver:true,spells:sp,total:me.total});
   return f; }
 function buildFoe(){

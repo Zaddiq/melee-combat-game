@@ -12,7 +12,7 @@ JS=r'''
  let saved=rollN; const dice=(...q)=>{rollN=n=>{ if(!q.length) throw new Error("dice queue empty"); return q.shift(); };};
  const fresh=(a,b)=>{G={me:a,foe:b,log:[],floor:[],objs:[],phase:"x",turn:1,settled:true}; WALLS=new Set(); me={name:"Me",rec:null,st:a.p.st,dx:a.p.dx}; foe=b.p; };
 
- const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles","Flight","Teleport","Fire","Shadow","Create Wall","Rope","Destroy Creation","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion","Shock Shield"];
+ const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles","Flight","Teleport","Fire","Shadow","Create Wall","Rope","Destroy Creation","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion","Shock Shield","Avert"];
  const wz=(o)=>mkF(Object.assign({name:"Wiz",cls:"wizard",st:14,dx:13,iq:14,spells:ALL.filter(x=>x!=="Staff"),silver:true},o));
  const pair=(wo,fo,rear)=>{ const w=unit(wz(wo||{}),A,0), f=unit(mkF(Object.assign({name:"Foe",st:12,dx:12,a:"shortsw"},fo||{})),B,0); fresh(w,f); face(w,f); return [w,f]; };
  const cast=(w,f,sp,n)=>{ w.act={t:"cast",sp,n}; doCast(w,f,w.act); };
@@ -91,6 +91,10 @@ JS=r'''
  ok("S64 Confusion wears off after its turns",(()=>{ const [w,f]=pair(); dice([3,3,2]); doCast(w,f,{t:"cast",sp:"Confusion",n:1}); nextTurn(); nextTurn(); nextTurn(); return f.conf===0&&f.confN===0&&effIQ(f)===f.p.iq; })());
  ok("S65 Shock Shield burns a figure sharing the subject's hex at end of turn, and not the subject",(()=>{ const [w,f]=pair(); dice([3,3,2]); doCast(w,w,{t:"cast",sp:"Shock Shield"}); f.q=w.q; f.r=w.r; const h=f.hp,wh=w.hp; dice([6]); applyShock(); return w.shock===true&&f.hp<h&&w.hp===wh; })());
  ok("S66 Shock Shield is a running spell on the caster",(()=>{ const [w,f]=pair(); dice([3,3,2]); doCast(w,w,{t:"cast",sp:"Shock Shield"}); return w.shock===true; })());
+ ok("S67 Avert (2 ST) marks the victim; his reachable hexes are all at least 2 farther from the caster",(()=>{ const [w,f]=pair(); dice([3,3,2]); const s=w.hp; doCast(w,f,{t:"cast",sp:"Avert"}); if(f.avert!==w||s-w.hp!==2) return false; const st={q:f.q,r:f.r}, R=reach(st,[w],6,false); const d0=dist(st,w); const fall=avertFilter(f,R,st); return !fall&&R.size>0&&[...R.values()].every(h=>dist(h,w)>=d0+2); })());
+ ok("S68 a cornered Avert victim keeps only the farthest hexes he can reach; with none he must roll to avoid a fall",(()=>{ const [w,f]=pair(); f.avert=w; const st={q:f.q,r:f.r}; const R=new Map([[key(st.q,st.r),{q:st.q,r:st.r,c:0}]]); const fall=avertFilter(f,R,st); return fall===true&&R.size===1; })());
+ ok("S69 Avert ends when the caster drops it at renewal and Remove Thrown Spell clears it",(()=>{ const [w,f]=pair(); f.avert=w; G.rlist=[{k:"avert",m:f,on:false}]; G.afterRenew=()=>{}; G.phase="renew"; doRenew(); const a=f.avert===null; f.avert=w; f.p.spells=[]; dice([3,3,2]); doCast(w,f,{t:"cast",sp:"Remove Thrown Spell",on:"foe"}); return a&&f.avert===null; })());
+ ok("S70 the computer foe, when Averted, moves away and a caster who dies frees the victim",(()=>{ const [w,f]=pair(); f.avert=w; const d0=dist(f,w); aiMove(f); const moved=dist(f,w)>=d0; f.avert=w; w.hp=0; const R=reach({q:f.q,r:f.r},[w],6,false); return moved&&avertFilter(f,R,{q:f.q,r:f.r})===false; })());
 
  return R;
 }'''

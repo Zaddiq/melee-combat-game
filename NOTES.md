@@ -155,3 +155,6 @@ Still not in: giving orders to a creature, creatures in hand-to-hand, dragons, f
 
 ## Spending earned points on IQ
 Wizards in the Wizard arena now get a +1 IQ button beside +1 ST / +1 DX when they earn an attribute point. The new IQ is stored in the record, used in later fights, and carried in Send to builder / Copy updated fighter / hall of fame.
+
+## Avert
+Thrown at a victim, 2 ST to cast and 1 ST a turn to keep (shown in the caster's renew step; ends if the caster dies or drops it). The victim's move is restricted to hexes at least 2 farther from the caster than where he started; if he cannot get 2 farther he goes as far as he can, and being engaged does not hold him (he disengages). If he cannot get any farther he rolls 3 dice against DX or falls down. The computer moves away automatically. Remove Thrown Spell clears it. Tests S67–S70.
