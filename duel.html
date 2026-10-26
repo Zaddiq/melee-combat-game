@@ -95,7 +95,8 @@ function adjDX(f){ /* starting gear, old Melee/Wizard penalties as the builder c
 }
 const MA=f=>{let m=ARMOR[f.armor].ma; if(f.race==="elf"){ if(f.armor==="none"||f.armor==="cloth")m=12; else if(f.armor==="leather")m=10; } return m;};
 const land=u=>{ if(u.air||u.fly){ u.fly=false; u.air=false; u.airN=0; u.stop=Math.max(u.stop,1); } };
-const MAu=u=>{ if(u.stop>0) return 0; let m=u.air?(u.airN<=1?6:12):MA(u.p); if(u.spd>0) m*=2; if(u.slow>0) m=Math.floor(m/2); if(u.rope>0) m=Math.floor(m/2); return m; };
+const ropeNum=u=>u.rope>0?(u.ropeN||1):0;   /* how many magic ropes hold this figure (Giant Rope on a weaker creature is two) */
+const MAu=u=>{ if(u.stop>0) return 0; let m=u.air?(u.airN<=1?6:12):MA(u.p); if(u.spd>0) m*=2; if(u.slow>0) m=Math.floor(m/2); for(let i=ropeNum(u);i>0;i--) m=Math.floor(m/2); return m; };
 const stops=f=>ARMOR[f.armor].stops+[f.right,f.left].reduce((t,k)=>t+(SHIELDS[k]?SHIELDS[k].stops:0),0)+(f.left==="mg"?1:0);
 const iname=k=>k==="none"?"nothing":(W[k]||SHIELDS[k]).n;
 function dmg(f,k){ if(!W[k]||W[k].miss)return""; let m=W[k].m; return dice(W[k].d,m); }
@@ -292,7 +293,7 @@ function startHexes(){
   const theirs=top.find(h=>key(h.q,h.r)===foeStart)||front(top,-1); foeStart=key(theirs.q,theirs.r);
   return {bottom,top,mine,theirs};
 }
-const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,conf:0,confN:0,shock:false,inv:false,sight:false,avert:null,fresh:false,gone:false,tgtSel:null,rev:false,revHit:false,rope:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,pn:[],cool:0,usedLast:false,dodging:false,
+const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,conf:0,confN:0,shock:false,inv:false,sight:false,avert:null,fresh:false,gone:false,tgtSel:null,rev:false,revHit:false,rope:0,ropeN:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,pn:[],cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
 function startFight(){
   if(!me||!foe)return; const s=startHexes();
@@ -362,7 +363,7 @@ function adjDXu(u,mode,tgt0){
   const wp=[u.right,u.left].filter(isW);
   if(p.cls==="wizard"){ if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4 }
   if(u.wound2) a-=2;
-  if(u.aid>0) a+=u.aidN; if(u.clum>0) a-=u.clumN; if(u.daz>0&&!(tgt&&(tgt.blur||tgt.inv))) a-=3; if(u.rope>0) a-=u.rope+1; if(u.fireT) a-=2; if(tgt&&shadowAt(tgt)&&!tgt.inv) a-=4; if(tgt&&shadowAt(u)) a-=6;   /* Dazzle -3, but not on top of Blur's -4 */
+  if(u.aid>0) a+=u.aidN; if(u.clum>0) a-=u.clumN; if(u.daz>0&&!(tgt&&(tgt.blur||tgt.inv))) a-=3; if(u.rope>0) a-=ropeNum(u)*(u.rope+1); if(u.fireT) a-=2; if(tgt&&shadowAt(tgt)&&!tgt.inv) a-=4; if(tgt&&shadowAt(u)) a-=6;   /* Dazzle -3, but not on top of Blur's -4 */
   if(tgt&&tgt.inv) a-=6; else if(tgt&&tgt.blur) a-=4; if(tgt&&tgt.air) a-=4; if(tgt&&u.air) a-=2;   /* Blur: -4 to every attack against the subject */
   if(u.poleVs) a+=2;   /* pole weapon, standing still, against a charge */
   if(u.hp<=3) a-=3;
@@ -498,7 +499,10 @@ function fireHits(u,total){ const prot=ARMOR[u.p.armor].stops+(u.iron?6:u.stone?
   if(h>0){ u.hp-=h; u.hits+=h; u.tookHit=true; u.sleep=false; lg(`${vb(u,"Your","Its")} ST is now ${Math.max(u.hp,0)}.`); } endCheck(); }
 function fireMove(u,ent){ const f=ent&&ent.fire||0; if(!f) return; const fin=!!objAt(u,"fire"); if(fin) u.fireT=true; fireHits(u,(f-(fin?1:0))*2+(fin?4:0)); }
 function doDisbelieve(u,o){ lg(`${sub(u)} ${vb(u,"try","tries")} to disbelieve ${o.p.name}.`); const r=sum(rollN(3)); if(o.fake&&r<=effIQ(u)){ o.hp=0; lg(`${o.p.name} unravels and vanishes!`); endCheck(); } }
-function doUnrope(u){ const dx=adjDXu(u,"single",null), t=sum(rollN(3)); if(t<=dx){ u.rope=0; lg(`${sub(u)} ${vb(u,"stand","stands")} still and ${vb(u,"work","works")} free of the rope (needed ${dx} or less, rolled ${t}).`); } else lg(`${sub(u)} ${vb(u,"struggle","struggles")} with the rope but ${vb(u,"stay","stays")} tangled (needed ${dx} or less, rolled ${t}).`); }
+function doUnrope(u){ const dx=adjDXu(u,"single",null), t=sum(rollN(3)), n=ropeNum(u);
+  if(t<=dx){ if(n>1){ u.ropeN=n-1; lg(`${sub(u)} ${vb(u,"stand","stands")} still and ${vb(u,"work","works")} one of the two ropes free; it vanishes, but the other still holds (needed ${dx} or less, rolled ${t}).`); }
+    else { u.rope=0; u.ropeN=0; lg(`${sub(u)} ${vb(u,"stand","stands")} still and ${vb(u,"work","works")} free of the rope (needed ${dx} or less, rolled ${t}).`); } }
+  else lg(`${sub(u)} ${vb(u,"struggle","struggles")} with the rope${n>1?"s":""} but ${vb(u,"stay","stays")} tangled (needed ${dx} or less, rolled ${t}).`); }
 /* ---- spells (Wizard 2018 p. 3, 11-14; Spell Table) ---- */
 const SP={
  "Magic Fist":{k:"M",sub:2},"Fireball":{k:"M",sub:1},"Lightning":{k:"M",sub:0},
@@ -516,6 +520,7 @@ const SP={
  "Shadow":{k:"C",cost:()=>1,obj:"shadow"},
  "Create Wall":{k:"C",cost:()=>2,obj:"wall"},
  "Rope":{k:"C",cost:()=>2,rope:1},
+ "Giant Rope":{k:"C",cost:()=>5,rope:1,giant:1},
  "Summon Wolf":{k:"C",cost:()=>2,obj:"summon",summon:"wolf"},
  "Summon Myrmidon":{k:"C",cost:()=>2,obj:"summon",summon:"myrmidon"},
  "Summon Bear":{k:"C",cost:()=>4,obj:"summon",summon:"bear"},
@@ -557,7 +562,7 @@ function castList(u,o){
       for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less; ${mh} megahex${mh===1?"":"es"} away)`}); continue; }
     if(d.slick){ if(mx>=3&&creaHexes(u,o,"slick").length) L.push({sp:name,cost:3,dx:base,hexsel:"slick",label:`Slippery Floor (3 ST; needs ${base} minus the hexes to its centre; you pick the centre of the megahex, it stays hidden until someone steps on it)`}); continue; }
     if(d.k==="C"){ const cc=d.cost(o); if(cc>mx) continue;
-      if(d.rope){ if(mhDist(u,o)<=1&&o.p.st<20&&!o.rope&&!blocked(u,o)) L.push({sp:name,cost:cc,dx:base,label:`Rope (${cc} ST; needs ${base} or less): halves the enemy's MA, −2 DX and one worse each turn; it must stand still and roll to get free`}); continue; }
+      if(d.rope){ const big=!!d.giant, two=big&&o.p.st<20; if(mhDist(u,o)<=1&&(big||o.p.st<20)&&!o.rope&&!blocked(u,o)) L.push({sp:name,cost:cc,dx:base,label:big?`Giant Rope (${cc} ST; needs ${base} or less): ${two?"two ropes at once on this weaker creature, each removed separately: MA quartered, DX −4 and two worse each turn":"one rope on this big creature: halves its MA, −2 DX and one worse each turn"}; it must stand still and roll to get free`:`Rope (${cc} ST; needs ${base} or less): halves the enemy's MA, −2 DX and one worse each turn; it must stand still and roll to get free`}); continue; }
       if(d.fake){ if(creaHexes(u,o,"summon").length) for(const fk of Object.keys(CRE)) L.push({sp:name,form:fk,cost:cc,dx:base,hexsel:"summon",label:`${name} of a ${CRE[fk].name} (${cc} ST; needs ${base} or less; you choose the hex)`}); continue; }
       if(creaHexes(u,o,d.obj).length) L.push({sp:name,cost:cc,dx:base,hexsel:d.obj,label:`${name} (${cc} ST; needs ${base} or less; you choose the hex, in your megahex or next to it)`}); continue; }
     if(d.destroy){ if(mx<1) continue; (G.objs||[]).forEach((ob,i)=>{ if(ob.t==="slick") return; const dd=dist(u,ob), dx=base-dd; L.push({sp:name,cost:1,dx,objId:i,label:`Destroy Creation: the ${ob.t} ${dd} hex${dd===1?"":"es"} away (1 ST; needs ${dx} or less)`}); }); continue; }
@@ -600,7 +605,8 @@ function doCast(u,o,pa){
   if(d.k==="C"&&!d.rope){ if(d.summon||d.fake){ const m=summonMinion(u,d.fake?c.form:d.summon,c.dest); if(d.fake) m.fake=d.fake; lg(`${head}: it works. ${m.p.name} appears (it cannot move or fight this turn).`); endCheck(); return; }
   const ob={t:d.obj,q:c.dest.q,r:c.dest.r,age:0}; G.objs.push(ob); syncWalls(); lg(`${head}: it works (${c.cost} ST). A ${d.obj==="wall"?"wall":d.obj==="fire"?"hex of flame":"hex of black shadow"} appears.`);
     if(d.obj==="fire"){ const f=allU().find(x=>x.hp>0&&same(x,ob)); if(f) fireHits(f,2); } else endCheck(); return; }
-  if(d.rope){ o.rope=1; lg(`${head}: it works (${c.cost} ST). A magic rope ties up ${sub(o)}: MA halved, DX −2, and one worse each turn until ${vb(o,"you stand","it stands")} still and break${vb(o,"","s")} free.`); if(adjDXu(o,"single",null)<=2) o.down=true; endCheck(); return; }
+  if(d.rope){ const two=!!d.giant&&o.p.st<20; o.rope=1; o.ropeN=two?2:1;
+    lg(two?`${head}: it works (${c.cost} ST). Two magic ropes tie up ${sub(o)}: MA quartered, DX −4, and two worse each turn; ${vb(o,"you","it")} must stand still and ${vb(o,"roll","rolls")} free of them one at a time.`:`${head}: it works (${c.cost} ST). A magic rope ties up ${sub(o)}: MA halved, DX −2, and one worse each turn until ${vb(o,"you stand","it stands")} still and break${vb(o,"","s")} free.`); if(adjDXu(o,"single",null)<=2) o.down=true; endCheck(); return; }
   if(d.destroy){ const ob=(G.objs||[])[c.objId]; if(ob){ G.objs.splice(c.objId,1); syncWalls(); lg(`${head}: it works (1 ST). The ${ob.t} vanishes.`); } else lg(`${head}: it works, but nothing is left to destroy.`); endCheck(); return; }
   if(d.k==="M"){
     let O=o, U=u; if(o.rev){ if(u.rev){ lg(`${head}: HIT, but both wizards are protected by Reverse Missiles and the missile flies back and forth, harming no one.`); endCheck(); return; } O=u; U=o; lg(`${head}: HIT, but Reverse Missiles turns it back on ${sub(u)}!`); }
@@ -691,7 +697,7 @@ function options(u,o){
   }
   if(inF&&(eng||half)&&SHIELDS[u.left]&&u.p.cls!=="wizard") L.push({t:"rush",label:`Shield-rush with the ${iname(u.left).toLowerCase()} (no weapon attack; if it hits, the target saves vs DX on ${u.p.st>=o.p.st?3:2} dice or falls)`});
   if(!u.minion&&u.moved<=1&&o.minion&&o.hp>0) L.push({t:"disbelieve",label:`Disbelieve ${o.p.name} (move at most 1 hex; if it is an illusion or an image, its owner secretly rolls 3 dice against your IQ ${effIQ(u)}; you are only told if it vanishes)`});
-  if(u.rope>0&&u.moved===0) L.push({t:"unrope",label:`Struggle free of the rope (stand still and do nothing else; roll ${adjDXu(u,"single",null)} or less on 3 dice)`});
+  if(u.rope>0&&u.moved===0) L.push({t:"unrope",label:ropeNum(u)>1?`Struggle free of one of the two ropes (stand still and do nothing else; roll ${adjDXu(u,"single",null)} or less on 3 dice; each success takes off one rope)`:`Struggle free of the rope (stand still and do nothing else; roll ${adjDXu(u,"single",null)} or less on 3 dice)`});
   L.push({t:"none",label:"Do nothing"});
   return L.filter(x=>!x.off);
 }
@@ -846,7 +852,7 @@ function ui(){
     if($("bNext")) $("bNext").onclick=()=>{ placeStep=1; ui(); drawMap(); }; if($("bPrev")) $("bPrev").onclick=()=>{ placeStep=0; ui(); drawMap(); };
     if($("bGo")) $("bGo").onclick=startFight; } else c.innerHTML="Load both fighters first (the boxes below)."; return; }
   const A=G.me,B=G.foe,cur=G.cur; let t="",b="";
-  const fx=u=>[u.blur&&"Blur",u.inv&&"Invisible",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.conf>0&&"confused −"+u.confN+" IQ",u.avert&&"averted",u.rope>0&&"roped −"+(u.rope+1)+" DX",u.air&&"flying",u.fly&&!u.air&&"taking off",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
+  const fx=u=>[u.blur&&"Blur",u.inv&&"Invisible",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.conf>0&&"confused −"+u.confN+" IQ",u.avert&&"averted",u.rope>0&&(ropeNum(u)>1?"2 ropes −":"roped −")+(ropeNum(u)*(u.rope+1))+" DX",u.air&&"flying",u.fly&&!u.air&&"taking off",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"")+(fx(u).length?" ["+fx(u).join(", ")+"]":"");
   const nm=u=>`<b class="${sideOf(u)==="me"?"me":"foe"}">${esc(u.p.name)}</b>`;
   const st=allU().filter(u=>u.hp>0||!u.minion).map(u=>`${nm(u)}${u.fake&&sideOf(u)===sideOf(cur)&&["pick","spells","dest"].includes(G.phase)?" (your "+u.fake+")":""} ST ${Math.max(u.hp,0)}/${u.p.st}${flags(u)}`).join(" · ")+`<br>${esc(A.p.name)} is ${engagedAny(A)?"<b>engaged</b>":"not engaged"}; ${esc(B.p.name)} is ${engagedAny(B)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).`;

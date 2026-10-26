@@ -8,12 +8,12 @@
 
 **Owner preferences:** one feature at a time (save tokens); the owner tests it themselves; Claude makes branches, merges to main and pushes; no mid-fight saving; opponents "just a little harder than originally"; duel XP rules in NOTES.md.
 
-**Tests** (Playwright headless, `pip install playwright`): `python3 tests/rules_test.py` (70, Melee arena), `python3 tests/spells_test.py` (66, Wizard arena), `python3 tests/duel_summon_test.py` (5). Random-play fuzzers are in `tests/fuzz/` (they were written in a scratch folder; fix the file paths at the top before running).
+**Tests** (Playwright headless, `pip install playwright`): `python3 tests/rules_test.py` (70, Melee arena), `python3 tests/spells_test.py` (97, Wizard arena), `python3 tests/duel_summon_test.py` (6). Random-play fuzzers are in `tests/fuzz/` (they were written in a scratch folder; fix the file paths at the top before running).
 
 **Git quirks:** tags can't be pushed through the proxy; push branches one at a time if a combined push disconnects.
 
-**Done:** Melee arena, builder, Wizard arena and duel with spells through Confusion and Shock Shield, Reverse Missiles, Flight, Teleport, creation spells, summons (Wolf, Myrmidon, Bear, Gargoyle, Giant), Image/Illusion/Dispel Illusions, multi-figure engine, +1 IQ for wizards when spending earned points.
+**Done:** Melee arena, builder, Wizard arena and duel with spells through Confusion and Shock Shield, Reverse Missiles, Flight, Teleport, creation spells, summons (Wolf, Myrmidon, Bear, Gargoyle, Giant), Image/Illusion/Dispel Illusions, Avert, Invisibility, Mage Sight, Control Person/Animal, Slippery Floor, Giant Rope (every spell on the original list is in), multi-figure engine, +1 IQ for wizards when spending earned points.
 
-**Deferred ideas:** Human/Computer choice per duel side (and computer vs computer); two humans vs creatures (team play); doubles of real figures; multi-hex images/illusions/creations; dragons, flying Gargoyle; orders to creatures; Mage Sight, Invisibility, Avert, control spells, Slippery Floor, Giant Rope.
+**Deferred ideas:** Human/Computer choice per duel side (and computer vs computer); two humans vs creatures (team play); doubles of real figures; multi-hex images/illusions/creations; dragons, flying Gargoyle; orders to creatures; hidden movement for Invisibility; a figure in an adjoining hex freeing someone else's Rope; spells still not in: Reveal Magic, the multi-hex versions (3-/4-/7-Hex Fire, Shadow, Image, Illusion, Wall), Megahex Avert and Megahex Sleep, Summon Small Dragon and Summon Dragon.
 
 **Known limits:** fliers can't pass over another figure; fire damage uses shortest path count; Lightning doesn't blast walls; minions can't grapple; some random duels stalemate legitimately. Live site and tablet play not verified by Claude.
