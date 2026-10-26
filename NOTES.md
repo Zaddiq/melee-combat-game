@@ -158,3 +158,8 @@ Wizards in the Wizard arena now get a +1 IQ button beside +1 ST / +1 DX when the
 
 ## Avert
 Thrown at a victim, 2 ST to cast and 1 ST a turn to keep (shown in the caster's renew step; ends if the caster dies or drops it). The victim's move is restricted to hexes at least 2 farther from the caster than where he started; if he cannot get 2 farther he goes as far as he can, and being engaged does not hold him (he disengages). If he cannot get any farther he rolls 3 dice against DX or falls down. The computer moves away automatically. Remove Thrown Spell clears it. Tests S67–S70.
+
+## Fixes: creature weapons leaking, targeting, explanations
+- Random opponents (arena and duel) could be handed the creature natural weapons (Bite, Club 3 dice, Fist 2 dice), so hobbits bit and some foes did almost nothing. The melee weapon list now skips creature weapons.
+- Automatic targeting now prefers an enemy in the figure's front hex (an attack is impossible against one at the side or rear), so your minions and you less often "can't attack".
+- When you cannot attack because the target is not in front, or cannot cast because you moved more than 1 hex, the log now says so.

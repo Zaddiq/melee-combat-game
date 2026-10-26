@@ -57,7 +57,7 @@ const ARMOR=Object.fromEntries(Object.entries(RULES.ARMOR).map(([k,v])=>[k,{n:v.
 Object.assign(W,{bite:{n:"Bite",d:1,m:1,st:0,hid:1},bite2:{n:"Bite",d:2,m:2,st:0,hid:1},fist2:{n:"Fist",d:2,m:0,st:0,hid:1},club3:{n:"Club",d:3,m:3,st:0,hid:1}});
 Object.assign(ARMOR,{wolfhide:{n:"Fur",stops:1,ma:12,pen:0,hid:1},bearhide:{n:"Fur",stops:2,ma:8,pen:0,hid:1},stonehide:{n:"Stone skin",stops:3,ma:8,pen:0,hid:1},bighide:{n:"Hide",stops:0,ma:8,pen:0,hid:1}});
 const CRE={wolf:{name:"Wolf",st:10,dx:14,iq:6,w:"bite",armor:"wolfhide"},myrmidon:{name:"Myrmidon",st:12,dx:12,iq:8,w:"broad",armor:"none"},bear:{name:"Bear",st:30,dx:11,iq:6,w:"bite2",armor:"bearhide"},gargoyle:{name:"Gargoyle",st:20,dx:11,iq:8,w:"fist2",armor:"stonehide"},giant:{name:"Giant",st:30,dx:9,iq:8,w:"club3",armor:"bighide"}};
-const MELEE=Object.keys(W).filter(k=>!W[k].miss&&k!=="staff"&&k!=="mg");
+const MELEE=Object.keys(W).filter(k=>!W[k].miss&&!W[k].hid&&k!=="staff"&&k!=="mg");
 const MELEE_HEXES=[[0, 0, 0, 0], [-1, 1, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [-1, 2, 0, 0], [1, 1, 0, 0], [0, 2, 0, 0], [-2, 2, 1, 0], [-3, 2, 1, 0], [-3, 3, 1, 0], [-2, 3, 1, 0], [-4, 3, 1, 0], [-4, 4, 1, 0], [-3, 4, 1, 0], [2, -1, 2, 1], [2, 0, 2, 1], [3, -1, 2, 1], [3, 0, 2, 1], [-1, 3, 3, 0], [0, 3, 3, 0], [-2, 4, 3, 0], [-1, 4, 3, 0], [0, 4, 3, 0], [-2, 5, 3, 0], [-1, 5, 3, 0], [2, 1, 4, 0], [1, 2, 4, 0], [3, 1, 4, 0], [2, 2, 4, 0], [1, 3, 4, 0], [3, 2, 4, 0], [2, 3, 4, 0], [-5, 4, 5, 0], [-5, 5, 5, 0], [-6, 4, 5, 0], [-6, 5, 5, 0], [-6, 6, 5, 0], [-7, 5, 5, 0], [-7, 6, 5, 0], [-4, 5, 6, 0], [-3, 5, 6, 0], [-5, 6, 6, 0], [-3, 6, 6, 0], [-5, 7, 6, 0], [-4, 7, 6, 0], [-4, 6, 6, 0], [1, 4, 7, 0], [0, 5, 7, 0], [2, 4, 7, 0], [1, 5, 7, 0], [0, 6, 7, 0], [2, 5, 7, 0], [1, 6, 7, 0], [-2, 6, 8, 0], [-1, 6, 8, 0], [-3, 7, 8, 0], [-2, 7, 8, 0], [-1, 7, 8, 0], [-3, 8, 8, 0], [-2, 8, 8, 0], [-7, 7, 9, 0], [-6, 7, 9, 0], [-8, 8, 9, 0], [-7, 8, 9, 0], [-6, 8, 9, 0], [-8, 9, 9, 0], [-7, 9, 9, 0], [-8, 6, 10, 0], [-8, 7, 10, 0], [-9, 6, 10, 0], [-9, 7, 10, 0], [-9, 8, 10, 0], [-10, 7, 10, 0], [-10, 8, 10, 0], [-5, 8, 11, 0], [-4, 8, 11, 0], [-6, 9, 11, 0], [-5, 9, 11, 0], [-4, 9, 11, 0], [-6, 10, 11, 0], [-5, 10, 11, 0], [-9, 9, 12, 0], [-10, 9, 12, 0], [-10, 10, 12, 0], [-9, 10, 12, 0], [-11, 10, 12, 0], [-11, 11, 12, 0], [-10, 11, 12, 0], [-8, 10, 13, 0], [-7, 10, 13, 0], [-9, 11, 13, 0], [-8, 11, 13, 0], [-7, 11, 13, 0], [-9, 12, 13, 0], [-8, 12, 13, 0], [-11, 12, 14, 1], [-10, 12, 14, 1], [-11, 13, 14, 1], [-10, 13, 14, 1]];
 let HEXES=MELEE_HEXES; /* [q,r,megahex,isEnd] */
 const KEY="wizard-builder-v1";
@@ -272,7 +272,7 @@ const opp=u=>sideOf(u)==="me"?G.foe:G.me;   /* the other player's own figure */
 const enemiesOf=u=>allU().filter(x=>x!==u&&x.hp>0&&sideOf(x)!==sideOf(u));
 const engagedAny=u=>enemiesOf(u).some(e=>isEngaged(u,e));
 function other(u){ const E=enemiesOf(u); if(!E.length) return u===G.me?G.foe:G.me; if(u.tgtSel&&E.includes(u.tgtSel)) return u.tgtSel;
-  let best=null; for(const e of E){ const sc=dist(u,e)*10+(e===G.me||e===G.foe?0:1); if(!best||sc<best.s) best={e,s:sc}; } return best.e; }
+  let best=null; for(const e of E){ const sc=dist(u,e)*10+(relOf(u,e)==="front"&&!u.down?0:6)+(e===G.me||e===G.foe?0:1);   /* prefer an enemy the figure can actually strike (in its front) */ if(!best||sc<best.s) best={e,s:sc}; } return best.e; }
 const lg=t=>G.log.push(t);
 function startHexes(){
   const ends=P.filter(h=>h.e), ys=P.map(h=>h.p[1]), xs=P.map(h=>h.p[0]);
@@ -694,7 +694,7 @@ function beginActions(){ G.picks={}; G.pi=0; startPick(); }
 function startPick(){ const k=["me","foe"][G.pi]; G.cur=G[k]; G.cur.tgtSel=G.cur.tgtSel&&G.cur.tgtSel.hp>0?G.cur.tgtSel:null; G.oth=other(G.cur); G.phase="cover"; ui(); drawMap(); }
 function showPick(){
   const u=G.cur,o=other(u); G.oth=o; G.opts=options(u,o); G.phase="pick";
-  G.note=(MWid(u)&&u.cool>0?`Your ${iname(MWid(u)).toLowerCase()} is still reloading (${u.cool} more turn${u.cool>1?"s":""}). `:"")+(!G.opts.some(x=>x.t==="attack")&&relOf(u,o)==="front"&&!u.engStart&&u.moved>MAu(u)/2?"You moved more than half your MA, so you cannot attack this turn. ":"");
+  G.note=(MWid(u)&&u.cool>0?`Your ${iname(MWid(u)).toLowerCase()} is still reloading (${u.cool} more turn${u.cool>1?"s":""}). `:"")+(!G.opts.some(x=>x.t==="attack")&&relOf(u,o)==="front"&&!u.engStart&&u.moved>MAu(u)/2?"You moved more than half your MA, so you cannot attack this turn. ":"")+(!G.opts.some(x=>x.t==="attack")&&relOf(u,o)!=="front"&&!u.hth&&!u.low&&!u.down&&(isW(u.right)||isW(u.left))?o.p.name+" is not in front of you, so you cannot attack it (click another enemy on the map, or move to face one). ":"")+(u.p.cls==="wizard"&&!G.opts.some(x=>x.t==="cast")&&!u.hth&&!u.sleep&&!u.down&&!(u.moved<=1||u.engStart)?"You moved more than 1 hex, so you cannot cast this turn unless you start engaged. ":"");
   if(enemiesOf(u).length>1) G.note=`Target: ${o.p.name} (click another enemy on the map to change it). `+G.note;
   ui(); drawMap();
 }
