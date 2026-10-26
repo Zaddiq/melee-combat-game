@@ -12,7 +12,7 @@ JS=r'''
  let saved=rollN; const dice=(...q)=>{rollN=n=>{ if(!q.length) throw new Error("dice queue empty"); return q.shift(); };};
  const fresh=(a,b)=>{G={me:a,foe:b,log:[],floor:[],objs:[],phase:"x",turn:1,settled:true}; WALLS=new Set(); me={name:"Me",rec:null,st:a.p.st,dx:a.p.dx}; foe=b.p; };
 
- const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles","Flight","Teleport","Fire","Shadow","Create Wall","Rope","Destroy Creation","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion","Shock Shield","Avert","Control Person","Control Animal","Invisibility"];
+ const ALL=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles","Flight","Teleport","Fire","Shadow","Create Wall","Rope","Destroy Creation","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion","Shock Shield","Avert","Control Person","Control Animal","Invisibility","Mage Sight"];
  const wz=(o)=>mkF(Object.assign({name:"Wiz",cls:"wizard",st:14,dx:13,iq:14,spells:ALL.filter(x=>x!=="Staff"),silver:true},o));
  const pair=(wo,fo,rear)=>{ const w=unit(wz(wo||{}),A,0), f=unit(mkF(Object.assign({name:"Foe",st:12,dx:12,a:"shortsw"},fo||{})),B,0); fresh(w,f); face(w,f); return [w,f]; };
  const cast=(w,f,sp,n)=>{ w.act={t:"cast",sp,n}; doCast(w,f,w.act); };
@@ -109,6 +109,10 @@ JS=r'''
  ok("S79 attacks against an invisible figure are at −6 DX, and the penalty does not add to Blur or Shadow",(()=>{ const [w,f]=pair(); const base=adjDXu(f,"single",w); w.inv=true; const a=adjDXu(f,"single",w); w.blur=true; const b=adjDXu(f,"single",w); return base-a===6&&base-b===6; })());
  ok("S80 spells at an invisible target need 6 less, and a Magic Fist is offered at the lowered number",(()=>{ const [w,f]=pair({},{cls:"wizard",st:14,iq:12,spells:["Magic Fist"]}); const a=castList(f,w).find(c=>c.sp==="Magic Fist"&&c.n===1).dx; w.inv=true; const b=castList(f,w).find(c=>c.sp==="Magic Fist"&&c.n===1).dx; return a-b===6; })());
  ok("S81 Remove Thrown Spell ends Invisibility",(()=>{ const [w,f]=pair(); f.inv=true; dice([1,1,1]); doCast(w,f,{t:"cast",sp:"Remove Thrown Spell",on:"foe"}); return f.inv===false; })());
+
+ ok("S82 Mage Sight costs 2 ST on yourself and is a running spell",(()=>{ const [w,f]=pair(); const s0=w.hp; dice([3,3,2]); doCast(w,w,{t:"cast",sp:"Mage Sight"}); return w.sight===true&&s0-w.hp===2&&CONT.includes("sight"); })());
+ ok("S83 a figure with Mage Sight attacks an invisible, blurred or shadowed target at full DX",(()=>{ const [w,f]=pair(); const base=adjDXu(f,"single",w); w.inv=true; w.blur=true; const a=adjDXu(f,"single",w); f.sight=true; const b=adjDXu(f,"single",w); return a<base&&b===base; })());
+ ok("S84 a wizard with Mage Sight casts at an invisible target at the normal number",(()=>{ const [w,f]=pair({},{cls:"wizard",st:14,iq:12,spells:["Magic Fist"]}); const a=castList(f,w).find(c=>c.sp==="Magic Fist"&&c.n===1).dx; w.inv=true; const b=castList(f,w).find(c=>c.sp==="Magic Fist"&&c.n===1).dx; f.sight=true; const c2=castList(f,w).find(c=>c.sp==="Magic Fist"&&c.n===1).dx; return b===a-6&&c2===a; })());
 
  return R;
 }'''

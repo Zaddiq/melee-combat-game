@@ -292,7 +292,7 @@ function startHexes(){
   const theirs=top.find(h=>key(h.q,h.r)===foeStart)||front(top,-1); foeStart=key(theirs.q,theirs.r);
   return {bottom,top,mine,theirs};
 }
-const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,conf:0,confN:0,shock:false,inv:false,avert:null,fresh:false,gone:false,tgtSel:null,rev:false,revHit:false,rope:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,pn:[],cool:0,usedLast:false,dodging:false,
+const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,conf:0,confN:0,shock:false,inv:false,sight:false,avert:null,fresh:false,gone:false,tgtSel:null,rev:false,revHit:false,rope:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,pn:[],cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
 function startFight(){
   if(!me||!foe)return; const s=startHexes();
@@ -314,7 +314,7 @@ function nextTurn(){
   G.rq=[G.me,G.foe].filter(u=>(CONT.some(k=>u[k])||avertsOf(u).length||allU().some(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(u)))&&u.hp>0);   /* step 2: each wizard with continuing spells decides, in secret */
   if(G.rq.length) nextRenew();
 }
-const CONT=["blur","stone","iron","shield","rev","fly","shock","inv"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield",rev:"Reverse Missiles",fly:"Flight",shock:"Shock Shield",inv:"Invisibility"};
+const CONT=["blur","stone","iron","shield","rev","fly","shock","inv","sight"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield",rev:"Reverse Missiles",fly:"Flight",shock:"Shock Shield",inv:"Invisibility",sight:"Mage Sight"};
 function nextRenew(){ if(!G.rq.length){ G.phase="choose"; return; } G.rcur=G.rq.shift(); G.rlist=CONT.filter(k=>G.rcur[k]).map(k=>({k,on:G.rcur.hp>=3})).concat(allU().filter(m=>m.minion&&!m.fake&&m.hp>0&&sideOf(m)===sideOf(G.rcur)).map(m=>({k:"minion",m,on:G.rcur.hp>=3}))).concat(avertsOf(G.rcur).map(m=>({k:"avert",m,on:G.rcur.hp>=3}))); G.cur=G.rcur; G.oth=other(G.rcur); G.phase="rcover"; }
 const rname=r=>r.k==="minion"?r.m.p.name:r.k==="avert"?"Avert on "+r.m.p.name:CONTN[r.k];
 const avertsOf=u=>allU().filter(x=>x.avert===u&&x.hp>0&&!x.fake);
@@ -355,8 +355,8 @@ function confirmMove(){ const u=G.cur; avertSave(u,u.p.name); minionMove(sideOf(
 function undoMove(){ G.cur.q=G.start.q; G.cur.r=G.start.r; G.moved=0; ui(); drawMap(); }
 
 /* ---- attack rules ---- */
-function adjDXu(u,mode,tgt){
-  const p=u.p; let a=p.dx-ARMOR[p.armor].pen;
+function adjDXu(u,mode,tgt0){
+  const p=u.p, tgt=(tgt0&&u.sight)?null:tgt0;   /* Mage Sight sees through Blur, Invisibility and Shadow */ let a=p.dx-ARMOR[p.armor].pen;
   if(SHIELDS[u.left]) a-=SHIELDS[u.left].pen;
   if(mode==="mg") a-=4;   /* separate main-gauche attack */
   const wp=[u.right,u.left].filter(isW);
@@ -512,6 +512,7 @@ const SP={
  "Summon Giant":{k:"C",cost:()=>4,obj:"summon",summon:"giant"},
  "Confusion":{k:"T",v:1},
  "Avert":{k:"T",cost:()=>2},
+ "Mage Sight":{k:"T",cost:()=>2,self:1,cont:"sight"},
  "Invisibility":{k:"T",cost:()=>3,self:1,cont:"inv"},
  "Control Person":{k:"T",cost:()=>3,ctl:"person"},
  "Control Animal":{k:"T",cost:()=>2,ctl:"animal"},
@@ -531,16 +532,16 @@ const SP={
  "Blast":{k:"S",cost:()=>2,rng:1},
  "Dazzle":{k:"S",cost:()=>3,rng:5}
 };
-const RMV=["avert","fly","blur","inv","stone","iron","slow","stop","spd","clum","aid","sleep","frozen"];
+const RMV=["avert","fly","blur","inv","sight","stone","iron","slow","stop","spd","clum","aid","sleep","frozen"];
 const rmCount=u=>RMV.filter(k=>u[k]).length;
 function brkItem(o){ const w=[o.right,o.left].find(k=>isW(k)&&!SHIELDS[k]&&k!==o.brkW); if(w) return w; const sh=[o.left,o.right].find(k=>SHIELDS[k]); return sh||null; }
 const ironU=u=>u.p.cls==="wizard"&&!u.p.silver&&(["chain","halfplate","plate"].includes(u.p.armor)||[u.right,u.left].some(k=>isW(k)&&k!=="staff"));
 function castBase(u){ return adjDXu(u,"single",null)-(ironU(u)?4:0); }
 function castList(u,o){
   const L=[]; if(u.p.cls!=="wizard"||u.down||u.hp<=0) return L;
-  const known=new Set(u.p.spells||[]), front=inFront(u,o), near=dist(u,o)<=1, base=castBase(u)-(u.air?2:0), fy=(o.air?-4:0)+(shadowAt(o)&&!o.inv?-4:0)+(shadowAt(u)?-6:0), mx=u.hp;
+  const nsee=!u.sight, known=new Set(u.p.spells||[]), front=inFront(u,o), near=dist(u,o)<=1, base=castBase(u)-(u.air?2:0), fy=(o.air?-4:0)+(nsee&&shadowAt(o)&&!o.inv?-4:0)+(shadowAt(u)?-6:0), mx=u.hp;
   for(const name of Object.keys(SP)){ if(!known.has(name)) continue; const d=SP[name]; if(u.conf>0&&(SPIQ[name]||0)>effIQ(u)) continue;   /* a confused wizard cannot cast spells above his lowered IQ */
-    if(d.k==="M"){ if(!front) continue; const mh=mhDist(u,o), dx=base+fy+mhPen(mh)+(o.inv?-6:o.blur?-4+(u.daz>0?3:0):0);
+    if(d.k==="M"){ if(!front) continue; const mh=mhDist(u,o), dx=base+fy+mhPen(mh)+(nsee&&o.inv?-6:nsee&&o.blur?-4+(u.daz>0?3:0):0);
       for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less; ${mh} megahex${mh===1?"":"es"} away)`}); continue; }
     if(d.k==="C"){ const cc=d.cost(o); if(cc>mx) continue;
       if(d.rope){ if(mhDist(u,o)<=1&&o.p.st<20&&!o.rope&&!blocked(u,o)) L.push({sp:name,cost:cc,dx:base,label:`Rope (${cc} ST; needs ${base} or less): halves the enemy's MA, −2 DX and one worse each turn; it must stand still and roll to get free`}); continue; }
@@ -551,14 +552,14 @@ function castList(u,o){
     if(d.k==="S"&&d.tele){ L.push({sp:name,cost:1,dx:base,tele:1,label:`Teleport (1 ST per megahex moved, at least 1; needs ${base} or less; you choose the hex next and face the enemy there)`}); continue; }
     if(d.k==="S"){ const mhd=mhDist(u,o); if(d.rng===1?dist(u,o)>1:mhd>d.rng) continue;
       const dx=base+(d.rng===1?fy-dist(u,o):0)+(o.blur&&u.daz>0?3:0); L.push({sp:name,cost:d.cost(o),dx,label:`${name} (${d.cost(o)} ST; needs ${dx} or less${name==="Dazzle"?"; −3 DX for 3 turns to everyone with eyes within 5 megahexes":"; 1 die of damage to everything in your hex and the hexes next to you"})`}); continue; }
-    if(d.rm){ const dxr=base+fy-dist(u,o)+(o.inv?-6:o.blur?-4+(u.daz>0?3:0):0);
+    if(d.rm){ const dxr=base+fy-dist(u,o)+(nsee&&o.inv?-6:nsee&&o.blur?-4+(u.daz>0?3:0):0);
       if(!u.shield&&(rmCount(u)&&["slow","stop","clum","spd","aid"].some(k=>u[k]))) L.push({sp:name,on:"self",cost:2,dx:base+(u.air?2:0),label:`${name} on yourself (2 ST; needs ${base+(u.air?2:0)} or less): ends your own thrown spells`});
       if((front||near)&&rmCount(o)) L.push({sp:name,on:"foe",cost:2,dx:dxr,label:`${name} on the enemy (2 ST; needs ${dxr} or less): ends its thrown spells`}); continue; }
-    if(name==="Death Spell"){ if(!(front||near)) continue; const dxd=base+fy-dist(u,o)+(o.inv?-6:o.blur?-4+(u.daz>0?3:0):0); L.push({sp:name,cost:0,dx:dxd,label:`${name} (needs ${dxd} or less; the weaker of you two dies and the stronger loses the weaker's ST: yours is ${u.hp}, theirs ${o.hp})`}); continue; }
+    if(name==="Death Spell"){ if(!(front||near)) continue; const dxd=base+fy-dist(u,o)+(nsee&&o.inv?-6:nsee&&o.blur?-4+(u.daz>0?3:0):0); L.push({sp:name,cost:0,dx:dxd,label:`${name} (needs ${dxd} or less; the weaker of you two dies and the stronger loses the weaker's ST: yours is ${u.hp}, theirs ${o.hp})`}); continue; }
     if(d.cont&&u[d.cont]) continue; if(d.cont==="stone"&&u.iron) continue;
     if(d.self&&u.shield) continue;   /* a Spell Shield keeps out the wizard's own spells too */
     if(!d.self){ if(!(front||near)) continue; if(d.ok&&!d.ok(o)) continue; if(d.ctl&&!ctlOK(u,o,d.ctl)) continue; }
-    const dx=base+(d.self?(u.air?2:0):fy-dist(u,o))+(d.self?0:o.inv?-6:o.blur?-4+(u.daz>0?3:0):0);
+    const dx=base+(d.self?(u.air?2:0):fy-dist(u,o))+(d.self?0:nsee&&o.inv?-6:nsee&&o.blur?-4+(u.daz>0?3:0):0);
     if(d.v){ for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less)${name==="Clumsiness"?`: −${2*n} DX for ${o.p.st>=30?1:3} turns`:name==="Confusion"?`: −${2*n} IQ for 3 turns`:`: +${n} DX for 2 turns`}`}); }
     else { const c=d.cost(o); if(c>mx) continue; L.push({sp:name,cost:c,dx,label:`${name} (${c} ST${d.cont?", +1 each turn":""}; needs ${dx} or less)`}); }
   }
@@ -571,7 +572,7 @@ function doCast(u,o,pa){
   if(c.hexsel){ const ok=pa.dest&&creaHexes(u,o,c.hexsel).some(h=>same(h,pa.dest)); if(!ok){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} create that there.`); return; } c=Object.assign({},c,{dest:{q:pa.dest.q,r:pa.dest.r}}); }
   if(c.tele){ const h=pa.dest&&P.find(x=>x.q===pa.dest.q&&x.r===pa.dest.r); const tc=h?Math.max(1,mhDist(u,h)):0;
     if(!h||same(h,o)||same(h,u)||tc>u.hp){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} teleport there.`); return; } c=Object.assign({},c,{cost:tc,dest:h,label:`Teleport ${tc} megahex${tc>1?"es":""}`}); }
-  const d=SP[c.sp], dice=rollN(3), t=sum(dice); let hit,mult=1,fizz=false; const secret=c.sp==='Stone Flesh'||c.sp==='Iron Flesh'||c.sp==='Spell Shield'||c.sp==='Reverse Missiles'||c.sp==='Shock Shield';
+  const d=SP[c.sp], dice=rollN(3), t=sum(dice); let hit,mult=1,fizz=false; const secret=c.sp==='Stone Flesh'||c.sp==='Iron Flesh'||c.sp==='Spell Shield'||c.sp==='Reverse Missiles'||c.sp==='Shock Shield'||c.sp==='Mage Sight';
   if(t===3){hit=true;mult=3;} else if(t===4){hit=true;mult=2;} else if(t===5)hit=true; else if(t>=16){hit=false;fizz=t>=17;} else hit=t<=c.dx;
   const head=secret?`${sub(u)} attempts a secret protection`:`${sub(u)} ${vb(u,"cast","casts")} ${(d.summon||d.fake)?"a creation spell":c.sp}${c.n?" with "+c.n+" ST":""} (needs ${c.dx} or less on 3d6, rolled ${t}${mult===3?": triple effect":mult===2?": double effect":""})`;
   if(!hit){
@@ -606,6 +607,7 @@ function doCast(u,o,pa){
     endCheck(); return; }
   switch(c.sp){
     case "Invisibility": u.inv=true; msg=`${sub(u)} ${vb(u,"vanish","vanishes")} from sight: attacks and spells against ${vb(u,"you","it")} are at −6 DX (not added to Blur, Dazzle or Shadow).`; break;
+    case "Mage Sight": u.sight=true; msg=`${sub(u)} can now see through Blur, Invisibility and Shadow.`; break;
     case "Blur": u.blur=true; msg="A blur surrounds "+sub(u)+": attacks and spells against it are at −4 DX."; break;
     case "Stone Flesh": u.stone=true; msg=sub(u)+"'s body stops 4 hits per attack."; break;
     case "Flight": u.fly=true; msg=sub(u)+" will be in the air from the start of next turn (MA 12, half on the first turn): attacks on a flier are at −4 DX, and a flier attacks at −2 (−4 with missile or thrown weapons)."; break;
@@ -720,8 +722,8 @@ function takePick(act){ G.picks[G.pi?"foe":"me"]=act; G.pi++; if(G.pi>=2) resolv
 function doAttack(a,d,wid,mode,kind){
   let dx=adjDXu(a,mode,kind?null:d);
   if(kind==="thrown") dx-=dist(a,d); else if(kind==="missile") dx+=mhPen(mhDist(a,d))+xb(a,wid);
-  if(kind&&shadowAt(d)&&!d.inv) dx-=4; if(kind&&shadowAt(a)) dx-=6; if(kind&&a.air) dx-=4; if(kind&&d.air) dx-=4;
-  if(kind&&d.inv) dx-=6; else if(kind&&d.blur){ dx-=4; if(a.daz>0) dx+=3; }
+  if(kind&&!a.sight&&shadowAt(d)&&!d.inv) dx-=4; if(kind&&shadowAt(a)) dx-=6; if(kind&&a.air) dx-=4; if(kind&&d.air) dx-=4;
+  if(kind&&!a.sight&&d.inv) dx-=6; else if(kind&&!a.sight&&d.blur){ dx-=4; if(a.daz>0) dx+=3; }
   if(a.wound2){ a.wound2=false; }   /* the -2 DX from 5+ hits lasts for the next attack only */
   const defend=(kind==="missile"||kind==="thrown")?d.dodging:d.defending, n=defend?4:3, dice=rollN(n), t=sum(dice);
   let hit,mult=1,fumble=null;
@@ -840,7 +842,7 @@ function ui(){
     b=`<button class="pri" id="bOk">End movement</button>`+(G.moved?`<button id="bUn">Undo move</button>`:""); }
   else if(G.phase==="cover"){ t=`<b>Actions are secret.</b> Pass the tablet to ${nm(cur)}. ${esc(opp(cur).p.name)}, look away.`; b=`<button class="pri" id="bShow">${esc(cur.p.name)} is ready</button>`; }
   else if(G.phase==="pick"){
-    t=`${nm(cur)}: choose your action. ${esc(opp(cur).p.name)} must not look. `+esc(G.note||"")+(cur.stone||cur.iron||cur.shield||cur.rev||cur.shock?` <b>Your secret protection: ${[cur.iron?"Iron Flesh (stops 6)":cur.stone?"Stone Flesh (stops 4)":"",cur.shield?"Spell Shield (no spells can be cast on you, or by you on yourself)":"",cur.rev?"Reverse Missiles":"",cur.shock?"Shock Shield (hurts anything in your hex at the end of each turn)":""].filter(Boolean).join("; ")}.</b>`:"");
+    t=`${nm(cur)}: choose your action. ${esc(opp(cur).p.name)} must not look. `+esc(G.note||"")+(cur.stone||cur.iron||cur.shield||cur.rev||cur.shock||cur.sight?` <b>Your secret protection: ${[cur.iron?"Iron Flesh (stops 6)":cur.stone?"Stone Flesh (stops 4)":"",cur.shield?"Spell Shield (no spells can be cast on you, or by you on yourself)":"",cur.rev?"Reverse Missiles":"",cur.sight?"Mage Sight":"",cur.shock?"Shock Shield (hurts anything in your hex at the end of each turn)":""].filter(Boolean).join("; ")}.</b>`:"");
     b=G.opts.length?G.opts.map((o,i)=>`<button data-opt="${i}"${i===0&&o.t!=="none"?' class="pri"':""}>${esc(o.label)}</button>`).join(""):`<button class="pri" data-opt="-1">Continue</button>`; }
   else if(G.phase==="rcover"){ t=`<b>Secret spells.</b> Pass the tablet to ${nm(cur)}. ${esc(opp(cur).p.name)}, look away.`; b=`<button class="pri" id="bRc">${esc(cur.p.name)} is ready</button>`; }
   else if(G.phase==="renew"){ t=`${nm(cur)}: renew your spells? Each costs 1 ST this turn; spells you do not renew end now.`; b=G.rlist.map((r,i)=>`<button data-rn="${i}"${r.on?' class="pri"':""}>${r.on?"Keep ":"Drop "}${rname(r)} (1 ST)</button>`).join("")+`<button class="pri" id="bRn">Done</button>`; }

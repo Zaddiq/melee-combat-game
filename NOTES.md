@@ -175,3 +175,6 @@ Thrown at a victim, 2 ST to cast and 1 ST a turn to keep (shown in the caster's 
 ## Invisibility (simple version)
 - IQ 12, 3 ST + 1/turn, on yourself only (not on allies yet). Attacks and spells at the invisible figure are −6 DX; this does not add to Blur, Dazzle or Shadow (the worst applies). Remove Thrown Spell ends it. The figure's token stays on the map but is drawn faint.
 - The book's hidden movement (counter removed from the map, revealed when adjacent, attacking, wounded or in fire) and Mage Sight are not in. Tests S78–S81.
+
+## Mage Sight
+IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and spell attacks ignore the DX penalties for a target that is Blurred, Invisible or in Shadow. Remove Thrown Spell ends it. Secret in the duel. Tests S82–S84.
