@@ -277,7 +277,7 @@ function startHexes(){
   const theirs=top.find(h=>key(h.q,h.r)===foeStart)||front(top,-1); foeStart=key(theirs.q,theirs.r);
   return {bottom,top,mine,theirs};
 }
-const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fresh:false,gone:false,tgtSel:null,rev:false,revHit:false,rope:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,pn:[],cool:0,usedLast:false,dodging:false,
+const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,fresh:false,gone:false,tgtSel:null,rev:false,revHit:false,rope:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,pn:[],cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
 function startFight(){
   if(!me||!foe)return; const s=startHexes();
@@ -299,7 +299,7 @@ function nextTurn(){
   if(G.rq.length) nextRenew();
 }
 const CONT=["blur","stone","iron","shield","rev","fly"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield",rev:"Reverse Missiles",fly:"Flight"};
-function nextRenew(){ if(!G.rq.length){ G.phase="choose"; return; } G.rcur=G.rq.shift(); G.rlist=CONT.filter(k=>G.rcur[k]).map(k=>({k,on:G.rcur.hp>=3})).concat(allU().filter(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(G.rcur)).map(m=>({k:"minion",m,on:G.rcur.hp>=3}))); G.cur=G.rcur; G.oth=other(G.rcur); G.phase="rcover"; }
+function nextRenew(){ if(!G.rq.length){ G.phase="choose"; return; } G.rcur=G.rq.shift(); G.rlist=CONT.filter(k=>G.rcur[k]).map(k=>({k,on:G.rcur.hp>=3})).concat(allU().filter(m=>m.minion&&!m.fake&&m.hp>0&&sideOf(m)===sideOf(G.rcur)).map(m=>({k:"minion",m,on:G.rcur.hp>=3}))); G.cur=G.rcur; G.oth=other(G.rcur); G.phase="rcover"; }
 const rname=r=>r.k==="minion"?r.m.p.name:CONTN[r.k];
 function doRenew(){ const u=G.rcur; for(const r of G.rlist){ if(r.on&&u.hp>=1){ u.hp--; if(r.k==="blur") lg(`${u.p.name} keeps Blur going.`); } else if(r.k==="minion"){ r.m.hp=0; endCheck(); } else { u[r.k]=false; if(r.k==="fly"){ land(u); lg(`${u.p.name} lands.`); } if(r.k==="blur") lg(`${u.p.name}'s Blur ends.`); } }
   endCheck(); if(G.phase!=="over") nextRenew(); }
@@ -465,6 +465,7 @@ function fireHits(u,total){ const prot=ARMOR[u.p.armor].stops+(u.iron?6:u.stone?
   lg(`${sub(u)} ${vb(u,"take","takes")} ${total} hits of fire; protection stops ${Math.min(prot,total)}. ${h?sub(u)+" "+vb(u,"take","takes")+" "+h+" hit"+(h>1?"s":""):"No damage gets through"}.`);
   if(h>0){ u.hp-=h; u.hits+=h; u.tookHit=true; u.sleep=false; lg(`${vb(u,"Your","Its")} ST is now ${Math.max(u.hp,0)}.`); } endCheck(); }
 function fireMove(u,ent){ const f=ent&&ent.fire||0; if(!f) return; const fin=!!objAt(u,"fire"); if(fin) u.fireT=true; fireHits(u,(f-(fin?1:0))*2+(fin?4:0)); }
+function doDisbelieve(u,o){ lg(`${sub(u)} ${vb(u,"try","tries")} to disbelieve ${o.p.name}.`); const r=sum(rollN(3)); if(o.fake&&r<=u.p.iq){ o.hp=0; lg(`${o.p.name} unravels and vanishes!`); endCheck(); } }
 function doUnrope(u){ const dx=adjDXu(u,"single",null), t=sum(rollN(3)); if(t<=dx){ u.rope=0; lg(`${sub(u)} ${vb(u,"stand","stands")} still and ${vb(u,"work","works")} free of the rope (needed ${dx} or less, rolled ${t}).`); } else lg(`${sub(u)} ${vb(u,"struggle","struggles")} with the rope but ${vb(u,"stay","stays")} tangled (needed ${dx} or less, rolled ${t}).`); }
 /* ---- spells (Wizard 2018 p. 3, 11-14; Spell Table) ---- */
 const SP={
@@ -488,6 +489,9 @@ const SP={
  "Summon Bear":{k:"C",cost:()=>4,obj:"summon",summon:"bear"},
  "Summon Gargoyle":{k:"C",cost:()=>4,obj:"summon",summon:"gargoyle"},
  "Summon Giant":{k:"C",cost:()=>4,obj:"summon",summon:"giant"},
+ "Image":{k:"C",cost:()=>1,obj:"summon",fake:"image"},
+ "Illusion":{k:"C",cost:()=>2,obj:"summon",fake:"illusion"},
+ "Dispel Illusions":{k:"S",cost:()=>5,dispel:1},
  "Destroy Creation":{k:"T",cost:()=>1,destroy:1},
  "Teleport":{k:"S",cost:()=>1,tele:1},
  "Flight":{k:"T",cost:()=>3,self:1,cont:"fly"},
@@ -513,8 +517,10 @@ function castList(u,o){
       for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less; ${mh} megahex${mh===1?"":"es"} away)`}); continue; }
     if(d.k==="C"){ const cc=d.cost(o); if(cc>mx) continue;
       if(d.rope){ if(mhDist(u,o)<=1&&o.p.st<20&&!o.rope&&!blocked(u,o)) L.push({sp:name,cost:cc,dx:base,label:`Rope (${cc} ST; needs ${base} or less): halves the enemy's MA, −2 DX and one worse each turn; it must stand still and roll to get free`}); continue; }
+      if(d.fake){ if(creaHexes(u,o,"summon").length) for(const fk of Object.keys(CRE)) L.push({sp:name,form:fk,cost:cc,dx:base,hexsel:"summon",label:`${name} of a ${CRE[fk].name} (${cc} ST; needs ${base} or less; you choose the hex)`}); continue; }
       if(creaHexes(u,o,d.obj).length) L.push({sp:name,cost:cc,dx:base,hexsel:d.obj,label:`${name} (${cc} ST; needs ${base} or less; you choose the hex, in your megahex or next to it)`}); continue; }
     if(d.destroy){ if(mx<1) continue; (G.objs||[]).forEach((ob,i)=>{ const dd=dist(u,ob), dx=base-dd; L.push({sp:name,cost:1,dx,objId:i,label:`Destroy Creation: the ${ob.t} ${dd} hex${dd===1?"":"es"} away (1 ST; needs ${dx} or less)`}); }); continue; }
+    if(d.dispel){ if(mx>=5) L.push({sp:name,cost:5,dx:base,label:`Dispel Illusions (5 ST; needs ${base} or less): every illusion and image within 5 megahexes vanishes, yours too`}); continue; }
     if(d.k==="S"&&d.tele){ L.push({sp:name,cost:1,dx:base,tele:1,label:`Teleport (1 ST per megahex moved, at least 1; needs ${base} or less; you choose the hex next and face the enemy there)`}); continue; }
     if(d.k==="S"){ const mhd=mhDist(u,o); if(d.rng===1?dist(u,o)>1:mhd>d.rng) continue;
       const dx=base+(d.rng===1?fy-dist(u,o):0)+(o.blur&&u.daz>0?3:0); L.push({sp:name,cost:d.cost(o),dx,label:`${name} (${d.cost(o)} ST; needs ${dx} or less${name==="Dazzle"?"; −3 DX for 3 turns to everyone with eyes within 5 megahexes":"; 1 die of damage to everything in your hex and the hexes next to you"})`}); continue; }
@@ -533,14 +539,14 @@ function castList(u,o){
 }
 function payST(u,c){ u.hp-=c; }
 function doCast(u,o,pa){
-  let c=castList(u,o).find(x=>x.sp===pa.sp&&(pa.n==null||x.n===pa.n)&&(pa.on==null||x.on===pa.on)&&(pa.objId==null||x.objId===pa.objId));
+  let c=castList(u,o).find(x=>x.sp===pa.sp&&(pa.n==null||x.n===pa.n)&&(pa.on==null||x.on===pa.on)&&(pa.objId==null||x.objId===pa.objId)&&(pa.form==null||x.form===pa.form));
   if(!c){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} cast that now.`); return; }
   if(c.hexsel){ const ok=pa.dest&&creaHexes(u,o,c.hexsel).some(h=>same(h,pa.dest)); if(!ok){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} create that there.`); return; } c=Object.assign({},c,{dest:{q:pa.dest.q,r:pa.dest.r}}); }
   if(c.tele){ const h=pa.dest&&P.find(x=>x.q===pa.dest.q&&x.r===pa.dest.r); const tc=h?Math.max(1,mhDist(u,h)):0;
     if(!h||same(h,o)||same(h,u)||tc>u.hp){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} teleport there.`); return; } c=Object.assign({},c,{cost:tc,dest:h,label:`Teleport ${tc} megahex${tc>1?"es":""}`}); }
   const d=SP[c.sp], dice=rollN(3), t=sum(dice); let hit,mult=1,fizz=false; const secret=c.sp==='Stone Flesh'||c.sp==='Iron Flesh'||c.sp==='Spell Shield'||c.sp==='Reverse Missiles';
   if(t===3){hit=true;mult=3;} else if(t===4){hit=true;mult=2;} else if(t===5)hit=true; else if(t>=16){hit=false;fizz=t>=17;} else hit=t<=c.dx;
-  const head=secret?`${sub(u)} attempts a secret protection`:`${sub(u)} ${vb(u,"cast","casts")} ${c.sp}${c.n?" with "+c.n+" ST":""} (needs ${c.dx} or less on 3d6, rolled ${t}${mult===3?": triple effect":mult===2?": double effect":""})`;
+  const head=secret?`${sub(u)} attempts a secret protection`:`${sub(u)} ${vb(u,"cast","casts")} ${(d.summon||d.fake)?"a creation spell":c.sp}${c.n?" with "+c.n+" ST":""} (needs ${c.dx} or less on 3d6, rolled ${t}${mult===3?": triple effect":mult===2?": double effect":""})`;
   if(!hit){
     const lost=Math.max(1,(d.k==="M"||fizz)?c.cost:1); payST(u,lost);
     if(secret) lg(`${head}.`); else lg(`${head}: ${fizz?"the spell fizzles":"miss"}. ${sub(u)} ${vb(u,"lose","loses")} ${lost} ST${t===18?" and the shock knocks "+vb(u,"you","them")+" down":""}.`);
@@ -549,14 +555,15 @@ function doCast(u,o,pa){
     endCheck(); return; }
   payST(u,c.cost);
   { const T0=(d.self||c.on==="self")?u:o;
-    if(T0.shield&&T0!==u&&!c.tele&&d.k!=="C"&&!d.destroy&&c.sp!=="Spell Shield"){ const x=c.sp==="Death Spell"?1:0; if(x) payST(u,1); lg(`${head}: it works, but ${sub(o)} ${vb(o,"are","is")} protected by a Spell Shield, so nothing happens. ${sub(u)} ${vb(u,"lose","loses")} ${c.cost+x} ST.`); endCheck(); return; } }
-  if(d.k==="C"&&!d.rope){ if(d.summon){ const m=summonMinion(u,d.summon,c.dest); lg(`${head}: it works (${c.cost} ST). ${m.p.name} appears (it cannot move or fight this turn; it costs 1 ST a turn to keep).`); endCheck(); return; }
+    if(T0.shield&&T0!==u&&!c.tele&&d.k!=="C"&&!d.destroy&&!d.dispel&&c.sp!=="Spell Shield"){ const x=c.sp==="Death Spell"?1:0; if(x) payST(u,1); lg(`${head}: it works, but ${sub(o)} ${vb(o,"are","is")} protected by a Spell Shield, so nothing happens. ${sub(u)} ${vb(u,"lose","loses")} ${c.cost+x} ST.`); endCheck(); return; } }
+  if(d.k==="C"&&!d.rope){ if(d.summon||d.fake){ const m=summonMinion(u,d.fake?c.form:d.summon,c.dest); if(d.fake) m.fake=d.fake; lg(`${head}: it works. ${m.p.name} appears (it cannot move or fight this turn).`); endCheck(); return; }
   const ob={t:d.obj,q:c.dest.q,r:c.dest.r,age:0}; G.objs.push(ob); syncWalls(); lg(`${head}: it works (${c.cost} ST). A ${d.obj==="wall"?"wall":d.obj==="fire"?"hex of flame":"hex of black shadow"} appears.`);
     if(d.obj==="fire"){ const f=allU().find(x=>x.hp>0&&same(x,ob)); if(f) fireHits(f,2); } else endCheck(); return; }
   if(d.rope){ o.rope=1; lg(`${head}: it works (${c.cost} ST). A magic rope ties up ${sub(o)}: MA halved, DX −2, and one worse each turn until ${vb(o,"you stand","it stands")} still and break${vb(o,"","s")} free.`); if(adjDXu(o,"single",null)<=2) o.down=true; endCheck(); return; }
   if(d.destroy){ const ob=(G.objs||[])[c.objId]; if(ob){ G.objs.splice(c.objId,1); syncWalls(); lg(`${head}: it works (1 ST). The ${ob.t} vanishes.`); } else lg(`${head}: it works, but nothing is left to destroy.`); endCheck(); return; }
   if(d.k==="M"){
     let O=o, U=u; if(o.rev){ if(u.rev){ lg(`${head}: HIT, but both wizards are protected by Reverse Missiles and the missile flies back and forth, harming no one.`); endCheck(); return; } O=u; U=o; lg(`${head}: HIT, but Reverse Missiles turns it back on ${sub(u)}!`); }
+    if(O.fake==="image"){ O.hp=0; lg(`${head}: HIT, but it was only an image: it vanishes and the missile flies on.`); endCheck(); return; }
     const dice2=rollN(c.n), raw=Math.max(c.n,sum(dice2)-d.sub*c.n), full=raw*mult, st=stopsFor(O,U,null,"missile"), hits=Math.max(0,full-st);
     lg(`${head}: HIT. ${c.n} ${c.n>1?"dice":"die"} (${dice2.join("+")}${d.sub?" −"+d.sub*c.n:""} = ${raw})${mult>1?" ×"+mult+" = "+full:""}; armor and protection stop ${Math.min(st,full)}. ${hits?sub(O)+" "+vb(O,"take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
     if(hits>0){ O.hp-=hits; O.hits+=hits; O.tookHit=true; O.sleep=false; lg(`${O.p.name}'s ST is now ${Math.max(O.hp,0)}.`);
@@ -565,7 +572,8 @@ function doCast(u,o,pa){
     endCheck(); return; }
   const m=mult, T=d.self?u:o, nn=c.n||1; let msg="";
   if(c.tele){ u.q=c.dest.q; u.r=c.dest.r; u.f=faceToward(u,o); u.low=null; if(u.hth){ u.hth=false; o.hth=false; } lg(`${head}: it works (${c.cost} ST). ${sub(u)} ${vb(u,"vanish","vanishes")} and ${vb(u,"reappear","reappears")} in another hex, facing ${vb(u,"the enemy","the enemy")}.`); endCheck(); return; }
-  if(d.k==="S"&&c.sp==="Blast"){ const dr=rollN(1), full=sum(dr)*m, st=stopsFor(o,u,null,"missile"), hits=Math.max(0,full-st);
+  if(d.dispel){ let n=0; for(const x of allU()) if(x.fake&&x.hp>0&&mhDist(u,x)<=5){ x.hp=0; n++; } lg(`${head}: it works (5 ST). ${n?n+" unreal thing"+(n>1?"s vanish":" vanishes")+".":"Nothing happens."}`); endCheck(); return; }
+  if(d.k==="S"&&c.sp==="Blast"){ if(o.fake==="image"){ o.hp=0; lg(`${head}: it works (2 ST), but it was only an image and vanishes.`); endCheck(); return; } const dr=rollN(1), full=sum(dr)*m, st=stopsFor(o,u,null,"missile"), hits=Math.max(0,full-st);
     lg(`${head}: it works (2 ST). 1 die (${dr.join("")})${m>1?" ×"+m+" = "+full:""}; armor and protection stop ${Math.min(st,full)}. ${hits?sub(o)+" "+vb(o,"take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
     if(hits>0){ o.hp-=hits; o.hits+=hits; o.tookHit=true; o.sleep=false; lg(`${o.p.name}'s ST is now ${Math.max(o.hp,0)}.`); if(o.hits>=8&&o.hp>0&&!o.down){ o.down=true; o.low=null; lg(`${sub(o)} ${vb(o,"are","is")} knocked down by ${o.hits} hits!`); } }
     endCheck(); return; }
@@ -579,7 +587,7 @@ function doCast(u,o,pa){
     case "Dazzle": o.daz=3*m; msg=`${sub(o)} ${vb(o,"are","is")} dazzled: −3 DX for ${o.daz} turns.`; break;
     case "Break Weapon": { const id=brkItem(o); if(!id){ msg="There is nothing to break."; break; } if(SHIELDS[id]||id==="staff"){ if(o.right===id) o.right="none"; else o.left="none"; msg=`${sub(o)}'s ${iname(id).toLowerCase()} shatters and is useless.`; } else { o.brkW=id; msg=`${sub(o)}'s ${iname(id).toLowerCase()} is broken: it now does half damage.`; } break; }
     case "Remove Thrown Spell": { const X=c.on==="self"?u:o, gone=[]; for(const k of RMV){ if(X[k]){ gone.push(k); X[k]=k==="sleep"?false:(typeof X[k]==="number"?0:false); } } land(X); X.clumN=0; X.aidN=0; msg=`${X===u?sub(u)+"'s":sub(o)+"'s"} thrown spells end (${gone.length}).`; break; }
-    case "Death Spell": { const A=u.hp, B=o.hp; if(A>B){ o.hp=-1; u.hp-=B; msg=`${sub(o)} ${vb(o,"die","dies")}. ${sub(u)} ${vb(u,"lose","loses")} ${B} ST.`; } else if(A<B){ u.hp=-1; msg=`${sub(u)} ${vb(u,"are","is")} the weaker and ${vb(u,"die","dies")}!`; } else { u.hp=-1; o.hp=-1; msg="Equal strength: both fall dead."; } break; }
+    case "Death Spell": { if(o.fake==="image"){ o.hp=0; payST(u,1); msg=`${sub(o)} was only an image and vanishes (it costs ${sub(u)} 1 ST).`; break; } const A=u.hp, B=o.hp; if(A>B){ o.hp=-1; u.hp-=B; msg=`${sub(o)} ${vb(o,"die","dies")}. ${sub(u)} ${vb(u,"lose","loses")} ${B} ST.`; } else if(A<B){ u.hp=-1; msg=`${sub(u)} ${vb(u,"are","is")} the weaker and ${vb(u,"die","dies")}!`; } else { u.hp=-1; o.hp=-1; msg="Equal strength: both fall dead."; } break; }
     case "Iron Flesh": u.iron=true; u.stone=false; msg=sub(u)+"'s body stops 6 hits per attack."; break;
     case "Aid": u.aid=2*m; u.aidN=nn; msg=`${sub(u)} gets +${nn} DX for ${2*m} turns.`; break;
     case "Clumsiness": o.clum=(o.p.st>=30?1:3)*m; o.clumN=2*nn; msg=`${sub(o)} ${vb(o,"get","gets")} −${2*nn} DX for ${o.clum} turns.`; break;
@@ -627,6 +635,7 @@ function options(u,o){
     G.floor.filter(f=>dist(f,u)<=1).forEach(f=>L.push({t:"ready",it:{id:f.id,src:"floor",obj:f},label:`Pick up and ready ${iname(f.id)} (on the floor ${f.q===u.q&&f.r===u.r?"here":"next to you"})`}));
   }
   if(inF&&(eng||half)&&SHIELDS[u.left]&&u.p.cls!=="wizard") L.push({t:"rush",label:`Shield-rush with the ${iname(u.left).toLowerCase()} (no weapon attack; if it hits, the target saves vs DX on ${u.p.st>=o.p.st?3:2} dice or falls)`});
+  if(!u.minion&&u.moved<=1&&o.minion&&o.hp>0) L.push({t:"disbelieve",label:`Disbelieve ${o.p.name} (move at most 1 hex; if it is an illusion or an image, its owner secretly rolls 3 dice against your IQ ${u.p.iq}; you are only told if it vanishes)`});
   if(u.rope>0&&u.moved===0) L.push({t:"unrope",label:`Struggle free of the rope (stand still and do nothing else; roll ${adjDXu(u,"single",null)} or less on 3 dice)`});
   L.push({t:"none",label:"Do nothing"});
   return L.filter(x=>!x.off);
@@ -689,6 +698,7 @@ function doAttack(a,d,wid,mode,kind){
     if(fumble==="break"){ extra=` — the ${iname(wid).toLowerCase()} breaks!`; if(a.right===wid)a.right="none"; else if(a.left===wid)a.left="none"; }
     lg(head+": miss"+extra+"."); return;
   }
+  if(d.fake==="image"||a.fake==="image"){ const im=d.fake==="image"?d:a; im.hp=0; lg(head+": HIT, but it is only an image: it vanishes without doing any harm."); endCheck(); return; }
   if((kind==="missile"||kind==="thrown")&&d.rev){ if(a.rev){ lg(head+": HIT, but both are protected by Reverse Missiles and the missile flies back and forth, harming no one."); return; } if(a.revHit){ lg(head+": the archer is warned that the first arrow turned back, and fires no second one."); return; } a.revHit=true; lg(head+": HIT, but Reverse Missiles turns it back on the one who fired!"); const t0=a; a=d; d=t0; }
   const r=dmgRoll(a,wid), full=r.total*mult, st=stopsFor(d,a,wid,kind), hits=Math.max(0,full-st);
   lg(`${head}: HIT. ${iname(wid)} ${dice_txt(r)}${mult>1?" ×"+mult+" = "+full:""}; armor and shield stop ${Math.min(st,full)}. ${hits?vb(d,"You take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
@@ -713,8 +723,8 @@ function endCheck(){
 }
 function resolveTurn(pa,pb){
   G.me.act=pa; G.foe.act=pb; const U=allU().filter(u=>u.hp>0); for(const u of U) if(u!==G.me&&u!==G.foe) u.act=aiAct(u,other(u)); G.phase="resolve"; U.forEach(u=>{ u.defending=u.act.t==="defend"; u.dodging=u.act.t==="dodge"; });
-  const N2={unrope:"struggle with the rope",cast:"cast a spell",drop:"drop down",rise:"stand up",hth:"close for hand-to-hand",hattack:"fight hand to hand",hdraw:"try to draw a dagger",hesc:"break away from the grapple",jab:"jab with a pole weapon",rush:"shield-rush",attack:"attack",dual:"attack with a weapon and the main-gauche",defend:"defend",dodge:"dodge",fire:"fire a missile weapon",last:"fire one last shot",throw:"throw a weapon",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
-  const N3={unrope:"struggles with the rope",cast:"casts a spell",drop:"drops down",rise:"starts to stand up",hth:"closes for hand-to-hand",hattack:"fights hand to hand",hdraw:"tries to draw a dagger",hesc:"tries to break away",jab:"jabs with a pole weapon",rush:"shield-rushes",attack:"attacks",dual:"attacks with a weapon and the main-gauche",defend:"defends",dodge:"dodges",fire:"fires a missile weapon",last:"fires one last shot",throw:"throws a weapon",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
+  const N2={disbelieve:"try to disbelieve something",unrope:"struggle with the rope",cast:"cast a spell",drop:"drop down",rise:"stand up",hth:"close for hand-to-hand",hattack:"fight hand to hand",hdraw:"try to draw a dagger",hesc:"break away from the grapple",jab:"jab with a pole weapon",rush:"shield-rush",attack:"attack",dual:"attack with a weapon and the main-gauche",defend:"defend",dodge:"dodge",fire:"fire a missile weapon",last:"fire one last shot",throw:"throw a weapon",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
+  const N3={disbelieve:"tries to disbelieve something",unrope:"struggles with the rope",cast:"casts a spell",drop:"drops down",rise:"starts to stand up",hth:"closes for hand-to-hand",hattack:"fights hand to hand",hdraw:"tries to draw a dagger",hesc:"tries to break away",jab:"jabs with a pole weapon",rush:"shield-rushes",attack:"attacks",dual:"attacks with a weapon and the main-gauche",defend:"defends",dodge:"dodges",fire:"fires a missile weapon",last:"fires one last shot",throw:"throws a weapon",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
   U.forEach(u=>{ if(u.act.pos&&(u.act.t==="drop"||u.act.t==="fire")&&!u.low){ u.low=u.act.pos; lg(`${sub(u)} ${vb(u,"go","goes")} ${u.act.pos==="prone"?"prone":"down on one knee"}.`); } if(u.act.t==="rise") u.standUp=true; });
   U.forEach(u=>lg(u.minion?`${sub(u)} ${N3[u.act.t]}.`:`${sub(u)} chooses to ${N2[u.act.t]}.`)); U.forEach(u=>{ u.lastTgt=null; });
   U.forEach(u=>{ const o=other(u); u.extra=0; u.poleVs=false; u.pri=false;
@@ -732,6 +742,7 @@ function resolveTurn(pa,pb){
     if(pass===1){
       if(t==="cast") doCast(u,o,u.act);
       else if(t==="unrope") doUnrope(u);
+      else if(t==="disbelieve"){ if(o.minion&&o.hp>0) doDisbelieve(u,o); }
       else if(t==="hth") startHth(u,o);
       else if(u.hth&&["hattack","hdraw","hesc"].includes(t)) hthResolve(u,o,t);
       else if(t==="attack"){ const w=isW(u.right)?u.right:(isW(u.left)&&!SHIELDS[u.left]?u.left:null);
@@ -777,7 +788,7 @@ function ui(){
   const fx=u=>[u.blur&&"Blur",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.rope>0&&"roped −"+(u.rope+1)+" DX",u.air&&"flying",u.fly&&!u.air&&"taking off",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"")+(fx(u).length?" ["+fx(u).join(", ")+"]":"");
   const nm=u=>`<b class="${sideOf(u)==="me"?"me":"foe"}">${esc(u.p.name)}</b>`;
-  const st=allU().filter(u=>u.hp>0||!u.minion).map(u=>`${nm(u)} ST ${Math.max(u.hp,0)}/${u.p.st}${flags(u)}`).join(" · ")+`<br>${esc(A.p.name)} is ${engagedAny(A)?"<b>engaged</b>":"not engaged"}; ${esc(B.p.name)} is ${engagedAny(B)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).`;
+  const st=allU().filter(u=>u.hp>0||!u.minion).map(u=>`${nm(u)}${u.fake&&sideOf(u)===sideOf(cur)&&["pick","spells","dest"].includes(G.phase)?" (your "+u.fake+")":""} ST ${Math.max(u.hp,0)}/${u.p.st}${flags(u)}`).join(" · ")+`<br>${esc(A.p.name)} is ${engagedAny(A)?"<b>engaged</b>":"not engaged"}; ${esc(B.p.name)} is ${engagedAny(B)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).`;
   const live=["move","cover","pick"].includes(G.phase);
   if(live){ const sh=startHexes(), own=(cur===G.me?sh.bottom:sh.top).some(h=>same(h,cur));
     b="";  G.qb=`<div style="margin-top:6px">${G.phase==="move"&&own&&!G.eng?`<button id="bEsc">${esc(cur.p.name)} escapes through the door</button>`:""}</div>`; } else G.qb="";
@@ -804,7 +815,7 @@ function ui(){
   on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door? This ends the duel.")) quitDuel(cur,"escape"); });
   on("bNew",()=>{ G=null; placeStep=0; $("setup").open=true; ui(); drawMap(); });
   on("bRc",()=>{ G.phase="renew"; ui(); drawMap(); }); c.querySelectorAll("[data-rn]").forEach(e=>e.onclick=()=>{ const r=G.rlist[+e.dataset.rn]; r.on=!r.on; ui(); }); on("bRn",()=>{ doRenew(); ui(); drawMap(); });
-  c.querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>{ const x=G.sopts[+e.dataset.sp]; if(x.hexsel){ G.destT="cast"; G.destX={sp:x.sp}; G.phase="dest"; G.dopts=new Map(creaHexes(G.cur,G.oth,x.hexsel).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } if(x.tele){ const U=G.cur, V=G.oth; G.destT="cast"; G.destX={sp:"Teleport"}; G.phase="dest"; G.dopts=new Map(P.filter(h=>!same(h,U)&&!same(h,V)&&Math.max(1,mhDist(U,h))<=U.hp).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } takePick({t:"cast",sp:x.sp,n:x.n,on:x.on,objId:x.objId}); });
+  c.querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>{ const x=G.sopts[+e.dataset.sp]; if(x.hexsel){ G.destT="cast"; G.destX={sp:x.sp,form:x.form}; G.phase="dest"; G.dopts=new Map(creaHexes(G.cur,G.oth,x.hexsel).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } if(x.tele){ const U=G.cur, V=G.oth; G.destT="cast"; G.destX={sp:"Teleport"}; G.phase="dest"; G.dopts=new Map(P.filter(h=>!same(h,U)&&!same(h,V)&&Math.max(1,mhDist(U,h))<=U.hp).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } takePick({t:"cast",sp:x.sp,n:x.n,on:x.on,objId:x.objId,form:x.form}); });
   c.querySelectorAll("[data-opt]").forEach(e=>e.onclick=()=>{
     const o=G.opts[+e.dataset.opt]||{t:"none"};
     if(o.t==="cast"){ G.sopts=castList(G.cur,G.oth); G.phase="spells"; ui(); drawMap(); }

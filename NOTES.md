@@ -138,3 +138,12 @@ The "always the best weapon, always the most armor at adjDX 11" rule made the ar
 ### Summons and many figures in the duel
 The duel now uses the same figure list as the Wizard arena. Summoned creatures are run by the computer on their owner's side, move after their owner moves, and pick their own actions. Each player has a default target (the nearest enemy) and can click another enemy counter, with the dashed rings, while moving or choosing an action. Creature upkeep (1 ST each, in the secret renew step), vanishing, and retreat rules are as in the Wizard arena. XP, escape and "quit" still only involve the two players' own figures. Tests: tests/duel_summon_test.py (D1 to D5).
 Still not in: giving orders to a creature, creatures in hand-to-hand, dragons, flying gargoyles.
+
+### Images and illusions (one-hex versions)
+- **Image** (1 ST, IQ 8) and **Illusion** (2 ST, IQ 11): a creation spell like the summons, so a to-hit roll, no range penalty, and a free hex in your megahex or next to it. You pick which creature it looks like (Wolf, Myrmidon, Bear, Gargoyle, Giant). The log says only "a creation spell", so the other side cannot tell a summon from an illusion or an image. Nothing here costs upkeep.
+- An **image** does no damage. If it hits, or is hit by a weapon, a missile or a Magic Fist or Blast, it vanishes. A Death Spell destroys it for 1 ST.
+- An **illusion** has the real creature's ST, DX and weapon and can hurt and be hurt like it. Damage it did stays real when it vanishes.
+- **Disbelieve** is a new action for a human-type fighter (not creatures, images or illusions): move at most 1 hex, pick a creature, and its owner secretly rolls 3 dice against the disbeliever's IQ. At or under the IQ, an image or illusion vanishes; a real creature just stays. Nobody is told the result unless it vanishes. The computer disbelieves a creature about a third of the time it can.
+- **Dispel Illusions** (5 ST, IQ 14): every image and illusion within 5 megahexes vanishes, yours too.
+- Hidden information: the "keeps … going" log line is gone, only the owner's renew screen lists real creatures, and in the duel an owner only sees "(your illusion)" on their own pick screens. In the Wizard arena the stats line tells you which of your own creatures are fake.
+- Not in: doubles of a real figure (yourself included), larger images and illusions, walls, fire or shadow made as illusions, moving through an image to destroy it (you just cannot enter its hex). Tests S56 to S62.
