@@ -147,3 +147,8 @@ Still not in: giving orders to a creature, creatures in hand-to-hand, dragons, f
 - **Dispel Illusions** (5 ST, IQ 14): every image and illusion within 5 megahexes vanishes, yours too.
 - Hidden information: the "keeps … going" log line is gone, only the owner's renew screen lists real creatures, and in the duel an owner only sees "(your illusion)" on their own pick screens. In the Wizard arena the stats line tells you which of your own creatures are fake.
 - Not in: doubles of a real figure (yourself included), larger images and illusions, walls, fire or shadow made as illusions, moving through an image to destroy it (you just cannot enter its hex). Tests S56 to S62.
+
+## Confusion and Shock Shield
+- **Confusion** (IQ 9, thrown, n ST): the subject loses 2 IQ per ST for 3 turns (1 turn if ST 30+... same multiplier as other thrown spells). While confused he cannot cast any spell whose IQ is above his lowered IQ; running spells can still be renewed; Disbelieve rolls use the lowered IQ. The computer casts it only at wizards.
+- **Shock Shield** (IQ 10, 2 ST, +1/turn): a running spell on the caster. At the end of each turn every other figure in the caster's hex takes 1 die, reduced by armor/protection. Secret in the duel.
+- Tests S63–S66.
