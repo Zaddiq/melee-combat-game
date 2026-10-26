@@ -305,7 +305,7 @@ function startFight(){
 function nextTurn(){
   for(const u of allU()){ u.fresh=false; if(u.hits>=5)u.wound2=true; u.hits=0; if(u.cool>0)u.cool--; u.dodging=false; if(!engagedAny(u))u.usedLast=false; u.from={q:u.q,r:u.r}; u.extra=0; u.poleVs=false; u.pri=false; u.dealt=u.tookHit=u.defending=false; u.act=null; u.standUp=false; u.moved=0; u.engStart=false; if(u.fly){ u.air=true; u.airN++; }
     u.fireT=false; if(u.rope>0){ u.rope++; if(adjDXu(u,"single",null)<=2&&!u.down){ u.down=true; lg(`${sub(u)} ${vb(u,"are","is")} so tangled in rope that ${vb(u,"you fall","it falls")} helpless.`); } }
-    for(const k of ["slow","stop","spd","daz","clum","aid","frozen","conf"]) if(u[k]>0) u[k]--; if(!u.conf) u.confN=0; if(!u.aid) u.aidN=0; if(!u.clum) u.clumN=0; u.pn=[]; u.revHit=false; }
+    for(const k of ["slow","stop","spd","daz","clum","aid","frozen","conf"]) if(u[k]>0) u[k]--; if(!u.conf) u.confN=0; if(!u.aid) u.aidN=0; if(!u.clum) u.clumN=0; u.pn=[]; u.rvl=u.rvlNew||""; u.rvlNew=""; u.revHit=false; }
   if(G.objs&&G.objs.length){ G.objs.forEach(o=>o.age++); const n0=G.objs.length; G.objs=G.objs.filter(o=>o.age<=12); if(G.objs.length<n0){ syncWalls(); lg("Some created things fade away (they last 12 turns)."); } }
   G.turn++; let a,b; do{a=d6();b=d6();}while(a===b);
   lg(`— Turn ${G.turn}. Initiative: ${me.name} ${a}, ${foe.name} ${b}.`);
@@ -471,7 +471,7 @@ const SPIQ={"Staff":8,"Magic Fist":8,"Blur":8,"Slow Movement":8,"Drop Weapon":8,
 const effIQ=u=>u.p.iq-(u.conf>0?u.confN:0);
 const OBJN={fire:"fire",shadow:"shadow",wall:"wall"};
 const slickAt=h=>(G&&G.objs||[]).find(o=>o.t==="slick"&&o.q===h.q&&o.r===h.r);
-const slickVis=o=>o.t!=="slick"||o.g.shown||(CTLMAIN?sideOf(o.owner)==="me":(G.cur&&sideOf(G.cur)===sideOf(o.owner)&&["move","pick","spells","dest","renew"].includes(G.phase)));
+const slickVis=o=>o.t!=="slick"||o.g.shown||(CTLMAIN?(sideOf(o.owner)==="me"||(o.g.seen||[]).includes("me")):(G.cur&&(sideOf(G.cur)===sideOf(o.owner)||(o.g.seen||[]).includes(sideOf(G.cur)))&&["move","pick","spells","dest","renew"].includes(G.phase)));
 function slipRoll(u,reveal){ const s=slickAt(u); if(s) s.g.shown=true; else if(reveal) for(const o of G.objs) if(o.t==="slick") o.g.shown=true;
   const dx=adjDXu(u,"single",null), r=sum(rollN(3));
   if(r<=dx){ lg(`${sub(u)} ${vb(u,"keep","keeps")} ${vb(u,"your","its")} footing on the slippery floor (rolled ${r} against DX ${dx}).`); return true; }
@@ -537,6 +537,7 @@ const SP={
  "Image":{k:"C",cost:()=>1,obj:"summon",fake:"image"},
  "Illusion":{k:"C",cost:()=>2,obj:"summon",fake:"illusion"},
  "Dispel Illusions":{k:"S",cost:()=>5,dispel:1},
+ "Reveal Magic":{k:"S",cost:()=>1,reveal:1},
  "Destroy Creation":{k:"T",cost:()=>1,destroy:1},
  "Teleport":{k:"S",cost:()=>1,tele:1},
  "Flight":{k:"T",cost:()=>3,self:1,cont:"fly"},
@@ -567,6 +568,7 @@ function castList(u,o){
       if(creaHexes(u,o,d.obj).length) L.push({sp:name,cost:cc,dx:base,hexsel:d.obj,label:`${name} (${cc} ST; needs ${base} or less; you choose the hex, in your megahex or next to it)`}); continue; }
     if(d.destroy){ if(mx<1) continue; (G.objs||[]).forEach((ob,i)=>{ if(ob.t==="slick") return; const dd=dist(u,ob), dx=base-dd; L.push({sp:name,cost:1,dx,objId:i,label:`Destroy Creation: the ${ob.t} ${dd} hex${dd===1?"":"es"} away (1 ST; needs ${dx} or less)`}); }); continue; }
   if(d.dispel){ if(mx>=5) L.push({sp:name,cost:5,dx:base,label:`Dispel Illusions (5 ST; needs ${base} or less): every illusion and image within 5 megahexes vanishes, yours too`}); continue; }
+  if(d.reveal){ if(mx>=1) L.push({sp:name,cost:1,dx:base,label:`Reveal Magic (1 ST; needs ${base} or less): you learn which enemy figures within 5 megahexes are protected by Reverse Missiles, a Spell Shield, Stone Flesh, Iron Flesh or a Shock Shield, and where slippery floors lie`}); continue; }
     if(d.k==="S"&&d.tele){ L.push({sp:name,cost:1,dx:base,tele:1,label:`Teleport (1 ST per megahex moved, at least 1; needs ${base} or less; you choose the hex next and face the enemy there)`}); continue; }
     if(d.k==="S"){ const mhd=mhDist(u,o); if(d.rng===1?dist(u,o)>1:mhd>d.rng) continue;
       const dx=base+(d.rng===1?fy-dist(u,o):0)+(o.blur&&u.daz>0?3:0); L.push({sp:name,cost:d.cost(o),dx,label:`${name} (${d.cost(o)} ST; needs ${dx} or less${name==="Dazzle"?"; −3 DX for 3 turns to everyone with eyes within 5 megahexes":"; 1 die of damage to everything in your hex and the hexes next to you"})`}); continue; }
@@ -601,7 +603,7 @@ function doCast(u,o,pa){
     endCheck(); return; }
   payST(u,c.cost);
   { const T0=(d.self||c.on==="self")?u:o;
-    if(T0.shield&&T0!==u&&!c.tele&&d.k!=="C"&&!d.destroy&&!d.dispel&&!d.slick&&c.sp!=="Spell Shield"){ const x=c.sp==="Death Spell"?1:0; if(x) payST(u,1); lg(`${head}: it works, but ${sub(o)} ${vb(o,"are","is")} protected by a Spell Shield, so nothing happens. ${sub(u)} ${vb(u,"lose","loses")} ${c.cost+x} ST.`); endCheck(); return; } }
+    if(T0.shield&&T0!==u&&!c.tele&&d.k!=="C"&&!d.destroy&&!d.dispel&&!d.reveal&&!d.slick&&c.sp!=="Spell Shield"){ const x=c.sp==="Death Spell"?1:0; if(x) payST(u,1); lg(`${head}: it works, but ${sub(o)} ${vb(o,"are","is")} protected by a Spell Shield, so nothing happens. ${sub(u)} ${vb(u,"lose","loses")} ${c.cost+x} ST.`); endCheck(); return; } }
   if(d.k==="C"&&!d.rope){ if(d.summon||d.fake){ const m=summonMinion(u,d.fake?c.form:d.summon,c.dest); if(d.fake) m.fake=d.fake; lg(`${head}: it works. ${m.p.name} appears (it cannot move or fight this turn).`); endCheck(); return; }
   const ob={t:d.obj,q:c.dest.q,r:c.dest.r,age:0}; G.objs.push(ob); syncWalls(); lg(`${head}: it works (${c.cost} ST). A ${d.obj==="wall"?"wall":d.obj==="fire"?"hex of flame":"hex of black shadow"} appears.`);
     if(d.obj==="fire"){ const f=allU().find(x=>x.hp>0&&same(x,ob)); if(f) fireHits(f,2); } else endCheck(); return; }
@@ -623,6 +625,7 @@ function doCast(u,o,pa){
     for(const h of cs) G.objs.push({t:"slick",q:h.q,r:h.r,age:0,g,owner:u});
     lg(`${head}: it works (3 ST).${CTLMAIN&&u===G.me?" A megahex of slippery floor now lies around the hex you chose; nobody sees it until a figure steps on it.":""}`);
     for(const x of allU().filter(x=>x.hp>0&&slickAt(x)&&!x.air)) slipRoll(x); endCheck(); return; }
+  if(d.reveal){ const side=sideOf(u), found=enemiesOf(u).filter(x=>x.hp>0&&mhDist(u,x)<=5).map(x=>({x,l:[x.rev&&"Reverse Missiles",x.shield&&"a Spell Shield",x.stone&&"Stone Flesh",x.iron&&"Iron Flesh",x.shock&&"a Shock Shield"].filter(Boolean)})).filter(r=>r.l.length), sl=(G.objs||[]).filter(o=>o.t==="slick"&&mhDist(u,o)<=5); sl.forEach(o=>{ o.g.seen=o.g.seen||[]; if(!o.g.seen.includes(side)) o.g.seen.push(side); }); const nf=new Set(sl.map(o=>o.g)).size, txt=(found.length?found.map(r=>`${r.x.p.name} is protected by ${r.l.join(" and ")}`).join("; ")+".":"No secret protection within 5 megahexes.")+" "+(nf?`${nf} slippery floor${nf>1?"s are":" is"} now marked on the map.`:"No slippery floor within 5 megahexes."); u.rvlNew=txt; lg(`${head}: it works (1 ST). The spell shows its caster what is hidden nearby; only the caster is told.`); endCheck(); return; }
   if(d.dispel){ let n=0; for(const x of allU()) if(x.fake&&x.hp>0&&mhDist(u,x)<=5){ x.hp=0; n++; } lg(`${head}: it works (5 ST). ${n?n+" unreal thing"+(n>1?"s vanish":" vanishes")+".":"Nothing happens."}`); endCheck(); return; }
   if(d.k==="S"&&c.sp==="Blast"){ if(o.fake==="image"){ o.hp=0; lg(`${head}: it works (2 ST), but it was only an image and vanishes.`); endCheck(); return; } const dr=rollN(1), full=sum(dr)*m, st=stopsFor(o,u,null,"missile"), hits=Math.max(0,full-st);
     lg(`${head}: it works (2 ST). 1 die (${dr.join("")})${m>1?" ×"+m+" = "+full:""}; armor and protection stop ${Math.min(st,full)}. ${hits?sub(o)+" "+vb(o,"take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
@@ -739,6 +742,7 @@ function showPick(){
   const u=G.cur,o=other(u); G.oth=o; G.opts=options(u,o); G.phase="pick";
   G.note=(MWid(u)&&u.cool>0?`Your ${iname(MWid(u)).toLowerCase()} is still reloading (${u.cool} more turn${u.cool>1?"s":""}). `:"")+(!G.opts.some(x=>x.t==="attack")&&relOf(u,o)==="front"&&!u.engStart&&u.moved>MAu(u)/2?"You moved more than half your MA, so you cannot attack this turn. ":"")+(!G.opts.some(x=>x.t==="attack")&&relOf(u,o)!=="front"&&!u.hth&&!u.low&&!u.down&&(isW(u.right)||isW(u.left))?o.p.name+" is not in front of you, so you cannot attack it (click another enemy on the map, or move to face one). ":"")+(u.p.cls==="wizard"&&!G.opts.some(x=>x.t==="cast")&&!u.hth&&!u.sleep&&!u.down&&!(u.moved<=1||u.engStart)?"You moved more than 1 hex, so you cannot cast this turn unless you start engaged. ":"");
   if(enemiesOf(u).length>1) G.note=`Target: ${o.p.name} (click another enemy on the map to change it). `+G.note;
+  if(u.rvl) G.note="Reveal Magic showed you: "+u.rvl+" "+G.note;
   ui(); drawMap();
 }
 function takePick(act){ G.picks[G.pi?"foe":"me"]=act; G.pi++; if(G.pi>=2) resolveTurn(G.picks.me,G.picks.foe); else startPick(); }

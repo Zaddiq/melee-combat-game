@@ -190,3 +190,10 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Plain Rope still does not work on ST 20 or more, and a Spell Shield does not stop either spell (the booklet says it does not protect against magic ropes). A figure that is already roped cannot be roped again. Both spells are in the Wizard arena and the duel.
 - Implementation: `u.rope` is still the age counter, `u.ropeN` is how many ropes (1 or 2), `ropeNum(u)` reads it. The computer wizard's own IQ stops at 14, so it never casts Giant Rope; the scorer has a case for it anyway.
 - Not in (also true of plain Rope): a figure in an adjoining hex standing still and rolling its own adjDX to free someone else's rope. Tests S91-S97 and D6.
+
+## Reveal Magic
+- IQ 9, 1 ST, a special spell (Wizard 2018 Spell Reference Booklet, p. 2): to-hit on your adjDX with no range penalty, a miss costs 1 ST. It is aimed at nobody, so a Spell Shield does not stop it.
+- It shows the caster which enemy figures within 5 megahexes are protected by Reverse Missiles, a Spell Shield, Stone Flesh, Iron Flesh or a Shock Shield (who they are on, not who cast them), and marks every slippery floor within 5 megahexes. It says nothing about whether a figure is real, an image or an illusion.
+- Arena: the result goes in the log. Protections are already shown in the arena's status lines, so in practice it is the slippery floors that it uncovers; the floor is drawn for you only and the computer does not learn of it.
+- Duel: the log only says the spell worked. The caster alone is told what it found, in the note at the top of their pick screen on the next turn (it lasts that one turn), and any floors are drawn for that player only (`o.g.seen` lists the sides that were shown a floor). Not told: Mage Sight, Invisibility, Blur (not secret or not in the spell's list).
+- The computer wizard never casts it (not in its spell list). Tests S98-S101, D7, D8.

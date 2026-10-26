@@ -3,7 +3,7 @@ from playwright.sync_api import sync_playwright
 JS=r'''
 ()=>{
  const R=[]; const ok=(n,c)=>R.push([n,!!c]);
- const w=fromBuilder({name:"Wiz",race:"human",cls:"wizard",st:15,dx:14,iq:15,a:"none",b:"none",armor:"none",d1:"dagger",silver:true,spells:["Staff","Summon Wolf","Summon Bear","Giant Rope"]});
+ const w=fromBuilder({name:"Wiz",race:"human",cls:"wizard",st:15,dx:14,iq:15,a:"none",b:"none",armor:"none",d1:"dagger",silver:true,spells:["Staff","Summon Wolf","Summon Bear","Giant Rope","Reveal Magic"]});
  const f=fromBuilder({name:"Fig",race:"human",cls:"fighter",st:14,dx:13,iq:8,a:"broad",b:"small",armor:"leather",d1:"dagger"});
  slot[0]=w; slot[1]=f; me=w; foe=f; startFight();
  let g=0; while(G.phase!=="move"&&g++<10){ if(G.phase==="choose") choose(true); else if(G.phase==="renew"){ doRenew(); } else if(G.phase==="rcover"){ G.phase="renew"; } }
@@ -18,6 +18,8 @@ JS=r'''
  ok("D4 a minion cannot be grappled",!canHth(F0,m)&&!canHth(m,F0));
  ok("D5 winner and quitter use the other player, not a minion",opp(m)===F0&&opp(F0)===W0);
  ok("D6 Giant Rope in the duel: on a weaker figure it is two ropes, removed one at a time",(()=>{ const nb=nbr(W0,0)||nbr(W0,1); F0.q=nb.q; F0.r=nb.r; W0.hp=15; const m0=MA(F0.p); const sv=rollN; rollN=n=>Array.from({length:n},()=>1); doCast(W0,F0,{t:"cast",sp:"Giant Rope"}); const a=F0.rope===1&&F0.ropeN===2&&MAu(F0)===Math.floor(Math.floor(m0/2)/2); doUnrope(F0); rollN=sv; return a&&F0.ropeN===1&&F0.rope===1; })());
+ ok("D7 Reveal Magic in the duel: the log stays silent about what it found and only the caster is told, on the next turn",(()=>{ F0.stone=true; F0.rev=true; const sv=rollN; rollN=n=>Array.from({length:n},()=>1); doCast(W0,F0,{t:"cast",sp:"Reveal Magic"}); rollN=sv; const a=!/Stone Flesh/.test(G.log.slice(-1)[0])&&/Stone Flesh/.test(W0.rvlNew||""); nextTurn(); return a&&/Stone Flesh/.test(W0.rvl||"")&&!F0.rvl; })());
+ ok("D8 the pick screen shows the caster what Reveal Magic found, and the other player's pick screen does not",(()=>{ G.cur=W0; showPick(); const a=/Reveal Magic showed you: .*Stone Flesh/.test(G.note||""); G.cur=F0; showPick(); return a&&!/Reveal Magic/.test(G.note||""); })());
  return R;
 }'''
 with sync_playwright() as p:
