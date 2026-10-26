@@ -178,3 +178,8 @@ Thrown at a victim, 2 ST to cast and 1 ST a turn to keep (shown in the caster's 
 
 ## Mage Sight
 IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and spell attacks ignore the DX penalties for a target that is Blurred, Invisible or in Shadow. Remove Thrown Spell ends it. Secret in the duel. Tests S82–S84.
+
+## Slippery Floor
+- IQ 13, 3 ST, thrown at a megahex (a hex and its six neighbours). You pick the centre hex; the to-hit number is your DX minus the hexes from you to that centre. It lasts 12 turns like other created things. It is a secret protection: the other side cannot see it on the map (and the log says "a secret protection") until some figure rolls on it, then it is shown to everyone.
+- Every figure standing in the area when it is cast, every figure that enters a slick hex (each hex on its path counts, as with fire), and every figure that stays still in one, rolls 3 dice against DX or falls. A fallen figure on the slick floor must roll DX each turn to start to stand up. Fliers are unaffected. The computer will not step on slick it can see or cast itself.
+- Not in: crawling out of the slick without a roll (a fallen figure just keeps trying to stand); the exact hex of the fall along a path (a figure falls where it ends its move). Tests S85–S90.
