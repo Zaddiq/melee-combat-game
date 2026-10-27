@@ -113,6 +113,12 @@ details{margin-top:14px;border-top:1px solid var(--line);padding-top:8px}
 summary{cursor:pointer;font:600 12px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
 .toast{font-size:13px;color:var(--ok);min-height:1.2em}
+.tools{margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.tools .navrow{display:flex;flex-wrap:wrap;gap:2px 16px;font-size:13px;margin:0 0 8px}
+.tools .navrow a{white-space:nowrap}
+.tools .btnrow{margin:0 0 2px;gap:6px}
+.tools button{padding:5px 10px;font-size:13px}
+.tools details{margin-top:4px;border-top:0;padding-top:0}
 .help{font-size:12.5px;color:var(--muted)}
 @page{margin:.4in}
 @media print{
@@ -185,11 +191,28 @@ summary{cursor:pointer;font:600 12px var(--f-mono);letter-spacing:.08em;text-tra
     <div class="steps">
       <section class="step" id="s-who"></section>
       <section class="step" id="s-attr"></section>
-      <section class="step" id="s-spells"></section>
       <section class="step" id="s-gear"></section>
+      <section class="step" id="s-spells"></section>
     </div>
 
     <aside class="sheet" aria-label="Character sheet">
+      <div class="tools noprint">
+        <nav class="navrow" aria-label="Other pages"><a href="index.html">Menu</a><a href="arena.html">Melee Arena</a><a href="wizard-arena.html">Wizard Arena</a><a href="duel.html">Melee Duel</a><a href="sim.html">Fight simulator</a></nav>
+        <div class="btnrow">
+          <button id="printBtn" class="primary">Print or save as PDF</button>
+          <button id="copyJson">Copy data</button>
+          <button id="copySheet">Copy sheet as text</button>
+          <button id="benchA">Send to bench as A</button>
+          <button id="benchB">Send to bench as B</button>
+        </div>
+        <div class="toast" id="toast" role="status"></div>
+        <details id="saveBox">
+          <summary>Load a saved character</summary>
+          <p class="help">The bench holds two fighters, A and B, that the simulator and the duel can load. The page remembers your last character in this browser. To keep it elsewhere, use Copy data, and paste the text here later.</p>
+          <textarea id="json" rows="5" aria-label="Character data" spellcheck="false"></textarea>
+          <div class="btnrow"><button id="loadJson">Load from box</button></div>
+        </details>
+      </div>
       <div class="ptitle" id="ptitle"></div>
       <div class="nameline"><span class="pname">Name</span><input id="name" type="text" placeholder="Character name" aria-label="Character name" maxlength="60"></div>
       <div class="who" id="who"></div>
@@ -198,20 +221,6 @@ summary{cursor:pointer;font:600 12px var(--f-mono);letter-spacing:.08em;text-tra
       <div class="row" id="epRow"></div>
       <h3>Notes</h3>
       <textarea id="notes" rows="3" aria-label="Notes" placeholder="Pets, magic items, background"></textarea>
-      <div class="btnrow noprint"><button id="printBtn" class="primary">Print or save as PDF</button> <a href="arena.html" style="margin-left:12px;white-space:nowrap">Melee Arena &rarr;</a> <a href="sim.html" style="margin-left:12px;white-space:nowrap">Fight simulator &rarr;</a> <a href="index.html" style="margin-left:12px;white-space:nowrap">Menu</a></div>
-      <details>
-        <summary>Save and load</summary>
-        <p class="help">The bench holds two fighters, A and B, that the simulator and the duel can load. The page remembers your last character in this browser. To keep it elsewhere, copy the text below and paste it back later.</p>
-        <textarea id="json" rows="5" aria-label="Character data" spellcheck="false"></textarea>
-        <div class="btnrow">
-          <button id="copyJson">Copy data</button>
-          <button id="loadJson">Load from box</button>
-          <button id="copySheet">Copy sheet as text</button>
-          <button id="benchA">Send to bench as A</button>
-          <button id="benchB">Send to bench as B</button>
-        </div>
-        <div class="toast" id="toast" role="status"></div>
-      </details>
     </aside>
   </div>
 </div>
@@ -472,10 +481,10 @@ function spellAfford(s){ return minCost(s) > S.st-1; }
 function renderSpells(){
   const el=$("s-spells");
   if(S.cls==="fighter"){
-    el.innerHTML=`<h2><span class="n">3</span>Spells</h2><p class="note">Fighters do not know spells. Switch the class to Wizard to choose spells.</p>`; return;
+    el.innerHTML=`<h2><span class="n">4</span>Spells</h2><p class="note">Fighters do not know spells. Switch the class to Wizard to choose spells.</p>`; return;
   }
   const full=S.spells.length>=S.iq;
-  let html=`<h2><span class="n">3</span>Spells<span class="count">${S.spells.length} of ${S.iq}</span></h2>
+  let html=`<h2><span class="n">4</span>Spells<span class="count">${S.spells.length} of ${S.iq}</span></h2>
   <p class="note" style="margin-top:0">Pick up to ${S.iq} spells from levels 8 to ${S.iq}. Types: S special, M missile, T thrown, C creation. Spells in red cost too much to cast at your full ST of ${S.st}; a wizard cannot drop below 1 ST.</p>`;
   for(let iq=8;iq<=16;iq++){
     const list=SPELLS.filter(s=>s.iq===iq), locked=iq>S.iq;
@@ -515,7 +524,7 @@ function daggerOptions(slot){
 }
 function renderGear(){
   const A=hasStaff();
-  $("s-gear").innerHTML=`<h2><span class="n">4</span>Armor and weapons</h2>
+  $("s-gear").innerHTML=`<h2><span class="n">3</span>Armor and weapons</h2>
   <div class="gear">
     <label class="f">Armor<select id="armor">${Object.entries(ARMOR).map(([k,a])=>`<option value="${k}"${k===S.armor?" selected":""}>${a.n} (stops ${a.stops}${a.pen.m?`, DX −${a.pen.m}`:""})</option>`).join("")}</select></label>
     <label class="f">Right hand<select id="slotA"${A?" disabled":""}>${A?`<option>Staff (from Staff spell)</option>`:gearOptions("a")}</select></label>
@@ -616,7 +625,7 @@ document.addEventListener("click",e=>{
   if(t.id==="loadJson"){ try{ S=normalize(JSON.parse($("json").value)); $("name").value=S.name; $("notes").value=S.notes; renderAll(); toast("Loaded."); }catch(err){ toast("That text is not valid character data."); } return; }
 });
 function copy(text,msg){
-  const fallback=()=>{ const ta=$("json"); ta.value=text; ta.focus(); ta.select(); toast("Select and copy the text in the box."); };
+  const fallback=()=>{ const d=$("saveBox"); if(d) d.open=true; const ta=$("json"); ta.value=text; ta.focus(); ta.select(); toast("Select and copy the text in the box."); };
   try{ navigator.clipboard.writeText(text).then(()=>toast(msg),fallback); }catch(e){ fallback(); }
 }
 document.addEventListener("change",e=>{

@@ -208,3 +208,9 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - The card (opponent and your own fighter) listed damage only for non-missile weapons, so an archer or a wizard with empty hands showed "Damage: none". It now lists every weapon in hand (and a slung one), marks missile weapons "(missile)", and says "none in hand (spells)" for a wizard with nothing in hand. Wizard arena and duel; `arena.html` is frozen and keeps its old card.
 - The Wizard arena still warned that "missile weapons are not in the arena yet" and "hand-to-hand is not in the arena yet". Both are in; the warning now only says when a fighter carries no melee weapon and no bow. Tests S106, S107.
 - Reminder when reading logs: "No damage gets through" is a real result, not a bug. A small bow does 1d-1 (it can roll 0, and any armor stops 1-3 hits), and a Gargoyle's hide stops 3.
+
+## Builder layout (Oct 26)
+- Step order is now 1 Race and class, 2 Attributes, 3 Armor and weapons, 4 Spells (spells last, so the long list is at the bottom).
+- The top of the character sheet (right column) holds a toolbar: links to Menu, Melee Arena, Wizard Arena, Melee Duel and the Fight simulator; then Print or save as PDF, Copy data, Copy sheet as text, Send to bench as A / B; then a folded "Load a saved character" box with the data text and "Load from box". The status message ("Data copied.", "on the bench as A") shows right under the buttons. If copying to the clipboard fails, the box opens by itself with the text selected.
+- The toolbar is hidden when printing; the printed sheet is unchanged. All buttons are found by id, so their code did not change.
+- Still on the list (owner asked for more layout tweaks later): spell list length, the sheet column being taller than a short window, and the single-column stacking below 860 px (tablet portrait).
