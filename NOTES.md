@@ -225,7 +225,7 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 
 ## Creature opponents in the Unlimited Arena (Oct 27)
 - Single creature only (Wolf, Bear, Gargoyle, Giant), picked in the opponent list under "Creatures (always an even match)". Stats come from the `CRE` table; hides are armor, natural weapons are `hid`.
-- Always counted as an even match: a win is 50 EP and is recorded, never an exhibition. Random opponent: only when a creature's ST+DX equals the player's, and then a 20% chance; otherwise a normal random human.
+- Always counted as an even match: a win is 50 EP and is recorded, never an exhibition. Random opponent: a creature only when its book ST+DX is within 2 of the player's (Wolf 24, Gargoyle 31, Giant 39, Bear 41; stats are not scaled), and then a 20% chance; otherwise a normal random human.
 - The gargoyle is a natural flier. Control Animal works on Wolf/Bear, Control Person on Giant/Gargoyle (`ctlOK`).
 - Arena Classic and the duel are unchanged.
 - Tests: spells_test S110-S115; fuzzer `tests/fuzz/creaturefz.py` (48 fights).

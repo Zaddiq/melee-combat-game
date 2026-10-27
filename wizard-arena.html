@@ -1087,7 +1087,7 @@ function buildFoe(){
   if(m.k==="wizard") return makeWizard();
   if(m.k==="preset") return fromBuilder(matched(PRESETS[m.id],me.st+me.dx));
   if(m.k==="fixed") return fromBuilder(JSON.parse(JSON.stringify(m.o)));
-  const same=FOE_CRE.filter(k=>CRE[k].st+CRE[k].dx===me.st+me.dx);   /* a random opponent is a creature only when its ST+DX equals yours */
+  const same=FOE_CRE.filter(k=>Math.abs(CRE[k].st+CRE[k].dx-(me.st+me.dx))<=2);   /* a random opponent is a creature only when its ST+DX is within 2 of yours */
   if(same.length&&Math.random()<.2) return creatureFoe(pick(same));
   return makeOpponent(me.st+me.dx);
 }
