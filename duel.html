@@ -99,7 +99,7 @@ const ropeNum=u=>u.rope>0?(u.ropeN||1):0;   /* how many magic ropes hold this fi
 const MAu=u=>{ if(u.stop>0) return 0; let m=u.air?(u.natFly?16:(u.airN<=1?6:12)):MA(u.p); if(u.spd>0) m*=2; if(u.slow>0) m=Math.floor(m/2); for(let i=ropeNum(u);i>0;i--) m=Math.floor(m/2); return m; };
 const stops=f=>ARMOR[f.armor].stops+[f.right,f.left].reduce((t,k)=>t+(SHIELDS[k]?SHIELDS[k].stops:0),0)+(f.left==="mg"?1:0);
 const iname=k=>k==="none"?"nothing":(W[k]||SHIELDS[k]).n;
-function dmg(f,k){ if(!W[k]||W[k].miss)return""; let m=W[k].m; return dice(W[k].d,m); }
+function dmg(f,k){ if(!W[k])return""; let m=W[k].m; return dice(W[k].d,m)+(W[k].miss?" (missile)":""); }
 
 /* ---- opponent: same ST+DX total as the player ---- */
 /* Arena opponents follow two rules: (1) carry the weapon that does the most damage for its ST, (2) wear as much armor and shield as it can while keeping adjDX 11 or more. */
@@ -151,7 +151,7 @@ function card(f,cls){
   <tr><td>ST / DX / IQ</td><td><b>${f.st} / ${f.dx} / ${f.iq}</b> (ST+DX ${f.st+f.dx})</td></tr>
   <tr><td>Armor</td><td>${ARMOR[f.armor].n}, MA ${MA(f)}</td></tr>
   <tr><td>In hand</td><td>${esc(hands)}</td></tr>
-  <tr><td>Damage</td><td>${[f.right,f.left].filter(k=>W[k]&&!W[k].miss).map(k=>iname(k)+" "+dmg(f,k)).join(", ")||"none"}</td></tr>
+  <tr><td>Damage</td><td>${[f.right,f.left,f.slung].filter(k=>W[k]).map(k=>iname(k)+" "+dmg(f,k)+(k===f.slung&&k!==f.right&&k!==f.left?" (slung)":"")).join(", ")||(f.cls==="wizard"?"none in hand (spells)":"none")}</td></tr>
   <tr><td>Hits stopped</td><td>${stops(f)}</td></tr>
   <tr><td>Adjusted DX</td><td><b>${adjDX(f)}</b></td></tr>
   ${f.cls==="wizard"?`<tr><td>Spells that work here</td><td>${esc((f.spells||[]).filter(n=>SP[n]).join(", ")||"none")}</td></tr>`:""}
