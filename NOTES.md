@@ -222,3 +222,11 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 ## Natural weapons cannot be dropped or broken (Oct 27)
 - A summoned creature's bite, claw, fist or club (the weapons flagged `hid`) is part of the creature. Before this fix a Wolf or Bear that rolled 17 "dropped the bite" and one that rolled 18 "broke" it, then fought with nothing for the rest of the fight (about a 2% chance per attack). Now a 17 or 18 with a natural weapon is only a miss.
 - Drop Weapon does nothing to a natural weapon (it can still drop a Myrmidon's sword), and Break Weapon finds "nothing to break" on a creature that has only a natural weapon. Fixed in both the Unlimited Arena and the duel. Tests S108, S109.
+
+## Creature opponents in the Unlimited Arena (Oct 27)
+- Single creature only (Wolf, Bear, Gargoyle, Giant), picked in the opponent list under "Creatures (always an even match)". Stats come from the `CRE` table; hides are armor, natural weapons are `hid`.
+- Always counted as an even match: a win is 50 EP and is recorded, never an exhibition. Random opponent: only when a creature's ST+DX equals the player's, and then a 20% chance; otherwise a normal random human.
+- The gargoyle is a natural flier. Control Animal works on Wolf/Bear, Control Person on Giant/Gargoyle (`ctlOK`).
+- Arena Classic and the duel are unchanged.
+- Tests: spells_test S110-S115; fuzzer `tests/fuzz/creaturefz.py` (48 fights).
+

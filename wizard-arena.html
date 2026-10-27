@@ -147,7 +147,7 @@ const isW0=id=>!!(W[id]&&!W[id].miss&&id!=="staff"||id==="staff");
 function card(f,cls){
   const hands=f.right==="none"&&f.left==="none"?"empty hands":iname(f.right)+" (right), "+iname(f.left)+" (left)";
   return `<h3 class="${cls}" style="margin:0 0 4px">${esc(f.name)}</h3><table>
-  <tr><td>Race / class</td><td>${RACES[f.race].n}, ${f.cls}</td></tr>
+  <tr><td>Race / class</td><td>${f.creature?"Creature":RACES[f.race].n+", "+f.cls}</td></tr>
   <tr><td>ST / DX / IQ</td><td><b>${f.st} / ${f.dx} / ${f.iq}</b> (ST+DX ${f.st+f.dx})</td></tr>
   <tr><td>Armor</td><td>${ARMOR[f.armor].n}, MA ${MA(f)}</td></tr>
   <tr><td>In hand</td><td>${esc(hands)}</td></tr>
@@ -263,7 +263,7 @@ function settle(){
   if(G.me.hp<0){ r.dead=true; r.losses++; lg("Your run ends here."); }
   else if(G.me.hp===0){ r.losses++; lg("You are unconscious at ST 0. A loss earns no EP. You heal and may fight again."); }
   else {
-    const gain=(foe.st+foe.dx)-(me.st+me.dx)>3?100:50; G.gain=gain;
+    const gain=!foe.creature&&(foe.st+foe.dx)-(me.st+me.dx)>3?100:50; G.gain=gain;
     r.wins++; r.ep+=gain; lg(`Victory: +${gain} EP${gain===100?" (the enemy was more than 3 points superior in ST+DX)":""} (${r.wins} wins).`);
     if(r.ep>=100){ r.ep-=100; if(r.banked){ r.pend=2; r.must=true; r.banked=false; } else { r.pend=1; r.must=false; }
       lg("100 EP: you earned an attribute point."); }
@@ -287,6 +287,7 @@ const ctlsOf=u=>allU().filter(x=>x.ctl===u&&!x.minion&&x.hp>0);
 const ANIMAL=["wolf","bear"], PERSON=["myrmidon","gargoyle","giant"];
 function ctlOK(u,o,kind){ if(!o||o.hp<=0||sideOf(o)===sideOf(u)) return false;
   const k=o.kind; if(o.minion||o.fake) return (kind==="animal"?ANIMAL:PERSON).includes(k);
+  if(o===G.foe&&o.p.creature) return CTLMAIN&&(kind==="animal"?ANIMAL:PERSON).includes(o.p.creature);
   return kind==="person"&&CTLMAIN&&o===G.foe; }
 function releaseCtl(x,why){ x.ctl=null; if(x.minion){ x.hp=0; } lg(`${x.p.name} is free of the control spell${x.minion?" and vanishes":""}${why?" ("+why+")":""}.`); }
 const enemiesOf=u=>allU().filter(x=>x!==u&&x.hp>0&&sideOf(x)!==sideOf(u));
@@ -310,7 +311,8 @@ function startFight(){
   if(!me||!foe)return; const s=startHexes();
   G={me:mk(s.mine,me),foe:mk(s.theirs,foe),turn:0,phase:"",log:[],order:[],idx:0,start:null,reach:null,eng:false,moved:0,floor:[],objs:[]};
   G.units=[G.me,G.foe]; G.tgt=null; WALLS=new Set(); G.me.f=faceToward(G.me,G.foe); G.foe.f=faceToward(G.foe,G.me);
-  G.exhib=foeMode.k!=="random"&&(foe.st+foe.dx)<(me.st+me.dx)-3;
+  G.exhib=!foe.creature&&foeMode.k!=="random"&&(foe.st+foe.dx)<(me.st+me.dx)-3;
+  G.foe.natFly=foe.creature==="gargoyle";
   $("setup").open=false;   /* fold the setup cards so the fight controls sit beside the map */
   nextTurn(); ui(); drawMap();
 }
@@ -577,7 +579,9 @@ function castBase(u){ return adjDXu(u,"single",null)-(ironU(u)?4:0); }
 function castList(u,o){
   const L=[]; if(u.p.cls!=="wizard"||u.down||u.hp<=0) return L;
   const nsee=!u.sight, known=new Set(u.p.spells||[]), front=inFront(u,o), near=dist(u,o)<=1, base=castBase(u)-(u.air?2:0), fy=(o.air?-4:0)+(nsee&&shadowAt(o)&&!o.inv?-4:0)+(shadowAt(u)?-6:0), mx=u.hp;
-  for(const name of Object.keys(SP)){ if(!known.has(name)) continue; const d=SP[name]; if(u.conf>0&&(SPIQ[name]||0)>effIQ(u)) continue;   /* a confused wizard cannot cast spells above his lowered IQ */
+  for(const name of Object.keys(SP)){ if(!known.has(name)) continue; const d=SP[name]; if(u.conf>0&&(SPIQ[name]||0)>effIQ(u)) continue;
+    if(name==="Drop Weapon"&&![o.right,o.left].some(k=>k!=="none"&&!(W[k]&&W[k].hid))) continue;   /* a natural weapon cannot be dropped */
+    if(name==="Break Weapon"&&!brkItem(o)) continue;   /* a confused wizard cannot cast spells above his lowered IQ */
     if(d.k==="M"){ if(!front) continue; const mh=mhDist(u,o), dx=base+fy+mhPen(mh)+(nsee&&o.inv?-6:nsee&&o.blur?-4+(u.daz>0?3:0):0);
       for(let n=1;n<=3&&n<=mx;n++) L.push({sp:name,n,cost:n,dx,label:`${name} with ${n} ST (needs ${dx} or less; ${mh} megahex${mh===1?"":"es"} away)`}); continue; }
     if(d.slick){ if(mx>=3&&creaHexes(u,o,"slick").length) L.push({sp:name,cost:3,dx:base,hexsel:"slick",label:`Slippery Floor (3 ST; needs ${base} minus the hexes to its centre; you pick the centre of the megahex, it stays hidden until someone steps on it)`}); continue; }
@@ -1075,22 +1079,28 @@ function makeWizard(){
   const sp=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Reverse Missiles","Rope","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion","Avert","Invisibility","Mage Sight","Control Animal","Control Person","Slippery Floor"].filter(n=>n==="Staff"||(({"Magic Fist":8,"Blur":8,"Drop Weapon":8,"Slow Movement":8,"Clumsiness":9,"Aid":9,"Trip":10,"Sleep":11,"Fireball":12,"Freeze":12,"Stone Flesh":13,"Stop":13,"Lightning":14,"Iron Flesh":15,"Speed Movement":10,"Dazzle":10,"Blast":12,"Break Weapon":12,"Remove Thrown Spell":14,"Spell Shield":14,"Reverse Missiles":11,"Rope":11,"Summon Wolf":9,"Summon Myrmidon":10,"Summon Bear":11,"Summon Gargoyle":13,"Summon Giant":14,"Image":8,"Illusion":11,"Dispel Illusions":14,"Confusion":9,"Avert":9})[n]<=iq));
   const f=fromBuilder({name:pick(["Morvane","Elowen","Sethric","Ilvara","Zorn","Kaleth"])+" the "+pick(["Mage","Sorcerer","Hedge Wizard","Enchanter"]),race:"human",cls:"wizard",st,dx,iq,a:"none",b:"none",armor:"none",d1:"dagger",silver:true,spells:sp,total:me.total});
   return f; }
+const FOE_CRE=["wolf","bear","gargoyle","giant"];   /* creatures that can be the opponent (Wizard 2018 monster table) */
+function creatureFoe(kind){ const C=CRE[kind], f=fromBuilder({name:C.name,race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"}); f.creature=kind; return f; }
 function buildFoe(){
   const m=foeMode;
+  if(m.k==="creature") return creatureFoe(m.kind);
   if(m.k==="wizard") return makeWizard();
   if(m.k==="preset") return fromBuilder(matched(PRESETS[m.id],me.st+me.dx));
   if(m.k==="fixed") return fromBuilder(JSON.parse(JSON.stringify(m.o)));
+  const same=FOE_CRE.filter(k=>CRE[k].st+CRE[k].dx===me.st+me.dx);   /* a random opponent is a creature only when its ST+DX equals yours */
+  if(same.length&&Math.random()<.2) return creatureFoe(pick(same));
   return makeOpponent(me.st+me.dx);
 }
 function foeNote(){ const d=(foe.st+foe.dx)-(me.st+me.dx); let t;
-  if(d>3) t="This opponent is more than 3 points stronger in ST+DX than you. A win is worth 100 EP.";
+  if(foe.creature) t=`A creature fight always counts as an even match: a win is worth 50 EP. Its ST+DX is ${foe.st+foe.dx}; yours is ${me.st+me.dx}.`;
+  else if(d>3) t="This opponent is more than 3 points stronger in ST+DX than you. A win is worth 100 EP.";
   else if(d<-3&&foeMode.k!=="random") t="This opponent is more than 3 points weaker than you. It is an exhibition: nothing is recorded.";
   else t="An even match. A win is worth 50 EP.";
   return `<div class="mut" style="margin-top:6px">${t}</div>`; }
 function renderFoeSel(){
-  const sel=$("foeSel"); if(!sel) return; const cur=foeMode.k==="wizard"?"wizard":foeMode.k==="preset"?"p:"+foeMode.id:foeMode.k==="fixed"?foeMode.src||"custom":"random";
-  sel.innerHTML=`<option value="random">Random, matched to you</option>`+Object.entries(PRESETS).map(([k,v])=>`<option value="p:${k}">${v.n} (matched to you)</option>`).join("")+`<option value="wizard">Wizard (spells, matched to you)</option><option value="roster">One of my roster fighters…</option><option value="custom">Build a custom opponent…</option>`;
-  sel.value=["random","roster","custom","wizard"].includes(cur)||cur.startsWith("p:")?cur:"random";
+  const sel=$("foeSel"); if(!sel) return; const cur=foeMode.k==="creature"?"c:"+foeMode.kind:foeMode.k==="wizard"?"wizard":foeMode.k==="preset"?"p:"+foeMode.id:foeMode.k==="fixed"?foeMode.src||"custom":"random";
+  sel.innerHTML=`<option value="random">Random, matched to you</option>`+Object.entries(PRESETS).map(([k,v])=>`<option value="p:${k}">${v.n} (matched to you)</option>`).join("")+`<option value="wizard">Wizard (spells, matched to you)</option><optgroup label="Creatures (always an even match)">${FOE_CRE.map(k=>`<option value="c:${k}">${CRE[k].name} (ST ${CRE[k].st}, DX ${CRE[k].dx})</option>`).join("")}</optgroup><option value="roster">One of my roster fighters…</option><option value="custom">Build a custom opponent…</option>`;
+  sel.value=["random","roster","custom","wizard"].includes(cur)||cur.startsWith("p:")||cur.startsWith("c:")?cur:"random";
 }
 function renderFoeCfg(v){
   const c=$("foeCfg"); c.innerHTML="";
@@ -1115,6 +1125,7 @@ $("foeSel").onchange=()=>{ const v=$("foeSel").value;
   if(v==="random"){ foeMode={k:"random"}; renderFoeCfg(""); if(me) newFoe(); }
   else if(v==="wizard"){ foeMode={k:"wizard"}; renderFoeCfg(""); if(me) newFoe(); }
   else if(v.startsWith("p:")){ foeMode={k:"preset",id:v.slice(2)}; renderFoeCfg(""); if(me) newFoe(); }
+  else if(v.startsWith("c:")){ foeMode={k:"creature",kind:v.slice(2)}; renderFoeCfg(""); if(me) newFoe(); }
   else renderFoeCfg(v); };
 renderFoeSel(); renderHof();
 try{ const last=localStorage.getItem("melee-arena-last"), r=last&&REC[last]; if(r&&r.src&&!r.dead) setMe(fromBuilder(Object.assign({},freshSrc(r),{st:r.st,dx:r.dx})),"Welcome back. Resumed "+r.name+" (gear from the builder if it holds this fighter)."); }catch(e){}
