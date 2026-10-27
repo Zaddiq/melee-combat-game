@@ -4,7 +4,7 @@
 
 **Authoritative rules:** the owner's own Melee Third Edition 2018 and Wizard 2018 PDFs (not committed; ask the owner to attach them). Keep characters "Melee legal". Design decisions and guessed rules are in `NOTES.md`.
 
-**Pages:** `builder.html` (characters, spell table), `arena.html` (Melee arena, FROZEN: do not change except what the owner asks), `wizard-arena.html` (Wizard arena, 1 human vs computer plus summons), `duel.html` (two humans on one device, secret orders). Shared: `rules.js`, `maps.js` (Wizard hex map).
+**Pages:** `builder.html` (characters, spell table), `arena.html` (now called **Arena Classic**; Melee arena, FROZEN: do not change except what the owner asks), `wizard-arena.html` (now called **Unlimited Arena**, no longer beta; Wizard arena, 1 human vs computer plus summons). The owner decided to keep both pages, not merge them, `duel.html` (two humans on one device, secret orders). Shared: `rules.js`, `maps.js` (Wizard hex map).
 
 **Owner preferences:** one feature at a time (save tokens); the owner tests it themselves; Claude makes branches, merges to main and pushes; no mid-fight saving; opponents "just a little harder than originally"; duel XP rules in NOTES.md.
 

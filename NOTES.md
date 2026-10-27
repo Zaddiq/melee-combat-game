@@ -214,3 +214,7 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - The top of the character sheet (right column) holds a toolbar: links to Menu, Melee Arena, Wizard Arena, Melee Duel and the Fight simulator; then Print or save as PDF, Copy data, Copy sheet as text, Send to bench as A / B; then a folded "Load a saved character" box with the data text and "Load from box". The status message ("Data copied.", "on the bench as A") shows right under the buttons. If copying to the clipboard fails, the box opens by itself with the text selected.
 - The toolbar is hidden when printing; the printed sheet is unchanged. All buttons are found by id, so their code did not change.
 - Still on the list (owner asked for more layout tweaks later): spell list length, the sheet column being taller than a short window, and the single-column stacking below 860 px (tablet portrait).
+
+## Page names (Oct 26)
+- The owner kept both arenas and renamed them: `arena.html` is **Arena Classic** (fighters, Melee rules only, still frozen) and `wizard-arena.html` is **Unlimited Arena** (everything in Classic plus spells, wizard opponents and summoned creatures; the "beta" label is gone). File names and links did not change. Older notes above still say "Melee arena" and "Wizard arena" for these two pages.
+- Decision: do not merge the two pages. Considered and put aside: renaming `wizard-arena.html` to `arena.html` after a bot-vs-bot outcome comparison (the 70 Classic rules checks already pass 70/70 against the Unlimited Arena).
