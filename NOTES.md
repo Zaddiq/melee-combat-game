@@ -218,3 +218,7 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 ## Page names (Oct 26)
 - The owner kept both arenas and renamed them: `arena.html` is **Arena Classic** (fighters, Melee rules only, still frozen) and `wizard-arena.html` is **Unlimited Arena** (everything in Classic plus spells, wizard opponents and summoned creatures; the "beta" label is gone). File names and links did not change. Older notes above still say "Melee arena" and "Wizard arena" for these two pages.
 - Decision: do not merge the two pages. Considered and put aside: renaming `wizard-arena.html` to `arena.html` after a bot-vs-bot outcome comparison (the 70 Classic rules checks already pass 70/70 against the Unlimited Arena).
+
+## Natural weapons cannot be dropped or broken (Oct 27)
+- A summoned creature's bite, claw, fist or club (the weapons flagged `hid`) is part of the creature. Before this fix a Wolf or Bear that rolled 17 "dropped the bite" and one that rolled 18 "broke" it, then fought with nothing for the rest of the fight (about a 2% chance per attack). Now a 17 or 18 with a natural weapon is only a miss.
+- Drop Weapon does nothing to a natural weapon (it can still drop a Myrmidon's sword), and Break Weapon finds "nothing to break" on a creature that has only a natural weapon. Fixed in both the Unlimited Arena and the duel. Tests S108, S109.

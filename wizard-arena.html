@@ -571,7 +571,7 @@ const SP={
 };
 const RMV=["avert","fly","blur","inv","sight","stone","iron","slow","stop","spd","clum","aid","sleep","frozen"];
 const rmCount=u=>RMV.filter(k=>u[k]).length;
-function brkItem(o){ const w=[o.right,o.left].find(k=>isW(k)&&!SHIELDS[k]&&k!==o.brkW); if(w) return w; const sh=[o.left,o.right].find(k=>SHIELDS[k]); return sh||null; }
+function brkItem(o){ const w=[o.right,o.left].find(k=>isW(k)&&!W[k].hid&&!SHIELDS[k]&&k!==o.brkW); if(w) return w; const sh=[o.left,o.right].find(k=>SHIELDS[k]); return sh||null; }
 const ironU=u=>u.p.cls==="wizard"&&!u.p.silver&&(["chain","halfplate","plate"].includes(u.p.armor)||[u.right,u.left].some(k=>isW(k)&&k!=="staff"));
 function castBase(u){ return adjDXu(u,"single",null)-(ironU(u)?4:0); }
 function castList(u,o){
@@ -678,7 +678,7 @@ function doCast(u,o,pa){
     case "Trip": if(o.air){ msg=sub(o)+" is in the air and cannot be tripped."; } else if(!o.down){ o.down=true; o.low=null; msg=sub(o)+" "+vb(o,"are","is")+" knocked down."; } else msg=sub(o)+" is already down."; break;
     case "Sleep": land(o); o.sleep=true; o.down=true; o.low=null; msg=`${sub(o)} falls asleep and stays that way until hit.`; break;
     case "Freeze": { const r=sum(rollN(2)); o.frozen=r*m; msg=`${sub(o)} ${vb(o,"are","is")} frozen for ${o.frozen} turns (rolled ${r}${m>1?" ×"+m:""}).`; break; }
-    case "Drop Weapon": { const k=o.right!=="none"?"right":o.left!=="none"?"left":null; if(k){ const id=o[k]; G.floor.push({q:o.q,r:o.r,id}); o[k]="none"; msg=`${sub(o)} ${vb(o,"drop","drops")} the ${iname(id).toLowerCase()}.`; } else msg=sub(o)+" holds nothing to drop."; break; }
+    case "Drop Weapon": { const nat=h=>!!(W[o[h]]&&W[o[h]].hid), k=(o.right!=="none"&&!nat("right"))?"right":(o.left!=="none"&&!nat("left"))?"left":null; if(k){ const id=o[k]; G.floor.push({q:o.q,r:o.r,id}); o[k]="none"; msg=`${sub(o)} ${vb(o,"drop","drops")} the ${iname(id).toLowerCase()}.`; } else msg=sub(o)+" holds nothing to drop."; break; }
   }
   lg(`${head}: it works (${c.cost} ST). ${msg}`);
   endCheck();
@@ -820,6 +820,7 @@ function doAttack(a,d,wid,mode,kind){
   let hit,mult=1,fumble=null;
   if(!defend){ if(t===3){hit=true;mult=3;} else if(t===4){hit=true;mult=2;} else if(t===5)hit=true; else if(t===16)hit=false; else if(t===17){hit=false;fumble="drop";} else if(t===18){hit=false;fumble="break";} else hit=t<=dx; }
   else { if(t===4){hit=true;mult=3;} else if(t===5){hit=true;mult=2;} else if(t>=23){hit=false;fumble="break";} else if(t>=21){hit=false;fumble="drop";} else if(t>=20)hit=false; else hit=t<=dx; }
+  if(fumble&&W[wid]&&W[wid].hid) fumble=null;   /* a bite, claw or fist is part of the creature: a fumble is only a miss */
   if(kind==="thrown"){ if(a.right===wid)a.right="none"; else if(a.left===wid)a.left="none"; if(fumble!=="break") G.floor.push({q:d.q,r:d.r,id:wid}); }
   const tn=d===G.me?"you":sub(d), verb=kind==="missile"?`${vb(a,"fire","fires")} ${iname(wid).toLowerCase()} at ${tn} (`:kind==="thrown"?`${vb(a,"throw","throws")} ${iname(wid).toLowerCase()} at ${tn} (`:kind==="jab"?`${vb(a,"jab","jabs")} ${tn} with ${iname(wid)} (`:`${vb(a,"attack","attacks")} ${tn} with ${iname(wid)} (`;
   const head=`${sub(a)} ${verb}needs ${dx} or less on ${n}d6, rolled ${t}${mult===3?": triple damage":mult===2?": double damage":""})`;
