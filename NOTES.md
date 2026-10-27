@@ -229,4 +229,4 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - The gargoyle is a natural flier. Control Animal works on Wolf/Bear, Control Person on Giant/Gargoyle (`ctlOK`).
 - Arena Classic and the duel are unchanged.
 - Tests: spells_test S110-S115; fuzzer `tests/fuzz/creaturefz.py` (48 fights).
-
+- Fights 14 to 16 of a champion's run (13 to 15 wins): a Gargoyle can be the random opponent at any ST+DX (same 20% chance, still an even match worth 50 EP).

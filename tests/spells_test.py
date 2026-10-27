@@ -156,6 +156,7 @@ JS=r'''
  ok("S114 a Gargoyle opponent is a natural flier and takes to the air to close the distance",(()=>{ const g=crSetup("gargoyle",12,12); const a=g.foe.natFly===true&&!g.foe.air; g.foe.fresh=false; aiMove(g.foe); return a&&g.foe.air===true&&MAu(g.foe)===16; })());
  ok("S115 Drop Weapon and Break Weapon are not offered against a creature that has only a natural weapon",(()=>{ const [w,f,m]=natHold("wolf"); const L=castList(w,m).map(x=>x.sp); const [w2,f2,my]=natHold("myrmidon"); const L2=castList(w2,my).map(x=>x.sp); return !L.includes("Drop Weapon")&&!L.includes("Break Weapon")&&L2.includes("Drop Weapon")&&L2.includes("Break Weapon"); })());
 
+ ok("S116 a Gargoyle can be the random opponent in fights 14 to 16 (13 to 15 wins) at any ST+DX, and not in fight 13 or after 16",(()=>{ foeMode={k:"random"}; const sv=Math.random; const seen=w=>{ me=applyRecord(fromBuilder({name:"Late"+w+Math.random(),race:"human",cls:"fighter",st:14,dx:14,iq:8,a:"shortsw",b:"none",armor:"leather",d1:"dagger"})); me.rec.wins=w; Math.random=()=>0.1; const f=buildFoe(); Math.random=sv; return f.creature; }; return seen(13)==="gargoyle"&&seen(15)==="gargoyle"&&seen(12)!=="gargoyle"&&seen(16)!=="gargoyle"; })());
  return R;
 }'''
 with sync_playwright() as p:
