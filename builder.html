@@ -89,6 +89,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .gear select{width:100%}
 /* sheet */
 aside.sheet{position:sticky;top:12px;background:var(--panel);border:1px solid var(--ink);border-radius:3px;padding:16px;min-width:0;box-shadow:4px 4px 0 var(--line)}
+@media screen and (min-width:861px){aside.sheet{max-height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain}}  /* the sheet scrolls on its own, so the DX adjustments are reachable without scrolling the whole spell list */
 @media (max-width:860px){aside.sheet{position:static}}
 .sheet .nameline{display:flex;gap:8px;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:6px}
 .sheet #name{flex:1;font:700 26px var(--f-display);background:transparent;border:0;padding:0;border-radius:0;min-width:0}
