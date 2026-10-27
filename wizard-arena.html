@@ -1090,6 +1090,7 @@ function buildFoe(){
   let same=FOE_CRE.filter(k=>Math.abs(CRE[k].st+CRE[k].dx-(me.st+me.dx))<=2);
   if(me.rec&&me.rec.wins>=13&&me.rec.wins<=15&&!same.includes("gargoyle")) same=same.concat("gargoyle");   /* fights 14 to 16 of a champion's run: a Gargoyle can appear at any ST+DX */   /* a random opponent is a creature only when its ST+DX is within 2 of yours */
   if(same.length&&Math.random()<.2) return creatureFoe(pick(same));
+  if(Math.random()<.25) return makeWizard();   /* a random opponent is a wizard one time in four */
   return makeOpponent(me.st+me.dx);
 }
 function foeNote(){ const d=(foe.st+foe.dx)-(me.st+me.dx); let t;

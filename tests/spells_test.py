@@ -157,6 +157,7 @@ JS=r'''
  ok("S115 Drop Weapon and Break Weapon are not offered against a creature that has only a natural weapon",(()=>{ const [w,f,m]=natHold("wolf"); const L=castList(w,m).map(x=>x.sp); const [w2,f2,my]=natHold("myrmidon"); const L2=castList(w2,my).map(x=>x.sp); return !L.includes("Drop Weapon")&&!L.includes("Break Weapon")&&L2.includes("Drop Weapon")&&L2.includes("Break Weapon"); })());
 
  ok("S116 a Gargoyle can be the random opponent in fights 14 to 16 (13 to 15 wins) at any ST+DX, and not in fight 13 or after 16",(()=>{ foeMode={k:"random"}; const sv=Math.random; const seen=w=>{ me=applyRecord(fromBuilder({name:"Late"+w+Math.random(),race:"human",cls:"fighter",st:14,dx:14,iq:8,a:"shortsw",b:"none",armor:"leather",d1:"dagger"})); me.rec.wins=w; Math.random=()=>0.1; const f=buildFoe(); Math.random=sv; return f.creature; }; return seen(13)==="gargoyle"&&seen(15)==="gargoyle"&&seen(12)!=="gargoyle"&&seen(16)!=="gargoyle"; })());
+ ok("S117 a random opponent is sometimes a wizard (one time in four) and otherwise a fighter, at low and high totals",(()=>{ foeMode={k:"random"}; const sv=Math.random; let okAll=true; for(const [st,dx] of [[8,8],[12,12],[16,14]]){ me=fromBuilder({name:"R",race:"human",cls:"fighter",st,dx,iq:8,a:"shortsw",b:"none",armor:"leather",d1:"dagger"}); let w=0,f=0; for(let i=0;i<120;i++){ const x=buildFoe(); if(x.creature) continue; if(x.cls==="wizard") w++; else f++; } if(!(w>5&&f>20)) okAll=false; } Math.random=sv; return okAll; })());
  return R;
 }'''
 with sync_playwright() as p:
