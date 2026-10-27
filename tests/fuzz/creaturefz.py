@@ -7,7 +7,7 @@ JS=r'''
  const KINDS=['wolf','bear','gargoyle','giant']; const seenAir=[0]; for(let g=0;g<48;g++){
   try{
    me=fromBuilder({name:"W"+g,race:"human",cls:g%2?"wizard":"wizard",st:9+ri(5),dx:11+ri(3),iq:14,a:"none",b:"none",armor:rnd(["none","cloth","leather"]),d1:"dagger",silver:true,spells:SPN.slice()});
-   foeMode={k:"creature",kind:KINDS[g%4]}; foe=buildFoe(); startFight();
+   foeMode={k:"creature",kind:KINDS[g%4],n:(g%3===0?2:1)}; foe=buildFoe(); startFight();
    let guard=0;
    while(G.phase!=="over"&&guard++<300){
      ui(); drawMap(); const ph=G.phase;

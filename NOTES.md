@@ -232,3 +232,7 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Fights 14 to 16 of a champion's run (13 to 15 wins): a Gargoyle can be the random opponent at any ST+DX (same 20% chance, still an even match worth 50 EP).
 
 - Random opponent is a wizard one time in four (after the creature check); before this a wizard came only from the opponent list. Test S117; wzfz2.py fuzzes wizard foes.
+
+## Two Wolves test (Oct 27)
+- Opponent list: "Two Wolves (test: a pack of 2)". The pack is a second full Wolf on the foe side (`m.pack`, not a summon: no upkeep), moved and played by the computer. The fight ends only when every foe figure is down; Control Animal can take a pack wolf (a controlled wolf stops counting against you). Always an even match, 50 EP. Only Wolf x2 is in the picker; the engine takes `foe.packN` for any creature.
+- Tests S118-S119; creaturefz.py now mixes in packs. This is the first step toward the encounter module (several monsters on one side).
