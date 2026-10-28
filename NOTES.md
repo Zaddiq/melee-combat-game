@@ -246,3 +246,10 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - A big figure is never forced back and does not follow up; no hand-to-hand with it.
 - Not done yet (next stages): second claw, fire breath, tail lash, stomp, push-back; flight (the rulebook lets a flier pass over figures, fires and walls; fixes the "fliers can't pass over a figure" limit); the 7-hex dragon. The Wizard counter sheet shows the 7-hex dragon counter is a long narrow strip, not a round 7-hex flower: model it from that counter. No Control spell works on a dragon.
 - Tests S120-S124; `tests/fuzz/creaturefz.py` now mixes the dragon in and checks that a big figure stays whole, on the board and clear of other figures.
+
+## Multi-hex figures, stage 2: the dragon's attacks (Oct 28)
+- Claws: a dragon strikes twice a turn with its claw (2d-2 for the small dragon), at the same or another target in its front hexes (second strike in the second pass of `resolveTurn`).
+- Fire breath (`doBreath`, option `breathe`): 2 dice for the small dragon (3 for a full dragon), costs 3 ST (5), needs the dragon's adjDX minus 1 per hex from its head to the target, works at any range and any direction, and armor stops hits as for fire. The computer breathes when no claw target is in front, or 30% of the time when it has more than 12 ST.
+- Tail lash (`tailLash`): every turn while on the ground, whatever the dragon does, one roll at its adjDX against each one-hex enemy standing in a rear hex; a hit makes that figure roll 3 dice against its DX or fall. No damage.
+- Push-back (`bigPush`, `doPush`): a dragon may end its move (or its shift) by moving one hex onto one-hex figures if their combined ST is below its ST and each has a free hex to step to. Each rolls 3 dice against DX: success steps aside and acts normally, failure falls and does nothing else that turn (a fallen figure skips its action; it stands up next turn). Tests: S125-S128. Pushed figures step to the free adjacent hex nearest the dragon.
+- Not done: the stomp (it is a scenario-specific note in the Silver Dragon creature table, not in the Wizard rulebook), flight, the 7-hex dragon.

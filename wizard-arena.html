@@ -54,7 +54,7 @@ const ARMOR=Object.fromEntries(Object.entries(RULES.ARMOR).map(([k,v])=>[k,{n:v.
 Object.assign(W,{bite:{n:"Bite",d:1,m:1,st:0,hid:1},bite2:{n:"Bite",d:2,m:2,st:0,hid:1},fist2:{n:"Fist",d:2,m:0,st:0,hid:1},club3:{n:"Club",d:3,m:3,st:0,hid:1}});
 Object.assign(W,{claw:{n:"Claw",d:2,m:-2,st:0,hid:1}});
 Object.assign(ARMOR,{scales:{n:"Scales",stops:3,ma:8,pen:0,hid:1},wolfhide:{n:"Fur",stops:1,ma:12,pen:0,hid:1},bearhide:{n:"Fur",stops:2,ma:8,pen:0,hid:1},stonehide:{n:"Stone skin",stops:3,ma:8,pen:0,hid:1},bighide:{n:"Hide",stops:0,ma:8,pen:0,hid:1}});
-const CRE={wolf:{name:"Wolf",st:10,dx:14,iq:6,w:"bite",armor:"wolfhide"},myrmidon:{name:"Myrmidon",st:12,dx:12,iq:8,w:"broad",armor:"none"},bear:{name:"Bear",st:30,dx:11,iq:6,w:"bite2",armor:"bearhide"},gargoyle:{name:"Gargoyle",st:20,dx:11,iq:8,w:"fist2",armor:"stonehide"},giant:{name:"Giant",st:30,dx:9,iq:8,w:"club3",armor:"bighide"},sdragon:{name:"Small Dragon",st:30,dx:12,iq:12,w:"claw",armor:"scales",size:4}};   /* sdragon: a 4-hex test dragon with placeholder stats */
+const CRE={wolf:{name:"Wolf",st:10,dx:14,iq:6,w:"bite",armor:"wolfhide"},myrmidon:{name:"Myrmidon",st:12,dx:12,iq:8,w:"broad",armor:"none"},bear:{name:"Bear",st:30,dx:11,iq:6,w:"bite2",armor:"bearhide"},gargoyle:{name:"Gargoyle",st:20,dx:11,iq:8,w:"fist2",armor:"stonehide"},giant:{name:"Giant",st:30,dx:9,iq:8,w:"club3",armor:"bighide"},sdragon:{name:"Small Dragon",st:30,dx:12,iq:12,w:"claw",armor:"scales",size:4,breath:{dice:2,cost:3}}};   /* sdragon: a 4-hex test dragon with placeholder stats */
 const MELEE=Object.keys(W).filter(k=>!W[k].miss&&!W[k].hid&&k!=="staff"&&k!=="mg");
 const MELEE_HEXES=[[0, 0, 0, 0], [-1, 1, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [-1, 2, 0, 0], [1, 1, 0, 0], [0, 2, 0, 0], [-2, 2, 1, 0], [-3, 2, 1, 0], [-3, 3, 1, 0], [-2, 3, 1, 0], [-4, 3, 1, 0], [-4, 4, 1, 0], [-3, 4, 1, 0], [2, -1, 2, 1], [2, 0, 2, 1], [3, -1, 2, 1], [3, 0, 2, 1], [-1, 3, 3, 0], [0, 3, 3, 0], [-2, 4, 3, 0], [-1, 4, 3, 0], [0, 4, 3, 0], [-2, 5, 3, 0], [-1, 5, 3, 0], [2, 1, 4, 0], [1, 2, 4, 0], [3, 1, 4, 0], [2, 2, 4, 0], [1, 3, 4, 0], [3, 2, 4, 0], [2, 3, 4, 0], [-5, 4, 5, 0], [-5, 5, 5, 0], [-6, 4, 5, 0], [-6, 5, 5, 0], [-6, 6, 5, 0], [-7, 5, 5, 0], [-7, 6, 5, 0], [-4, 5, 6, 0], [-3, 5, 6, 0], [-5, 6, 6, 0], [-3, 6, 6, 0], [-5, 7, 6, 0], [-4, 7, 6, 0], [-4, 6, 6, 0], [1, 4, 7, 0], [0, 5, 7, 0], [2, 4, 7, 0], [1, 5, 7, 0], [0, 6, 7, 0], [2, 5, 7, 0], [1, 6, 7, 0], [-2, 6, 8, 0], [-1, 6, 8, 0], [-3, 7, 8, 0], [-2, 7, 8, 0], [-1, 7, 8, 0], [-3, 8, 8, 0], [-2, 8, 8, 0], [-7, 7, 9, 0], [-6, 7, 9, 0], [-8, 8, 9, 0], [-7, 8, 9, 0], [-6, 8, 9, 0], [-8, 9, 9, 0], [-7, 9, 9, 0], [-8, 6, 10, 0], [-8, 7, 10, 0], [-9, 6, 10, 0], [-9, 7, 10, 0], [-9, 8, 10, 0], [-10, 7, 10, 0], [-10, 8, 10, 0], [-5, 8, 11, 0], [-4, 8, 11, 0], [-6, 9, 11, 0], [-5, 9, 11, 0], [-4, 9, 11, 0], [-6, 10, 11, 0], [-5, 10, 11, 0], [-9, 9, 12, 0], [-10, 9, 12, 0], [-10, 10, 12, 0], [-9, 10, 12, 0], [-11, 10, 12, 0], [-11, 11, 12, 0], [-10, 11, 12, 0], [-8, 10, 13, 0], [-7, 10, 13, 0], [-9, 11, 13, 0], [-8, 11, 13, 0], [-7, 11, 13, 0], [-9, 12, 13, 0], [-8, 12, 13, 0], [-11, 12, 14, 1], [-10, 12, 14, 1], [-11, 13, 14, 1], [-10, 13, 14, 1]];
 let HEXES=MELEE_HEXES; /* [q,r,megahex,isEnd] */
@@ -225,6 +225,18 @@ function avertFilter(u,R,startPos){
   return false; }
 const ks=s=>s.q+","+s.r+","+s.f;
 function bigOK(s,self){ const c=cells(s); if(!c.every(x=>M.get(key(x.q,x.r))&&!WALLS.has(key(x.q,x.r)))) return false; return !allU().some(x=>x!==self&&x.hp>0&&c.some(y=>same(y,x))); }
+/* moving onto small figures (Wizard p. 8): allowed if their combined ST is below the dragon's, and each has a free hex to step to. Returns the plan or null. */
+function bigPush(st,self){
+  const c=cells(st), ov=allU().filter(x=>x!==self&&x.hp>0&&c.some(y=>same(y,x)));
+  if(!ov.length) return []; if(ov.some(x=>x.size>1||x.hth||x.low)) return null; if(ov.reduce((t,x)=>t+x.hp,0)>=self.hp) return null;
+  const taken=new Set(c.map(x=>key(x.q,x.r))), plan=[], cen=cenXY(st);
+  for(const x of ov){ const opts=[]; for(let d=0;d<6;d++){ const n=nbr(x,d); if(!n||taken.has(key(n.q,n.r))) continue; if(allU().some(y=>y.hp>0&&y!==x&&!ov.includes(y)&&same(n,y))) continue; opts.push(n); }
+    opts.sort((a,b)=>Math.hypot(a.p[0]-cen[0],a.p[1]-cen[1])-Math.hypot(b.p[0]-cen[0],b.p[1]-cen[1])+(Math.random()-.5)*.4);
+    if(!opts.length) return null; const n=opts[0]; taken.add(key(n.q,n.r)); plan.push({u:x,dest:n}); }
+  return plan; }
+function doPush(a,plan){ for(const pl of plan){ const x=pl.u, dx=adjDXu(x,"single",null), t=sum(rollN(3)); x.q=pl.dest.q; x.r=pl.dest.r;
+    if(t<=dx) lg(`${a.p.name} pushes ${sub(x)==="You"?"you":x.p.name} back; ${sub(x)==="You"?"you step":x.p.name+" steps"} aside and can act normally (saving roll ${t}, needed ${dx} or less).`);
+    else { x.down=true; x.low=null; lg(`${a.p.name} pushes ${sub(x)==="You"?"you":x.p.name} back; ${sub(x)==="You"?"you fall":x.p.name+" falls"} and can do nothing else this turn (saving roll ${t}, needed ${dx} or less).`); } } }
 function bigEngaged(s,E){ const X=E.filter(e=>e.hp>0&&isEngaged(s,e)); return X.length>=2||X.some(e=>e.size>1); }
 /* a big figure moves as one rigid piece: it slides one hex in any direction, or pivots a sixth of a turn about its tail or its head.
    A step costs the farthest any part of it moves (a straight move is 1 per hex, a pivot about the tail swings the head 2 hexes). */
@@ -236,16 +248,18 @@ function reachBig(a,B,ma,eng){
   const E=[].concat(B), start={q:a.q,r:a.r,f:a.f,size:a.size,air:a.air,c:0,fire:0,slk:0}, out=new Map([[ks(start),start]]), engagers=eng?E.filter(e=>e.hp>0&&isEngaged(a,e)):[], pq=[start];
   while(pq.length){ pq.sort((x,y)=>x.c-y.c); const cur=pq.shift(); if(cur.stop) continue;
     for(const n of bigSteps(cur)){ const c=cur.c+bigCost(cur,n); if(c>(eng?1:ma)) continue; const k=ks(n); if(out.has(k)&&out.get(k).c<=c) continue;
-      const st={q:n.q,r:n.r,f:n.f,size:a.size,air:a.air,c,fire:0,slk:0}; if(!bigOK(st,a)) continue;
+      const st={q:n.q,r:n.r,f:n.f,size:a.size,air:a.air,c,fire:0,slk:0};
+      if(!bigOK(st,a)){ if(n.f===cur.f&&cells(st).every(x=>M.get(key(x.q,x.r))&&!WALLS.has(key(x.q,x.r)))){ const pl=bigPush(st,a); if(pl&&pl.length&&(!eng||engagers.every(e=>dist(st,e)===1||pl.some(q=>q.u===e)))){ st.push=pl; st.stop=true; out.set(k,st); } } continue; }
       if(eng&&!engagers.every(e=>dist(st,e)===1)) continue;
       if(!eng&&bigEngaged(st,E)) st.stop=true;
       out.set(k,st); pq.push(st); } }
   return out; }
 function aiMoveBig(a){
   const E=enemiesOf(a), b=other(a), eng=engagedAny(a), R=reachBig(a,E,MAu(a),eng); let best=null;
-  for(const st of R.values()){ const d=dist(st,b); let sc=d*10; if(d===1){ const z=relOf(st,b); sc=z==="front"?-6:z==="side"?3:6; } sc+=Math.random()*1.5; if(!best||sc<best.sc) best={st,sc}; }
+  for(const st of R.values()){ const d=dist(st,b); let sc=d*10; if(d===1){ const z=relOf(st,b); sc=z==="front"?-6:z==="side"?3:6; } if(st.push) sc=(st.push.some(q=>q.u===b)?-4:sc)+1.5; sc+=Math.random()*1.5; if(!best||sc<best.sc) best={st,sc}; }
   const st=best.st, moved=st.q!==a.q||st.r!==a.r||st.f!==a.f; a.q=st.q; a.r=st.r; a.f=st.f; a.engStart=eng; a.moved=st.c||0;
   lg(`${a.p.name} ${eng?(moved?"shifts":"holds"):(moved?"moves "+st.c+" hex"+(st.c>1?"es":""):"holds")}.`);
+  if(st.push) doPush(a,st.push);
 }
 /* put a big figure on the board, as near the given start hex as it fits, facing the enemy */
 function placeBig(u,start,toward){ let best=null; for(const h of P) for(let f=0;f<6;f++){ const t={q:h.q,r:h.r,f,size:u.size}; if(!bigOK(t,u)) continue;
@@ -772,6 +786,7 @@ function options(u,o){
   if(inF&&(eng||half)&&SHIELDS[u.left]&&u.p.cls!=="wizard") L.push({t:"rush",label:`Shield-rush with the ${iname(u.left).toLowerCase()} (no weapon attack; if it hits, the target saves vs DX on ${u.p.st>=o.p.st?3:2} dice or falls)`});
   if(!u.minion&&u.moved<=1&&o.minion&&o.hp>0) L.push({t:"disbelieve",label:`Disbelieve ${o.p.name} (move at most 1 hex; if it is an illusion or an image, its owner secretly rolls 3 dice against your IQ ${effIQ(u)}; you are only told if it vanishes)`});
   if(u.rope>0&&u.moved===0) L.push({t:"unrope",label:ropeNum(u)>1?`Struggle free of one of the two ropes (stand still and do nothing else; roll ${adjDXu(u,"single",null)} or less on 3 dice; each success takes off one rope)`:`Struggle free of the rope (stand still and do nothing else; roll ${adjDXu(u,"single",null)} or less on 3 dice)`});
+  if(u.size>1&&u.p.breath&&u.hp>u.p.breath.cost+1&&!u.down&&(eng||half)) L.push({t:"breathe",label:`Breathe fire at ${o.p.name} (${u.p.breath.dice} dice damage, costs ${u.p.breath.cost} ST, −1 DX per hex of range)`});
   L.push({t:"none",label:"Do nothing"});
   return L.filter(x=>!x.off);
 }
@@ -826,10 +841,22 @@ function aiCast(u,o){
     v+=Math.random()*.6; if(!best||v>best.v) best={x,v}; }
   if(!best||best.v<=1.1) return null; const pk={t:"cast",sp:best.x.sp,n:best.x.n}; if(best.x.form) pk.form=best.x.form; if(best.x.hexsel){ const H=creaHexes(u,o,best.x.hexsel).sort((a,b)=>dist(a,o)-dist(b,o)); if(!H.length) return null; pk.dest=H[Math.min(1,H.length-1)]; } return pk;
 }
+/* Wizard p. 21: fire breath (any hex, -1 DX per hex from the head), tail lash on whoever is behind it */
+function doBreath(u,o){ const B=u.p.breath; u.hp-=B.cost; const head=fpAt(u.q,u.r,u.f)[3], rng=Math.min(...cells(o).map(x=>hdist(head,x)));
+  let dx=adjDXu(u,"single",null)-rng; if(o.inv) dx-=6; else if(o.blur) dx-=4; if(o.air) dx-=4; if(shadowAt(o)&&!u.sight&&!o.inv) dx-=4;
+  const t=sum(rollN(3)), hit=t===3||t===4||(t<=dx&&t<16), tn=o===G.me?"you":o.p.name;
+  lg(`${u.p.name} breathes fire at ${tn} (${rng} hex${rng>1?"es":""} away, needs ${dx} or less, rolled ${t}; it costs ${B.cost} ST).`);
+  if(hit) fireHits(o,sum(rollN(B.dice))); else lg("The flames miss."); endCheck(); }
+function tailLash(u){ for(const x of enemiesOf(u).filter(x=>x.hp>0&&!(x.size>1)&&!x.air&&!x.down&&relOf(u,x)==="rear")){
+    const dx=adjDXu(u,"single",null), t=sum(rollN(3)), hit=t===3||t===4||(t<=dx&&t<16), tn=x===G.me?"you":x.p.name;
+    if(!hit){ lg(`${u.p.name}'s tail lashes at ${tn} and misses (rolled ${t}, needed ${dx} or less).`); continue; }
+    const sd=adjDXu(x,"single",null), sv=sum(rollN(3));
+    if(sv<=sd) lg(`${u.p.name}'s tail lashes ${tn}, but ${x===G.me?"you keep your":"it keeps its"} feet (saving roll ${sv}, needed ${sd} or less).`);
+    else { x.down=true; x.low=null; lg(`${u.p.name}'s tail knocks ${tn} down (saving roll ${sv}, needed ${sd} or less).`); } } }
 function aiAct(u,o){
   if(!enemiesOf(u||G.foe).length) return {t:"none"};
   u=u||G.foe; o=o||other(u); if(u.standUp||u.fresh) return {t:"none"};
-  if(u.size>1){ const L0=options(u,o); return L0.find(x=>x.t==="attack")||{t:"none"}; }   /* a big creature simply attacks what is in front of it */
+  if(u.size>1){ const L0=options(u,o), br=L0.find(x=>x.t==="breathe"), at=L0.find(x=>x.t==="attack"); if(br&&(!at||(u.hp>12&&Math.random()<.3))) return br; return at||{t:"none"}; }   /* a big creature claws what is in front of it, or breathes fire at range */
   if(u.ctl&&u.ctl.hp>0&&o.p.st>2*u.p.st){ const sv=sum(rollN(3)), iq=effIQ(u); if(sv<=iq){ releaseCtl(u,"it refused to attack a far stronger foe"); return {t:"none"}; } }
   if(u.sleep||u.frozen>0) return {t:"none"};
   const L=options(u,o), has=t=>L.find(x=>x.t===t);
@@ -910,8 +937,8 @@ function endCheck(){
 }
 function resolveTurn(pa){
   G.me.act=pa; const U=allU().filter(u=>u.hp>0); for(const u of U) if(u!==G.me) u.act=aiAct(u,other(u)); G.phase="resolve"; U.forEach(u=>{ u.defending=u.act.t==="defend"; u.dodging=u.act.t==="dodge"; });
-  const N2={disbelieve:"try to disbelieve something",unrope:"struggle with the rope",cast:"cast a spell",drop:"drop down",rise:"stand up",hth:"close for hand-to-hand",hattack:"fight hand to hand",hdraw:"try to draw a dagger",hesc:"break away from the grapple",jab:"jab with a pole weapon",rush:"shield-rush",attack:"attack",dual:"attack with a weapon and the main-gauche",defend:"defend",dodge:"dodge",fire:"fire a missile weapon",last:"fire one last shot",throw:"throw a weapon",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
-  const N3={disbelieve:"tries to disbelieve something",unrope:"struggles with the rope",cast:"casts a spell",drop:"drops down",rise:"starts to stand up",hth:"closes for hand-to-hand",hattack:"fights hand to hand",hdraw:"tries to draw a dagger",hesc:"tries to break away",jab:"jabs with a pole weapon",rush:"shield-rushes",attack:"attacks",dual:"attacks with a weapon and the main-gauche",defend:"defends",dodge:"dodges",fire:"fires a missile weapon",last:"fires one last shot",throw:"throws a weapon",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
+  const N2={breathe:"breathe fire",disbelieve:"try to disbelieve something",unrope:"struggle with the rope",cast:"cast a spell",drop:"drop down",rise:"stand up",hth:"close for hand-to-hand",hattack:"fight hand to hand",hdraw:"try to draw a dagger",hesc:"break away from the grapple",jab:"jab with a pole weapon",rush:"shield-rush",attack:"attack",dual:"attack with a weapon and the main-gauche",defend:"defend",dodge:"dodge",fire:"fire a missile weapon",last:"fire one last shot",throw:"throw a weapon",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
+  const N3={breathe:"breathes fire",disbelieve:"tries to disbelieve something",unrope:"struggles with the rope",cast:"casts a spell",drop:"drops down",rise:"starts to stand up",hth:"closes for hand-to-hand",hattack:"fights hand to hand",hdraw:"tries to draw a dagger",hesc:"tries to break away",jab:"jabs with a pole weapon",rush:"shield-rushes",attack:"attacks",dual:"attacks with a weapon and the main-gauche",defend:"defends",dodge:"dodges",fire:"fires a missile weapon",last:"fires one last shot",throw:"throws a weapon",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
   U.forEach(u=>{ if(u.act.pos&&(u.act.t==="drop"||u.act.t==="fire")&&!u.low){ u.low=u.act.pos; lg(`${sub(u)} ${vb(u,"go","goes")} ${u.act.pos==="prone"?"prone":"down on one knee"}.`); } if(u.act.t==="rise") u.standUp=true; });
   U.forEach(u=>lg(`${sub(u)} ${u===G.me?"choose to "+N2[u.act.t]:"chooses to "+N2[u.act.t]}.`));
   U.forEach(u=>{ u.lastTgt=null; });
@@ -927,8 +954,10 @@ function resolveTurn(pa){
     if(G.phase==="over")break; const u=e.u,o=other(u); let t=u.act.t;
     if((u.down&&!u.hth)||u.hp<=0||u.frozen>0||u.sleep)continue;
     if(u.hth&&ATK.concat(["jab","fire","last","throw"]).includes(t)) t="hattack";
+    if(pass===1&&u.size>1&&!u.air) tailLash(u);
     if(pass===1){
-      if(t==="cast") doCast(u,o,u.act);
+      if(t==="breathe"){ if(u.size>1&&u.p.breath&&u.hp>u.p.breath.cost) doBreath(u,o); }
+      else if(t==="cast") doCast(u,o,u.act);
       else if(t==="unrope") doUnrope(u);
       else if(t==="disbelieve"){ if(o.minion&&o.hp>0) doDisbelieve(u,o); }
       else if(t==="hth") startHth(u,o);
@@ -948,7 +977,8 @@ function resolveTurn(pa){
       else if(t==="throw"){ const wid=u.act.wid; if((u.right===wid||u.left===wid)&&inFront(u,o)) doAttack(u,o,wid,"single","thrown"); else lg(`${sub(u)} ${vb(u,"have","has")} no throw.`); }
       else if(t==="disengage"){ const dest=u.act.dest; if(dest&&!same(dest,o)&&dist(dest,u)===1){ u.q=dest.q; u.r=dest.r; lg(`${sub(u)} ${vb(u,"disengage","disengages")}.`);} }
       else if(t==="ready"){ applyReady(u,u.act.it); lg(`${sub(u)} ${vb(u,"ready","readies")} ${iname(u.act.it.id).toLowerCase()} (usable next turn).`); u.justReady=true; }
-    } else if(t==="dual"){ if(u.left==="mg"&&relOf(u,o)==="front") doAttack(u,o,u.left,"mg"); }
+    } else if(t==="attack"&&u.size>1){ const T=enemiesOf(u).filter(x=>x.hp>0&&relOf(u,x)==="front"); if(T.length&&u.hp>0){ const x=T.includes(o)&&Math.random()<.6?o:pick(T); doAttack(u,x,u.right,"single"); } }   /* a dragon strikes twice with its claws, at the same or another target */
+    else if(t==="dual"){ if(u.left==="mg"&&relOf(u,o)==="front") doAttack(u,o,u.left,"mg"); }
     else if(t==="fire"&&u.act.dbl&&(u.right===u.act.wid||u.left===u.act.wid)&&inFront(u,o)) doAttack(u,o,u.act.wid,"single","missile");
   }
   if(G.phase!=="over"){ U.forEach(u=>{ if(u.standUp&&(u.down||u.low)){ u.down=false; u.low=null; lg(`${sub(u)} ${vb(u,"are","is")} back on ${vb(u,"your","its")} feet.`); } }); afterActions(); }
@@ -1135,7 +1165,7 @@ function makeWizard(){
   const f=fromBuilder({name:pick(["Morvane","Elowen","Sethric","Ilvara","Zorn","Kaleth"])+" the "+pick(["Mage","Sorcerer","Hedge Wizard","Enchanter"]),race:"human",cls:"wizard",st,dx,iq,a:"none",b:"none",armor:"none",d1:"dagger",silver:true,spells:sp,total:me.total});
   return f; }
 const FOE_CRE=["wolf","bear","gargoyle","giant"];   /* creatures that can be the opponent (Wizard 2018 monster table) */
-function creatureFoe(kind){ const C=CRE[kind], f=fromBuilder({name:C.name,race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"}); f.creature=kind; if(C.size) f.size=C.size; return f; }
+function creatureFoe(kind){ const C=CRE[kind], f=fromBuilder({name:C.name,race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"}); f.creature=kind; if(C.size) f.size=C.size; if(C.breath) f.breath=C.breath; return f; }
 function buildFoe(){
   const m=foeMode;
   if(m.k==="creature"){ const f=creatureFoe(m.kind); if(m.n>1) f.packN=m.n; return f; }
