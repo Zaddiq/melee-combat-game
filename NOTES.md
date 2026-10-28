@@ -236,3 +236,13 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 ## Two Wolves test (Oct 27)
 - Opponent list: "Two Wolves (test: a pack of 2)". The pack is a second full Wolf on the foe side (`m.pack`, not a summon: no upkeep), moved and played by the computer. The fight ends only when every foe figure is down; Control Animal can take a pack wolf (a controlled wolf stops counting against you). Always an even match, 50 EP. Only Wolf x2 is in the picker; the engine takes `foe.packN` for any creature.
 - Tests S118-S119; creaturefz.py now mixes in packs. This is the first step toward the encounter module (several monsters on one side).
+
+## Multi-hex figures, stage 1: the 4-hex dragon (Oct 27)
+- Unlimited Arena only. Opponent list: "Small Dragon (test: 4 hexes)". Placeholder stats (ST 30, DX 12, IQ 12, claw 2d-2, scales stop 3, MA 8); the real scenario numbers will come from local data, not this repo.
+- A big figure has `u.size` (4), `u.q,u.r` = its tail hex and `u.f` = which of six pointing directions it has (between two hex directions). `cells(u)` is its footprint (a diamond: tail, two flanks, head). `dist`, `same`, `relOf`, `relFar`, `faceToward`, `inFront` and `engagedAny` now work on whole footprints, so the old attack code works unchanged. One-hex figures behave exactly as before.
+- Zones (matches the Wizard 2018 diagram counts): of the 10 hexes around the diamond, the 4 beyond the head are front, the 2 at its widest are side, the 4 behind are rear (`bigZone`).
+- Engagement: a one-hex figure is engaged by a big one if it stands in one of its front hexes. A big figure is engaged only when 2 one-hex figures have it in their front hexes (or 1 big figure).
+- Movement (`reachBig`): it moves as one rigid piece: slide one hex in any direction, or pivot a sixth of a turn about its tail or head. A step costs the farthest any part moves (straight = 1 per hex, a pivot about the tail = 2). It must stop as soon as it is engaged; engaged, it may only shift one hex. It cannot enter another figure's hex yet (pushing back small figures is stage 2). `placeBig` sets it up on the board.
+- A big figure is never forced back and does not follow up; no hand-to-hand with it.
+- Not done yet (next stages): second claw, fire breath, tail lash, stomp, push-back; flight (the rulebook lets a flier pass over figures, fires and walls; fixes the "fliers can't pass over a figure" limit); the 7-hex dragon. The Wizard counter sheet shows the 7-hex dragon counter is a long narrow strip, not a round 7-hex flower: model it from that counter. No Control spell works on a dragon.
+- Tests S120-S124; `tests/fuzz/creaturefz.py` now mixes the dragon in and checks that a big figure stays whole, on the board and clear of other figures.
