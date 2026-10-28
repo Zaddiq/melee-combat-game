@@ -259,3 +259,12 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Natural fliers: `u.natFly` is true (Gargoyle, air MA 16) or the air MA itself (the test Small Dragon, 20, set by `CRE.sdragon.fly`). The computer's flier takes to the air when the foe is 3 or more hexes off and lands to fight (`aiMoveBig` for the dragon, `aiMove` for the Gargoyle). A grounded figure is not engaged by a flier and vice versa.
 - Tests S129-S132.
 - Still not done: the 7-hex dragon, the stomp, orders and the encounter page itself.
+
+## Multi-hex figures, stage 4: the 7-hex Dragon (Oct 28)
+- Opponent list: "Dragon (test: 7 hexes)". Placeholder stats (ST 60, DX 12, IQ 14, claw 3d-3, scales stop 4, MA 8, air MA 20, breath 3 dice for 5 ST); the real scenario numbers stay in the owner's local data, not in this repo.
+- Shape, read from the Wizard counter sheet 4 outline: two 4-hex diamonds chained end to end, sharing one hex. Columns of 1, 2, 1, 2 and 1 hexes (tail, wing pair, middle, wing pair, head), a long narrow strip pointing between two hex directions like the 4-hex diamond. `fpAt(q,r,f,size)` builds either shape; `headOf(u)` is its last cell. `u.size` is 4 or 7.
+- Zones around the 14 hexes that touch it: the 4 beyond the head are front, the 4 beyond the tail rear, the 6 along its flanks side (`bigZone`, same rule as the 4-hex diamond but scaled by its length). This is my reading of the rule, not copied from a diagram: check it against the Wizard 2018 dragon diagram.
+- Movement: slide one hex in any direction, or pivot a sixth of a turn about its tail, its head or (7-hex only) its middle hex. A step costs the farthest any part moves. Everything else (engagement, push-back, tail lash, fire breath from the head hex, flight and the fly-over rule) uses the stage 1 to 3 code unchanged.
+- Tests S133-S138; `tests/fuzz/creaturefz.py` now mixes the 7-hex Dragon in (72 games) and checks every big figure stays whole.
+- Still not done: the stomp, orders and the encounter page itself.
+

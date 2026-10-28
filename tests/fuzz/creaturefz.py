@@ -4,13 +4,13 @@ JS=r'''
  const rnd=a=>a[Math.floor(Math.random()*a.length)];
  const out={games:0,over:0,errors:[],casts:0,renew:0,foeCasts:0,wizFoe:0};
  const SPN=["Staff","Magic Fist","Blur","Drop Weapon","Slow Movement","Clumsiness","Aid","Trip","Sleep","Fireball","Freeze","Stone Flesh","Stop","Lightning","Iron Flesh","Speed Movement","Dazzle","Blast","Break Weapon","Remove Thrown Spell","Spell Shield","Death Spell","Reverse Missiles","Flight","Teleport","Fire","Shadow","Create Wall","Rope","Destroy Creation","Summon Wolf","Summon Myrmidon","Summon Bear","Summon Gargoyle","Summon Giant","Image","Illusion","Dispel Illusions","Confusion","Shock Shield","Avert","Invisibility","Mage Sight","Slippery Floor","Control Person","Control Animal"];
- const KINDS=['wolf','bear','gargoyle','giant','sdragon']; const seenAir=[0]; for(let g=0;g<48;g++){
+ const KINDS=['wolf','bear','gargoyle','giant','sdragon','dragon']; const seenAir=[0]; for(let g=0;g<72;g++){
   try{
    me=fromBuilder({name:"W"+g,race:"human",cls:g%2?"wizard":"wizard",st:9+ri(5),dx:11+ri(3),iq:14,a:"none",b:"none",armor:rnd(["none","cloth","leather"]),d1:"dagger",silver:true,spells:SPN.slice()});
-   foeMode={k:"creature",kind:KINDS[g%5],n:(g%3===0&&KINDS[g%5]!=='sdragon'?2:1)}; foe=buildFoe(); startFight();
+   foeMode={k:"creature",kind:KINDS[g%6],n:(g%3===0&&KINDS[g%6]!=='sdragon'&&KINDS[g%6]!=='dragon'?2:1)}; foe=buildFoe(); startFight();
    let guard=0;
    while(G.phase!=="over"&&guard++<300){
-     for(const u of allU()) if(u.size>1&&u.hp>0){ const c=cells(u); if(c.length!==4||!c.every(x=>M.get(key(x.q,x.r)))) out.errors.push('big figure off board'); if(allU().some(x=>x!==u&&x.hp>0&&same(x,u))) out.errors.push('big figure overlaps another'); }
+     for(const u of allU()) if(u.size>1&&u.hp>0){ const c=cells(u); if(c.length!==u.size||!c.every(x=>M.get(key(x.q,x.r)))) out.errors.push('big figure off board'); if(allU().some(x=>x!==u&&x.hp>0&&same(x,u))) out.errors.push('big figure overlaps another'); }
      ui(); drawMap(); const ph=G.phase;
      if(ph==="choose") choose(Math.random()<.5);
      else if(ph==="move"){ const R2=[...G.reach.values()]; const t=rnd(R2); G.me.q=t.q;G.me.r=t.r;G.moved=t.c; G.me.f=faceToward(G.me,G.foe); confirmMove(); }
@@ -23,7 +23,7 @@ JS=r'''
      else if(ph==="advance") doAdvance(Math.random()<.5);
      else { out.errors.push("stuck "+ph); break; }
    }
-   out.games++; if(G.phase==="over") out.over++; if(KINDS[g%5]==="gargoyle"&&G.log.some(l=>/takes to the air/.test(l))) seenAir[0]++; if(G.log.some(l=>/^.*casts /.test(l)&&!/^You/.test(l))) out.foeCasts++;
+   out.games++; if(G.phase==="over") out.over++; if(KINDS[g%6]==="gargoyle"&&G.log.some(l=>/takes to the air/.test(l))) seenAir[0]++; if(G.log.some(l=>/^.*casts /.test(l)&&!/^You/.test(l))) out.foeCasts++;
    if(G.log.some(l=>/undefined|NaN/.test(l))) out.errors.push("bad text: "+G.log.filter(l=>/undefined|NaN/.test(l))[0]);
   }catch(e){ out.errors.push(String(e.stack||e).slice(0,400)); }
  }
