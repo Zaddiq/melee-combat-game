@@ -271,3 +271,12 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 
 ## 7-hex dragon art (Oct 28)
 - The 7-hex Dragon token is drawn with original art (`dragonArt`, head toward +x on the flat-top strip); a dead Dragon shows an original skull-and-crossbones (`skullArt`), the counter's back-side idea. The owner's Wizard counter sheet is a reference for the footprint only; none of its artwork is copied or committed.
+
+## Summon Small Dragon and Summon Dragon (Oct 28)
+- Source: Spell Reference Booklet p. 5-6 (spells) and p. 8 (creature table), Wizard 2018 p. 21 (dragon attacks). Small Dragon: IQ 15 spell, 5 ST then 1 a turn; 4 hexes, ST 30, DX 13, IQ 16, MA 6 ground / 16 air, scales stop 3, claw 2d-2, breath 2 dice for 3 ST. Dragon: IQ 16 spell, 5 ST then 2 a turn; 7 hexes, ST 60, DX 14, IQ 20, MA 8 / 20, stops 5, claw 2 dice, breath 3 dice for 5 ST.
+- Data: `CRE.bsdragon` and `CRE.bdragon` (book numbers, `up` = upkeep). The older `sdragon` and `dragon` stay as the placeholder test opponents.
+- Placement: you pick the tail hex; the whole footprint must be free, on the board and inside your megahex or the ones next to it (my reading of "any hex in your megahex or next to it" for a long figure). It is turned to face the enemy as nearly as it fits. It cannot act on the turn it appears (`fresh`), like any summon.
+- Upkeep is per creature (`upOf`): 1 ST, or 2 for the Dragon, at the renew step; the computer pays the same.
+- Image and Illusion are only offered as one-hex creatures (before this they could make a one-hex "dragon"); multi-hex images and illusions are still to do.
+- Computer wizards can cast them (only with ST for 5 plus about 10 or 14 spare). No Control spell works on a dragon (not in the Animal or Person lists).
+- Not done: the same spells in `duel.html`, and 4-hex dragon token art (it still uses the arrow marker). Tests S139-S145.
