@@ -268,3 +268,6 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Tests S133-S138; `tests/fuzz/creaturefz.py` now mixes the 7-hex Dragon in (72 games) and checks every big figure stays whole.
 - Still not done: the stomp, orders and the encounter page itself.
 
+
+## 7-hex dragon art (Oct 28)
+- The 7-hex Dragon token is drawn with original art (`dragonArt`, head toward +x on the flat-top strip); a dead Dragon shows an original skull-and-crossbones (`skullArt`), the counter's back-side idea. The owner's Wizard counter sheet is a reference for the footprint only; none of its artwork is copied or committed.
