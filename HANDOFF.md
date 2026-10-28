@@ -8,7 +8,7 @@
 
 **Owner preferences:** one feature at a time (save tokens); the owner tests it themselves; Claude makes branches, merges to main and pushes; no mid-fight saving; opponents "just a little harder than originally"; duel XP rules in NOTES.md.
 
-**Tests** (Playwright headless, `pip install playwright`): `python3 tests/rules_test.py` (70, Melee arena), `python3 tests/spells_test.py` (128, Wizard arena), `python3 tests/duel_summon_test.py` (9). Random-play fuzzers are in `tests/fuzz/` (they were written in a scratch folder; fix the file paths at the top before running).
+**Tests** (Playwright headless, `pip install playwright`): `python3 tests/rules_test.py` (70, Melee arena), `python3 tests/spells_test.py` (132, Wizard arena), `python3 tests/duel_summon_test.py` (9). Random-play fuzzers are in `tests/fuzz/` (they were written in a scratch folder; fix the file paths at the top before running).
 
 **Git quirks:** tags can't be pushed through the proxy; push branches one at a time if a combined push disconnects.
 

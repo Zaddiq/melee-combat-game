@@ -253,3 +253,9 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Tail lash (`tailLash`): every turn while on the ground, whatever the dragon does, one roll at its adjDX against each one-hex enemy standing in a rear hex; a hit makes that figure roll 3 dice against its DX or fall. No damage.
 - Push-back (`bigPush`, `doPush`): a dragon may end its move (or its shift) by moving one hex onto one-hex figures if their combined ST is below its ST and each has a free hex to step to. Each rolls 3 dice against DX: success steps aside and acts normally, failure falls and does nothing else that turn (a fallen figure skips its action; it stands up next turn). Tests: S125-S128. Pushed figures step to the free adjacent hex nearest the dragon.
 - Not done: the stomp (it is a scenario-specific note in the Silver Dragon creature table, not in the Wizard rulebook), flight, the 7-hex dragon.
+
+## Multi-hex figures, stage 3: flight and the fly-over rule (Oct 28)
+- Wizard 2018 p. 8: "A flyer may freely go over another figure, a fire, a wall, etc." In the Unlimited Arena a flying figure (Flight spell, natural fliers, a flying dragon) now passes over other figures and created walls and takes no fire or slippery-floor effect on the way, but can only END its move on an empty, non-wall hex (`reach`, `reachBig`). The old limit "fliers can't pass over another figure" is gone here. The duel and Arena Classic still have it.
+- Natural fliers: `u.natFly` is true (Gargoyle, air MA 16) or the air MA itself (the test Small Dragon, 20, set by `CRE.sdragon.fly`). The computer's flier takes to the air when the foe is 3 or more hexes off and lands to fight (`aiMoveBig` for the dragon, `aiMove` for the Gargoyle). A grounded figure is not engaged by a flier and vice versa.
+- Tests S129-S132.
+- Still not done: the 7-hex dragon, the stomp, orders and the encounter page itself.
