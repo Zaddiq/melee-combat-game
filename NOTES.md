@@ -279,4 +279,9 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Upkeep is per creature (`upOf`): 1 ST, or 2 for the Dragon, at the renew step; the computer pays the same.
 - Image and Illusion are only offered as one-hex creatures (before this they could make a one-hex "dragon"); multi-hex images and illusions are still to do.
 - Computer wizards can cast them (only with ST for 5 plus about 10 or 14 spare). No Control spell works on a dragon (not in the Animal or Person lists).
-- Not done: the same spells in `duel.html`, and 4-hex dragon token art (it still uses the arrow marker). Tests S139-S145.
+- Tests S139-S145. The duel port and the 4-hex art are below.
+
+## Small Dragon art and the dragons in the duel (Oct 28)
+- Small Dragon: original 4-hex token art (`smallDragonArt`, unit coordinates, hex radius 1, head toward +x) in both pages; a dead 4-hex or 7-hex dragon shows the skull (`skullArt`). Dragon art is all original; the owner's Wizard counter sheet is only a reference for the footprint.
+- `duel.html` now has the multi-hex engine (ported from the Unlimited Arena: footprints, rigid movement, flight, breath, claws, tail lash, push-back) plus Summon Small Dragon and Summon Dragon with the same rules, per-creature upkeep (renew list shows 2 ST for the Dragon) and the same map tokens. Players' own fighters are always one hex, so only computer-run summoned dragons are big and there is no player move UI for big figures. The duel's action names now include "breathe" (it logged "undefined" before).
+- Tests: `tests/duel_summon_test.py` D10-D13. Fuzzer: `tests/fuzz/dsum.py` with the dragon spells added ran clean (no errors or bad log text, 3 runs of 30 duels).

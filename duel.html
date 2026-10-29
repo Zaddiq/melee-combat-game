@@ -53,10 +53,13 @@ svg{width:100%;height:auto;max-height:80vh}
 "use strict";
 const RACES=RULES.RACES, W=RULES.W, SHIELDS=RULES.SHIELDS;
 const ARMOR=Object.fromEntries(Object.entries(RULES.ARMOR).map(([k,v])=>[k,{n:v.n,stops:v.stops,ma:v.ma,pen:v.pen.m}]));  /* Melee DX penalties */
-/* natural weapons and hides for summoned creatures (Wizard 2018 p. 15-16) */
+/* natural weapons and hides for summoned creatures (Wizard 2018 p. 15-16); kept out of the fighter menus with hid */
 Object.assign(W,{bite:{n:"Bite",d:1,m:1,st:0,hid:1},bite2:{n:"Bite",d:2,m:2,st:0,hid:1},fist2:{n:"Fist",d:2,m:0,st:0,hid:1},club3:{n:"Club",d:3,m:3,st:0,hid:1}});
-Object.assign(ARMOR,{wolfhide:{n:"Fur",stops:1,ma:12,pen:0,hid:1},bearhide:{n:"Fur",stops:2,ma:8,pen:0,hid:1},stonehide:{n:"Stone skin",stops:3,ma:8,pen:0,hid:1},bighide:{n:"Hide",stops:0,ma:8,pen:0,hid:1}});
-const CRE={wolf:{name:"Wolf",st:10,dx:14,iq:6,w:"bite",armor:"wolfhide"},myrmidon:{name:"Myrmidon",st:12,dx:12,iq:8,w:"broad",armor:"none"},bear:{name:"Bear",st:30,dx:11,iq:6,w:"bite2",armor:"bearhide"},gargoyle:{name:"Gargoyle",st:20,dx:11,iq:8,w:"fist2",armor:"stonehide"},giant:{name:"Giant",st:30,dx:9,iq:8,w:"club3",armor:"bighide"}};
+Object.assign(W,{claw:{n:"Claw",d:2,m:-2,st:0,hid:1},claw3:{n:"Claw",d:3,m:-3,st:0,hid:1},claw2:{n:"Claw",d:2,m:0,st:0,hid:1}});
+Object.assign(ARMOR,{scales:{n:"Scales",stops:3,ma:8,pen:0,hid:1},scales4:{n:"Scales",stops:4,ma:8,pen:0,hid:1},scalesS:{n:"Scales",stops:3,ma:6,pen:0,hid:1},scales5:{n:"Scales",stops:5,ma:8,pen:0,hid:1},wolfhide:{n:"Fur",stops:1,ma:12,pen:0,hid:1},bearhide:{n:"Fur",stops:2,ma:8,pen:0,hid:1},stonehide:{n:"Stone skin",stops:3,ma:8,pen:0,hid:1},bighide:{n:"Hide",stops:0,ma:8,pen:0,hid:1}});
+const CRE={wolf:{name:"Wolf",st:10,dx:14,iq:6,w:"bite",armor:"wolfhide"},myrmidon:{name:"Myrmidon",st:12,dx:12,iq:8,w:"broad",armor:"none"},bear:{name:"Bear",st:30,dx:11,iq:6,w:"bite2",armor:"bearhide"},gargoyle:{name:"Gargoyle",st:20,dx:11,iq:8,w:"fist2",armor:"stonehide"},giant:{name:"Giant",st:30,dx:9,iq:8,w:"club3",armor:"bighide"},sdragon:{name:"Small Dragon",st:30,dx:12,iq:12,w:"claw",armor:"scales",size:4,fly:20,breath:{dice:2,cost:3}},dragon:{name:"Dragon",st:60,dx:12,iq:14,w:"claw3",armor:"scales4",size:7,fly:20,breath:{dice:3,cost:5}},
+  /* summoned dragons at the Spell Reference Booklet numbers (creature table p. 8; Summon Small Dragon / Summon Dragon); up = ST a turn to keep them */
+  bsdragon:{name:"Small Dragon",st:30,dx:13,iq:16,w:"claw",armor:"scalesS",size:4,fly:16,breath:{dice:2,cost:3},up:1,book:1},bdragon:{name:"Dragon",st:60,dx:14,iq:20,w:"claw2",armor:"scales5",size:7,fly:20,breath:{dice:3,cost:5},up:2,book:1}};   /* sdragon, dragon: test dragons (4 and 7 hexes) with placeholder stats; the real scenario numbers stay in the owner's local data */
 const MELEE=Object.keys(W).filter(k=>!W[k].miss&&!W[k].hid&&k!=="staff"&&k!=="mg");
 const MELEE_HEXES=[[0, 0, 0, 0], [-1, 1, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [-1, 2, 0, 0], [1, 1, 0, 0], [0, 2, 0, 0], [-2, 2, 1, 0], [-3, 2, 1, 0], [-3, 3, 1, 0], [-2, 3, 1, 0], [-4, 3, 1, 0], [-4, 4, 1, 0], [-3, 4, 1, 0], [2, -1, 2, 1], [2, 0, 2, 1], [3, -1, 2, 1], [3, 0, 2, 1], [-1, 3, 3, 0], [0, 3, 3, 0], [-2, 4, 3, 0], [-1, 4, 3, 0], [0, 4, 3, 0], [-2, 5, 3, 0], [-1, 5, 3, 0], [2, 1, 4, 0], [1, 2, 4, 0], [3, 1, 4, 0], [2, 2, 4, 0], [1, 3, 4, 0], [3, 2, 4, 0], [2, 3, 4, 0], [-5, 4, 5, 0], [-5, 5, 5, 0], [-6, 4, 5, 0], [-6, 5, 5, 0], [-6, 6, 5, 0], [-7, 5, 5, 0], [-7, 6, 5, 0], [-4, 5, 6, 0], [-3, 5, 6, 0], [-5, 6, 6, 0], [-3, 6, 6, 0], [-5, 7, 6, 0], [-4, 7, 6, 0], [-4, 6, 6, 0], [1, 4, 7, 0], [0, 5, 7, 0], [2, 4, 7, 0], [1, 5, 7, 0], [0, 6, 7, 0], [2, 5, 7, 0], [1, 6, 7, 0], [-2, 6, 8, 0], [-1, 6, 8, 0], [-3, 7, 8, 0], [-2, 7, 8, 0], [-1, 7, 8, 0], [-3, 8, 8, 0], [-2, 8, 8, 0], [-7, 7, 9, 0], [-6, 7, 9, 0], [-8, 8, 9, 0], [-7, 8, 9, 0], [-6, 8, 9, 0], [-8, 9, 9, 0], [-7, 9, 9, 0], [-8, 6, 10, 0], [-8, 7, 10, 0], [-9, 6, 10, 0], [-9, 7, 10, 0], [-9, 8, 10, 0], [-10, 7, 10, 0], [-10, 8, 10, 0], [-5, 8, 11, 0], [-4, 8, 11, 0], [-6, 9, 11, 0], [-5, 9, 11, 0], [-4, 9, 11, 0], [-6, 10, 11, 0], [-5, 10, 11, 0], [-9, 9, 12, 0], [-10, 9, 12, 0], [-10, 10, 12, 0], [-9, 10, 12, 0], [-11, 10, 12, 0], [-11, 11, 12, 0], [-10, 11, 12, 0], [-8, 10, 13, 0], [-7, 10, 13, 0], [-9, 11, 13, 0], [-8, 11, 13, 0], [-7, 11, 13, 0], [-9, 12, 13, 0], [-8, 12, 13, 0], [-11, 12, 14, 1], [-10, 12, 14, 1], [-11, 13, 14, 1], [-10, 13, 14, 1]];
 let HEXES=MELEE_HEXES; /* [q,r,megahex,isEnd] */
@@ -94,9 +97,9 @@ function adjDX(f){ /* starting gear, old Melee/Wizard penalties as the builder c
   return a;
 }
 const MA=f=>{let m=ARMOR[f.armor].ma; if(f.race==="elf"){ if(f.armor==="none"||f.armor==="cloth")m=12; else if(f.armor==="leather")m=10; } return m;};
-const land=u=>{ if(u.air||u.fly){ u.fly=false; u.air=false; u.airN=0; if(!u.natFly) u.stop=Math.max(u.stop,1); } };
+const land=u=>{ if(u.air||u.fly){ u.fly=false; u.air=false; u.airN=0; if(!u.natFly) u.stop=Math.max(u.stop,1); } };   /* a lander may not move on the ground that turn (not a natural flier) */
 const ropeNum=u=>u.rope>0?(u.ropeN||1):0;   /* how many magic ropes hold this figure (Giant Rope on a weaker creature is two) */
-const MAu=u=>{ if(u.stop>0) return 0; let m=u.air?(u.natFly?16:(u.airN<=1?6:12)):MA(u.p); if(u.spd>0) m*=2; if(u.slow>0) m=Math.floor(m/2); for(let i=ropeNum(u);i>0;i--) m=Math.floor(m/2); return m; };
+const MAu=u=>{ if(u.stop>0) return 0; let m=u.air?(u.natFly?(u.natFly>1?u.natFly:16):(u.airN<=1?6:12)):MA(u.p); if(u.spd>0) m*=2; if(u.slow>0) m=Math.floor(m/2); for(let i=ropeNum(u);i>0;i--) m=Math.floor(m/2); return m; };
 const stops=f=>ARMOR[f.armor].stops+[f.right,f.left].reduce((t,k)=>t+(SHIELDS[k]?SHIELDS[k].stops:0),0)+(f.left==="mg"?1:0);
 const iname=k=>k==="none"?"nothing":(W[k]||SHIELDS[k]).n;
 function dmg(f,k){ if(!W[k])return""; let m=W[k].m; return dice(W[k].d,m)+(W[k].miss?" (missile)":""); }
@@ -202,26 +205,103 @@ let P=HEXES.map(h=>({q:h[0],r:h[1],g:h[2],e:h[3],p:pt(h[0],h[1])}));
 let M=new Map(P.map(h=>[key(h.q,h.r),h]));
 let WALLS=new Set();
 const nbr=(h,d)=>{ const n=M.get(key(h.q+DIRS[d][0],h.r+DIRS[d][1])); return n&&!WALLS.has(key(n.q,n.r))?n:undefined; };   /* created walls are not open hexes */
-const dist=(a,b)=>{const dq=a.q-b.q,dr=a.r-b.r;return Math.max(Math.abs(dq),Math.abs(dr),Math.abs(dq+dr));};
+/* ---- multi-hex figures (summoned dragons), ported from the Unlimited Arena ---- */
+const hdist=(a,b)=>{const dq=a.q-b.q,dr=a.r-b.r;return Math.max(Math.abs(dq),Math.abs(dr),Math.abs(dq+dr));};
+/* A multi-hex figure (u.size>1) is a rigid group of hexes: a 4-hex dragon is a diamond. u.q,u.r is its tail hex and u.f (0-5) the
+   way it points, between two of the six hex directions (Wizard 2018 p. 9-10). Everything below works on a figure's whole footprint. */
+/* a 4-hex figure is one diamond (tail, two flanks, head); a 7-hex dragon is two diamonds chained end to end, sharing one hex (Wizard counter sheet 4):
+   columns of 1, 2, 1, 2, 1 hexes. The head is always the last cell. */
+const fpAt=(q,r,f,size)=>{ const a=DIRS[f],b=DIRS[(f+1)%6], dm=(x,y)=>[{q:x,r:y},{q:x+a[0],r:y+a[1]},{q:x+b[0],r:y+b[1]},{q:x+a[0]+b[0],r:y+a[1]+b[1]}], d1=dm(q,r);
+  return size===7?d1.concat(dm(d1[3].q,d1[3].r).slice(1)):d1; };
+const cells=u=>u&&u.size>1?fpAt(u.q,u.r,u.f,u.size):[u];
+const headOf=u=>{ const c=cells(u); return c[c.length-1]; };
+const cenXY=u=>{ const c=cells(u).map(x=>pt(x.q,x.r)); return [c.reduce((s,v)=>s+v[0],0)/c.length,c.reduce((s,v)=>s+v[1],0)/c.length]; };
+const vang=i=>{ const a=DIRS[i],b=DIRS[(i+1)%6],v=pt(a[0]+b[0],a[1]+b[1]); return Math.atan2(v[1],v[0])*180/Math.PI; };   /* screen angle a big figure points at */
+const ks=s=>s.q+","+s.r+","+s.f;
+function bigZone(t,h){ const c=cells(t); if(c.some(x=>x.q===h.q&&x.r===h.r)||!c.some(x=>hdist(x,h)===1)) return null;
+  const cen=cenXY(t), a=DIRS[t.f], b=DIRS[(t.f+1)%6], hv=pt(a[0]+b[0],a[1]+b[1]), hl=Math.hypot(hv[0],hv[1]), p=pt(h.q,h.r), pr=((p[0]-cen[0])*hv[0]+(p[1]-cen[1])*hv[1])/hl;
+  const half=t.size===7?3:1.5; return pr>half-0.5?"front":pr>-half+0.75?"side":"rear"; }   /* a 7-hex strip: the 4 hexes beyond the head are front, the 4 beyond the tail rear, the 6 along its flanks side */
+function bigOK(s,self){ const c=cells(s); if(!c.every(x=>M.get(key(x.q,x.r))&&!WALLS.has(key(x.q,x.r)))) return false; return !allU().some(x=>x!==self&&x.hp>0&&c.some(y=>same(y,x))); }
+function bigPush(st,self){
+  const c=cells(st), ov=allU().filter(x=>x!==self&&x.hp>0&&c.some(y=>same(y,x)));
+  if(!ov.length) return []; if(ov.some(x=>x.size>1||x.hth||x.low)) return null; if(ov.reduce((t,x)=>t+x.hp,0)>=self.hp) return null;
+  const taken=new Set(c.map(x=>key(x.q,x.r))), plan=[], cen=cenXY(st);
+  for(const x of ov){ const opts=[]; for(let d=0;d<6;d++){ const n=nbr(x,d); if(!n||taken.has(key(n.q,n.r))) continue; if(allU().some(y=>y.hp>0&&y!==x&&!ov.includes(y)&&same(n,y))) continue; opts.push(n); }
+    opts.sort((a,b)=>Math.hypot(a.p[0]-cen[0],a.p[1]-cen[1])-Math.hypot(b.p[0]-cen[0],b.p[1]-cen[1])+(Math.random()-.5)*.4);
+    if(!opts.length) return null; const n=opts[0]; taken.add(key(n.q,n.r)); plan.push({u:x,dest:n}); }
+  return plan; }
+function doPush(a,plan){ for(const pl of plan){ const x=pl.u, dx=adjDXu(x,"single",null), t=sum(rollN(3)); x.q=pl.dest.q; x.r=pl.dest.r;
+    if(t<=dx) lg(`${a.p.name} pushes ${sub(x)==="You"?"you":x.p.name} back; ${sub(x)==="You"?"you step":x.p.name+" steps"} aside and can act normally (saving roll ${t}, needed ${dx} or less).`);
+    else { x.down=true; x.low=null; lg(`${a.p.name} pushes ${sub(x)==="You"?"you":x.p.name} back; ${sub(x)==="You"?"you fall":x.p.name+" falls"} and can do nothing else this turn (saving roll ${t}, needed ${dx} or less).`); } } }
+function bigEngaged(s,E){ const X=E.filter(e=>e.hp>0&&isEngaged(s,e)); return X.length>=2||X.some(e=>e.size>1); }
+/* a big figure moves as one rigid piece: it slides one hex in any direction, or pivots a sixth of a turn about its tail or its head.
+   A step costs the farthest any part of it moves (a straight move is 1 per hex, a pivot about the tail swings the head 2 hexes). */
+function bigSteps(s){ const out=[]; for(const d of DIRS) out.push({q:s.q+d[0],r:s.r+d[1],f:s.f});
+  for(const df of [1,5]){ const f2=(s.f+df)%6, H=headOf(s), a=DIRS[f2], b=DIRS[(f2+1)%6], k=s.size===7?2:1; out.push({q:s.q,r:s.r,f:f2}); out.push({q:H.q-k*(a[0]+b[0]),r:H.r-k*(a[1]+b[1]),f:f2});
+    if(s.size===7){ const A0=DIRS[s.f],B0=DIRS[(s.f+1)%6], m={q:s.q+A0[0]+B0[0],r:s.r+A0[1]+B0[1]}; out.push({q:m.q-a[0]-b[0],r:m.r-a[1]-b[1],f:f2}); } }   /* a 7-hex dragon may also pivot about its middle hex */
+  return out; }
+const bigCost=(s,n)=>{ const A=fpAt(s.q,s.r,s.f,s.size), B=fpAt(n.q,n.r,n.f,s.size); return Math.max(...A.map((x,i)=>hdist(x,B[i]))); };
+function reachBig(a,B,ma,eng){
+  const E=[].concat(B), start={q:a.q,r:a.r,f:a.f,size:a.size,air:a.air,c:0,fire:0,slk:0}, out=new Map([[ks(start),start]]), engagers=eng?E.filter(e=>e.hp>0&&isEngaged(a,e)):[], pq=[start], fly=!!a.air, vis=new Map([[ks(start),0]]);
+  while(pq.length){ pq.sort((x,y)=>x.c-y.c); const cur=pq.shift(); if(cur.stop) continue;
+    for(const n of bigSteps(cur)){ const c=cur.c+bigCost(cur,n); if(c>(eng?1:ma)) continue; const k=ks(n); if(out.has(k)&&out.get(k).c<=c) continue;
+      const st={q:n.q,r:n.r,f:n.f,size:a.size,air:a.air,c,fire:0,slk:0};
+      if(fly){ if(!cells(st).every(x=>M.get(key(x.q,x.r)))) continue; if(vis.has(k)&&vis.get(k)<=c) continue; vis.set(k,c);   /* a flying dragon passes over figures and walls, and ends on empty hexes */
+        const good=bigOK(st,a); if(eng&&!engagers.every(e=>dist(st,e)===1)) continue; if(good&&!eng&&bigEngaged(st,E)) st.stop=true; if(good) out.set(k,st); pq.push(st); continue; }
+      if(!bigOK(st,a)){ if(n.f===cur.f&&cells(st).every(x=>M.get(key(x.q,x.r))&&!WALLS.has(key(x.q,x.r)))){ const pl=bigPush(st,a); if(pl&&pl.length&&(!eng||engagers.every(e=>dist(st,e)===1||pl.some(q=>q.u===e)))){ st.push=pl; st.stop=true; out.set(k,st); } } continue; }
+      if(eng&&!engagers.every(e=>dist(st,e)===1)) continue;
+      if(!eng&&bigEngaged(st,E)) st.stop=true;
+      out.set(k,st); pq.push(st); } }
+  return out; }
+function aiMoveBig(a){
+  if(a.natFly){ const up=dist(a,other(a))>=3; if(up!==!!a.air){ a.air=up; if(!up) a.airN=0; lg(`${a.p.name} ${up?"takes to the air":"lands"}.`); } }
+  const E=enemiesOf(a), b=other(a), eng=engagedAny(a), R=reachBig(a,E,MAu(a),eng); let best=null;
+  for(const st of R.values()){ const d=dist(st,b); let sc=d*10; if(d===1){ const z=relOf(st,b); sc=z==="front"?-6:z==="side"?3:6; } if(st.push) sc=(st.push.some(q=>q.u===b)?-4:sc)+1.5; sc+=Math.random()*1.5; if(!best||sc<best.sc) best={st,sc}; }
+  const st=best.st, moved=st.q!==a.q||st.r!==a.r||st.f!==a.f; a.q=st.q; a.r=st.r; a.f=st.f; a.engStart=eng; a.moved=st.c||0;
+  lg(`${a.p.name} ${eng?(moved?"shifts":"holds"):(moved?"moves "+st.c+" hex"+(st.c>1?"es":""):"holds")}.`);
+  if(st.push) doPush(a,st.push);
+}
+function placeBig(u,start,toward){ let best=null; for(const h of P) for(let f=0;f<6;f++){ const t={q:h.q,r:h.r,f,size:u.size}; if(!bigOK(t,u)) continue;
+    const ang=Math.atan2(cenXY(toward)[1]-cenXY(t)[1],cenXY(toward)[0]-cenXY(t)[0])*180/Math.PI, df=Math.abs((ang-vang(f)+540)%360-180), sc=dist(t,start)*10+df/30; if(!best||sc<best.sc) best={t,sc}; }
+  if(best){ u.q=best.t.q; u.r=best.t.r; u.f=best.t.f; } }
+function doBreath(u,o){ const B=u.p.breath; u.hp-=B.cost; const head=headOf(u), rng=Math.min(...cells(o).map(x=>hdist(head,x)));
+  let dx=adjDXu(u,"single",null)-rng; if(o.inv) dx-=6; else if(o.blur) dx-=4; if(o.air) dx-=4; if(shadowAt(o)&&!u.sight&&!o.inv) dx-=4;
+  const t=sum(rollN(3)), hit=t===3||t===4||(t<=dx&&t<16), tn=o.p.name;
+  lg(`${u.p.name} breathes fire at ${tn} (${rng} hex${rng>1?"es":""} away, needs ${dx} or less, rolled ${t}; it costs ${B.cost} ST).`);
+  if(hit) fireHits(o,sum(rollN(B.dice))); else lg("The flames miss."); endCheck(); }
+function tailLash(u){ for(const x of enemiesOf(u).filter(x=>x.hp>0&&!(x.size>1)&&!x.air&&!x.down&&relOf(u,x)==="rear")){
+    const dx=adjDXu(u,"single",null), t=sum(rollN(3)), hit=t===3||t===4||(t<=dx&&t<16), tn=x.p.name;
+    if(!hit){ lg(`${u.p.name}'s tail lashes at ${tn} and misses (rolled ${t}, needed ${dx} or less).`); continue; }
+    const sd=adjDXu(x,"single",null), sv=sum(rollN(3));
+    if(sv<=sd) lg(`${u.p.name}'s tail lashes ${tn}, but ${"it keeps its"} feet (saving roll ${sv}, needed ${sd} or less).`);
+    else { x.down=true; x.low=null; lg(`${u.p.name}'s tail knocks ${tn} down (saving roll ${sv}, needed ${sd} or less).`); } } }
+const upOf=m=>m.up||1;
+const dist=(a,b)=>{ if(!(a.size>1)&&!(b.size>1)) return hdist(a,b); let m=99; for(const x of cells(a)) for(const y of cells(b)) m=Math.min(m,hdist(x,y)); return m; };
 const dirIdx=(from,to)=>DIRS.findIndex(d=>d[0]===to.q-from.q&&d[1]===to.r-from.r);
-const same=(a,b)=>a.q===b.q&&a.r===b.r;
+const same=(a,b)=>{ if(!(a.size>1)&&!(b.size>1)) return a.q===b.q&&a.r===b.r; return cells(a).some(x=>cells(b).some(y=>x.q===y.q&&x.r===y.r)); };   /* for a big figure: do the two overlap */
 /* where hex h lies relative to a figure at t facing t.f: front (3 hexes), side (2) or rear (1). null if not adjacent */
-function relOf(t,h){ const d=dirIdx(t,h); if(d<0)return null; if(t.down||t.low==="prone")return "rear"; const k=(d-t.f+6)%6; return k===0||k===1||k===5?"front":k===3?"rear":"side"; }
+function relOf(t,h){ const rank={front:3,side:2,rear:1}; let best=null;
+  for(const c of cells(h)){ let z=null;
+    if(t.size>1) z=bigZone(t,c);
+    else { const d=dirIdx(t,c); if(d<0) continue; if(t.down||t.low==="prone") z="rear"; else { const k=(d-t.f+6)%6; z=k===0||k===1||k===5?"front":k===3?"rear":"side"; } }
+    if(z&&(!best||rank[z]>rank[best])) best=z; }
+  return best; }
 /* same classification for a hex that is not adjacent (used for missile fire and thrown weapons) */
-function relFar(t,h){ const d=dirIdx(t,h); if(d>=0) return relOf(t,h); if(t.down||t.low==="prone") return "rear"; const k=(faceToward(t,h)-t.f+6)%6; return k===0||k===1||k===5?"front":k===3?"rear":"side"; }
+function relFar(t,h){ if(t.size>1||h.size>1){ const z=relOf(t,h); if(z) return z; const A=cenXY(t),B=cenXY(h); let df=Math.abs((Math.atan2(B[1]-A[1],B[0]-A[0])*180/Math.PI-(t.size>1?vang(t.f):SCR[t.f])+540)%360-180); return df<=75?"front":df>=135?"rear":"side"; }
+  const d=dirIdx(t,h); if(d>=0) return relOf(t,h); if(t.down||t.low==="prone") return "rear"; const k=(faceToward(t,h)-t.f+6)%6; return k===0||k===1||k===5?"front":k===3?"rear":"side"; }
 /* megahex distance: the 15 megahexes sit on a lattice whose neighbours are 3 hexes apart */
 const mhCell=h=>{ for(let a=-8;a<=8;a++)for(let b=-8;b<=8;b++){ if(dist(h,{q:2*a-b,r:1+a+3*b})<=1) return [a,b]; } return [0,0]; };
 function mhDist(x,y){ const A=mhCell(x),B=mhCell(y),da=A[0]-B[0],db=A[1]-B[1]; return Math.max(Math.abs(da),Math.abs(db),Math.abs(da+db)); }
 const mhPen=n=>n<=2?0:-Math.ceil((n-2)/2);   /* 3-4 MH: -1, 5-6 MH: -2 */
 /* "in front of" a figure for missile and thrown weapons: everything ahead of the line across its rear hex edges (Melee p. 9) */
-function inFront(a,b){ if(a.down||blocked(a,b)) return false; const A=pt(a.q,a.r),B=pt(b.q,b.r),f=SCR[a.f]*Math.PI/180; return (B[0]-A[0])*Math.cos(f)+(B[1]-A[1])*Math.sin(f)>-0.85; }
+function inFront(a,b){ if(a.down||blocked(a,b)) return false; const A=cenXY(a),B=cenXY(b),f=(a.size>1?vang(a.f):SCR[a.f])*Math.PI/180; return (B[0]-A[0])*Math.cos(f)+(B[1]-A[1])*Math.sin(f)>-0.85; }
 const isMW=id=>!!(W[id]&&W[id].miss), isBow=id=>id==="sbow"||id==="hbow"||id==="lbow";
 const xb=(u,w)=>u.low==="prone"&&(w==="lxbow"||w==="hxbow")?1:0;   /* crossbowman lying prone +1 DX */
 const shotDX=(u,o,wid,kind)=>adjDXu(u,"single",null)-(shadowAt(o)?4:0)-(shadowAt(u)?6:0)-(u.air&&!u.natFly?4:0)-(o.air?4:0)+(kind==="thrown"?-dist(u,o):mhPen(mhDist(u,o))+xb(u,wid));
 const MWid=u=>isMW(u.right)?u.right:(isMW(u.left)&&!SHIELDS[u.left]?u.left:null);
 const isEngaged=(a,b)=>!!a.air===!!b.air&&relOf(b,a)==="front";   /* a stands in one of b's front hexes */
-function faceToward(a,b){ const A=pt(a.q,a.r),B=pt(b.q,b.r); const ang=Math.atan2(B[1]-A[1],B[0]-A[0])*180/Math.PI;
-  let best=0,bd=999; SCR.forEach((s,i)=>{const dd=Math.abs((ang-s+540)%360-180); if(dd<bd){bd=dd;best=i;}}); return best; }
+function faceToward(a,b){ const A=cenXY(a),B=cenXY(b); const ang=Math.atan2(B[1]-A[1],B[0]-A[0])*180/Math.PI;
+  let best=0,bd=999; (a.size>1?[0,1,2,3,4,5].map(vang):SCR).forEach((sc,i)=>{const dd=Math.abs((ang-sc+540)%360-180); if(dd<bd){bd=dd;best=i;}}); return best; }
 /* hexes a figure may end its movement in. Engaged: shift one hex, staying next to the enemy. Otherwise up to MA hexes,
    and movement must stop on entering any enemy front hex. */
 /* Avert: the victim must end his move at least 2 hexes farther from the caster; if he cannot, as far as he can; if he cannot get any farther he must save against DX or fall */
@@ -233,19 +313,17 @@ function avertFilter(u,R,startPos){
   for(const [k,h] of [...R]) if(dist(h,c)<need) R.delete(k);
   return false; }
 function reach(a,B,ma,eng){
+  if(a.size>1) return reachBig(a,B,ma,eng);
   const E=[].concat(B), occ=allU().filter(x=>x.hp>0&&!same(x,a)), free=n=>n&&!occ.some(x=>same(x,n));
-  const out=new Map([[key(a.q,a.r),{q:a.q,r:a.r,c:0,fire:0,slk:0}]]);
+  const air=!!a.air, nb=(h,d)=>air?M.get(key(h.q+DIRS[d][0],h.r+DIRS[d][1])):nbr(h,d), endOK=n=>free(n)&&!WALLS.has(key(n.q,n.r));   /* a flier crosses figures and walls but must end on an empty hex */
+  const out=new Map([[key(a.q,a.r),{q:a.q,r:a.r,c:0,fire:0,slk:0}]]), vis=new Set([key(a.q,a.r)]);
   if(eng){ for(let d=0;d<6;d++){const n=nbr(a,d); if(free(n)&&E.some(e=>dist(n,e)===1)) out.set(key(n.q,n.r),{q:n.q,r:n.r,c:1,fire:objAt(n,"fire")?1:0,slk:slickAt(n)?1:0});} return out; }
   const qu=[{q:a.q,r:a.r,c:0}];
   while(qu.length){ const cur=qu.shift(); if(cur.c>=ma)continue; if(cur.c>0&&E.some(e=>relOf(e,cur)==="front"&&!!a.air===!!e.air))continue;
-    for(let d=0;d<6;d++){ const n=nbr(cur,d); if(!free(n)||out.has(key(n.q,n.r)))continue;
-      const e={q:n.q,r:n.r,c:cur.c+1,fire:(cur.fire||0)+(objAt(n,"fire")?1:0),slk:(cur.slk||0)+(slickAt(n)?1:0)}; out.set(key(n.q,n.r),e); qu.push(e); } }
+    for(let d=0;d<6;d++){ const n=nb(cur,d); if(!n||(!air&&!free(n))||vis.has(key(n.q,n.r)))continue; vis.add(key(n.q,n.r));
+      const e={q:n.q,r:n.r,c:cur.c+1,fire:air?0:(cur.fire||0)+(objAt(n,"fire")?1:0),slk:air?0:(cur.slk||0)+(slickAt(n)?1:0)}; if(!air||endOK(n)) out.set(key(n.q,n.r),e); qu.push(e); } }
   return out;
 }
-
-
-/* Melee 2018 p. 22, arena combat: winner 30 XP, defeated survivor 20, a runaway who is unhurt loses 10; the side that is 3+ weaker in ST+DX gets 10 extra.
-   House rule from the players: if someone gives up or flees unhurt, the other gets 0. A friendly duel never kills a fighter. */
 function settle(){
   if(G.settled) return; G.settled=true; const A=G.me,B=G.foe;
   const sa=me.st+me.dx, sb=foe.st+foe.dx, bonus=u=>(u===A?sb-sa>=3:sa-sb>=3)?10:0;
@@ -278,7 +356,7 @@ function ctlOK(u,o,kind){ if(!o||o.hp<=0||sideOf(o)===sideOf(u)) return false;
 function releaseCtl(x,why){ x.ctl=null; if(x.minion){ x.hp=0; } lg(`${x.p.name} is free of the control spell${x.minion?" and vanishes":""}${why?" ("+why+")":""}.`); }
 const opp=u=>sideOf(u)==="me"?G.foe:G.me;   /* the other player's own figure */
 const enemiesOf=u=>allU().filter(x=>x!==u&&x.hp>0&&sideOf(x)!==sideOf(u));
-const engagedAny=u=>enemiesOf(u).some(e=>isEngaged(u,e));
+const engagedAny=u=>{ const X=enemiesOf(u).filter(e=>isEngaged(u,e)); return u.size>1?(X.length>=2||X.some(e=>e.size>1)):X.length>0; };   /* a big figure needs two attackers in front of it */
 function other(u){ const E=enemiesOf(u); if(!E.length) return u===G.me?G.foe:G.me; if(u.tgtSel&&E.includes(u.tgtSel)) return u.tgtSel;
   let best=null; for(const e of E){ const sc=dist(u,e)*10+(relOf(u,e)==="front"&&!u.down?0:6)+(e===G.me||e===G.foe?0:1);   /* prefer an enemy the figure can actually strike (in its front) */ if(!best||sc<best.s) best={e,s:sc}; } return best.e; }
 const lg=t=>G.log.push(t);
@@ -319,7 +397,7 @@ const CONT=["blur","stone","iron","shield","rev","fly","shock","inv","sight"], C
 function nextRenew(){ if(!G.rq.length){ G.phase="choose"; return; } G.rcur=G.rq.shift(); G.rlist=CONT.filter(k=>G.rcur[k]).map(k=>({k,on:G.rcur.hp>=3})).concat(allU().filter(m=>m.minion&&!m.fake&&m.hp>0&&sideOf(m)===sideOf(G.rcur)).map(m=>({k:"minion",m,on:G.rcur.hp>=3}))).concat(avertsOf(G.rcur).map(m=>({k:"avert",m,on:G.rcur.hp>=3}))); G.cur=G.rcur; G.oth=other(G.rcur); G.phase="rcover"; }
 const rname=r=>r.k==="minion"?r.m.p.name:r.k==="avert"?"Avert on "+r.m.p.name:CONTN[r.k];
 const avertsOf=u=>allU().filter(x=>x.avert===u&&x.hp>0&&!x.fake);
-function doRenew(){ const u=G.rcur; for(const r of G.rlist){ if(r.on&&u.hp>=1){ u.hp--; if(r.k==="blur") lg(`${u.p.name} keeps Blur going.`); } else if(r.k==="minion"){ r.m.hp=0; endCheck(); } else if(r.k==="avert"){ r.m.avert=null; lg(`${u.p.name}'s Avert on ${r.m.p.name} ends.`); } else { u[r.k]=false; if(r.k==="fly"){ land(u); lg(`${u.p.name} lands.`); } if(r.k==="blur") lg(`${u.p.name}'s Blur ends.`); } }
+function doRenew(){ const u=G.rcur; for(const r of G.rlist){ if(r.on&&u.hp>=(r.k==="minion"?upOf(r.m):1)){ u.hp-=(r.k==="minion"?upOf(r.m):1); if(r.k==="blur") lg(`${u.p.name} keeps Blur going.`); } else if(r.k==="minion"){ r.m.hp=0; endCheck(); } else if(r.k==="avert"){ r.m.avert=null; lg(`${u.p.name}'s Avert on ${r.m.p.name} ends.`); } else { u[r.k]=false; if(r.k==="fly"){ land(u); lg(`${u.p.name} lands.`); } if(r.k==="blur") lg(`${u.p.name}'s Blur ends.`); } }
   endCheck(); if(G.phase!=="over") nextRenew(); }
 function choose(first){ const k=G.chooser, o=k==="me"?"foe":"me"; G.order=first?[k,o]:[o,k]; G.idx=0; lg(`${G[k].p.name} moves ${first?"first":"second"}.`); advance(); ui(); drawMap(); }
 function minionMove(side){ for(const m of allU().filter(x=>x.minion&&x.hp>0&&sideOf(x)===side)) aiMove(m); }
@@ -334,6 +412,7 @@ function advance(){
 }
 function aiMove(a){
   if(!enemiesOf(a).length){ lg(`${a.p.name} holds.`); return; } const b=other(a);
+  if(a.size>1&&!a.fresh&&!a.sleep&&!(a.frozen>0)) return aiMoveBig(a);
   if(a.fresh||a.hth||a.low||a.sleep||a.frozen>0) return;
   if(a.down){ if(slickAt(a)&&!slickStand(a)) return; a.standUp=true; lg(`${a.p.name} starts to stand up.`); return; }
   if(a.natFly){ const up=dist(a,b)>=3; if(up!==!!a.air){ a.air=up; if(!up) a.airN=0; lg(`${a.p.name} ${up?"takes to the air":"lands"}.`); } }   /* a gargoyle flies to close a gap and lands to fight */
@@ -400,7 +479,7 @@ function doRush(a,d){
 /* ---- hand-to-hand combat (Melee 2018 p. 17-20) ---- */
 const hthWeap=u=>[u.right,u.left].find(k=>k==="dagger"||k==="mg")||null;
 const sheathedDag=u=>u.dag.find(k=>k==="dagger"||k==="mg")||null;
-function canHth(u,o){ return !u.minion&&!o.minion&&!u.air&&!o.air&&!u.hth&&!o.hth&&!u.down&&u.hp>0&&dist(u,o)===1&&(o.down||o.low||MAu(u)>MAu(o)||relOf(o,u)==="rear"); }
+function canHth(u,o){ return !(u.size>1)&&!(o.size>1)&&!u.minion&&!o.minion&&!u.air&&!o.air&&!u.hth&&!o.hth&&!u.down&&u.hp>0&&dist(u,o)===1&&(o.down||o.low||MAu(u)>MAu(o)||relOf(o,u)==="rear"); }
 function hthWhy(u,o){ return o.down||o.low?"it is down, kneeling or prone":relOf(o,u)==="rear"?"you are behind it":"it has the lower MA"; }
 function dropGear(u,at){ const keep=hthWeap(u); let kept=false;
   for(const side of ["right","left"]){ const k=u[side]; if(k==="none")continue; if(k===keep&&!kept){kept=true;continue;} G.floor.push({q:at.q,r:at.r,id:k}); u[side]="none"; } }
@@ -489,12 +568,21 @@ function lineHexes(a,b){ const n=dist(a,b), out=[]; const A=[a.q,a.r,-a.q-a.r], 
     if(d[0]>d[1]&&d[0]>d[2]) r[0]=-r[1]-r[2]; else if(d[1]>d[2]) r[1]=-r[0]-r[2]; else r[2]=-r[0]-r[1]; out.push({q:r[0],r:r[1]}); }
   return out; }
 const blocked=(a,b)=>WALLS.size>0&&lineHexes(a,b).some(h=>WALLS.has(key(h.q,h.r)));
-function creaHexes(u,o,t){ if(t==="slick") return P.filter(h=>dist(u,h)<=Math.max(1,castBase(u)-3)&&!blocked(u,h));
+function creaHexes(u,o,t,sp){ if(t==="slick") return P.filter(h=>dist(u,h)<=Math.max(1,castBase(u)-3)&&!blocked(u,h));
   const occ=h=>allU().some(x=>x.hp>0&&same(x,h)), solid=t==="wall"||t==="summon";
+  const sz=(t==="summon"&&sp&&SP[sp]&&SP[sp].summon&&CRE[SP[sp].summon].size)||0;
+  if(sz>1){ const okc=c=>M.get(key(c.q,c.r))&&mhDist(u,c)<=1&&!blocked(u,c)&&!WALLS.has(key(c.q,c.r))&&!G.objs.some(x=>x.t!=="slick"&&same(x,c))&&!occ(c);   /* a summoned dragon must fit whole: every hex free, on the board, in your megahex or the ones next to it */
+    return P.filter(h=>[0,1,2,3,4,5].some(f=>cells({q:h.q,r:h.r,f,size:sz}).every(okc))); }
   return P.filter(h=>mhDist(u,h)<=1&&!blocked(u,h)&&!G.objs.some(x=>x.t!=="slick"&&same(x,h)&&(solid||x.t===t||x.t==="wall"))&&(!solid||!occ(h))&&(t!=="fire"||!same(h,u))); }
 function summonMinion(u,kind,h){ const C=CRE[kind], n=allU().filter(x=>x.minion&&x.p.name.indexOf(C.name)===0).length;
   const p=fromBuilder({name:C.name+(n?" "+(n+1):""),race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"});
-  const m=mk(h,p); m.minion=true; m.kind=kind; if(kind==="gargoyle") m.natFly=true; m.side=sideOf(u); m.owner=u; m.fresh=true; m.f=faceToward(m,other(u)); if(!G.units) G.units=[G.me,G.foe]; G.units.push(m); return m; }
+  const m=mk(h,p); m.minion=true; m.kind=kind; if(kind==="gargoyle") m.natFly=true; m.side=sideOf(u); m.owner=u; m.fresh=true; m.f=faceToward(m,other(u));
+  if(C.up) m.up=C.up;
+  if(C.size>1){ m.size=C.size; p.breath=C.breath; m.natFly=C.fly||false; const tw=other(u); let bf=-1,bs=1e9;   /* a big summon is placed whole, facing the enemy as nearly as it fits */
+    for(let f=0;f<6;f++){ const c=cells({q:h.q,r:h.r,f,size:C.size}); if(!c.every(x=>M.get(key(x.q,x.r))&&mhDist(u,x)<=1&&!WALLS.has(key(x.q,x.r))&&!allU().some(y=>y.hp>0&&cells(y).some(z=>same(z,x))))) continue;
+      const ang=Math.atan2(cenXY(tw)[1]-cenXY({q:h.q,r:h.r,f,size:C.size})[1],cenXY(tw)[0]-cenXY({q:h.q,r:h.r,f,size:C.size})[0])*180/Math.PI, sc=Math.abs((ang-vang(f)+540)%360-180); if(sc<bs){ bs=sc; bf=f; } }
+    if(bf>=0) m.f=bf; }
+  if(!G.units) G.units=[G.me,G.foe]; G.units.push(m); return m; }
 function fireHits(u,total){ const prot=ARMOR[u.p.armor].stops+(u.iron?6:u.stone?4:0), h=Math.max(0,total-prot);
   lg(`${sub(u)} ${vb(u,"take","takes")} ${total} hits of fire; protection stops ${Math.min(prot,total)}. ${h?sub(u)+" "+vb(u,"take","takes")+" "+h+" hit"+(h>1?"s":""):"No damage gets through"}.`);
   if(h>0){ u.hp-=h; u.hits+=h; u.tookHit=true; u.sleep=false; lg(`${vb(u,"Your","Its")} ST is now ${Math.max(u.hp,0)}.`); } endCheck(); }
@@ -527,6 +615,8 @@ const SP={
  "Summon Bear":{k:"C",cost:()=>4,obj:"summon",summon:"bear"},
  "Summon Gargoyle":{k:"C",cost:()=>4,obj:"summon",summon:"gargoyle"},
  "Summon Giant":{k:"C",cost:()=>4,obj:"summon",summon:"giant"},
+ "Summon Small Dragon":{k:"C",cost:()=>5,obj:"summon",summon:"bsdragon"},
+ "Summon Dragon":{k:"C",cost:()=>5,obj:"summon",summon:"bdragon"},
  "Confusion":{k:"T",v:1},
  "Avert":{k:"T",cost:()=>2},
  "Slippery Floor":{k:"T",cost:()=>3,slick:1},
@@ -565,8 +655,8 @@ function castList(u,o){
     if(d.slick){ if(mx>=3&&creaHexes(u,o,"slick").length) L.push({sp:name,cost:3,dx:base,hexsel:"slick",label:`Slippery Floor (3 ST; needs ${base} minus the hexes to its centre; you pick the centre of the megahex, it stays hidden until someone steps on it)`}); continue; }
     if(d.k==="C"){ const cc=d.cost(o); if(cc>mx) continue;
       if(d.rope){ const big=!!d.giant, two=big&&o.p.st<20; if(mhDist(u,o)<=1&&(big||o.p.st<20)&&!o.rope&&!blocked(u,o)) L.push({sp:name,cost:cc,dx:base,label:big?`Giant Rope (${cc} ST; needs ${base} or less): ${two?"two ropes at once on this weaker creature, each removed separately: MA quartered, DX −4 and two worse each turn":"one rope on this big creature: halves its MA, −2 DX and one worse each turn"}; it must stand still and roll to get free`:`Rope (${cc} ST; needs ${base} or less): halves the enemy's MA, −2 DX and one worse each turn; it must stand still and roll to get free`}); continue; }
-      if(d.fake){ if(creaHexes(u,o,"summon").length) for(const fk of Object.keys(CRE)) L.push({sp:name,form:fk,cost:cc,dx:base,hexsel:"summon",label:`${name} of a ${CRE[fk].name} (${cc} ST; needs ${base} or less; you choose the hex)`}); continue; }
-      if(creaHexes(u,o,d.obj).length) L.push({sp:name,cost:cc,dx:base,hexsel:d.obj,label:`${name} (${cc} ST; needs ${base} or less; you choose the hex, in your megahex or next to it)`}); continue; }
+      if(d.fake){ if(creaHexes(u,o,"summon").length) for(const fk of Object.keys(CRE).filter(k=>!CRE[k].size)) L.push({sp:name,form:fk,cost:cc,dx:base,hexsel:"summon",label:`${name} of a ${CRE[fk].name} (${cc} ST; needs ${base} or less; you choose the hex)`}); continue; }
+      if(creaHexes(u,o,d.obj,name).length) L.push({sp:name,cost:cc,dx:base,hexsel:d.obj,label:`${name} (${cc} ST${d.summon&&CRE[d.summon].up>1?", then "+CRE[d.summon].up+" a turn":""}; needs ${base} or less; you choose the hex${d.summon&&CRE[d.summon].size?" for its tail; the whole dragon must fit":""}, in your megahex or next to it)`}); continue; }
     if(d.destroy){ if(mx<1) continue; (G.objs||[]).forEach((ob,i)=>{ if(ob.t==="slick") return; const dd=dist(u,ob), dx=base-dd; L.push({sp:name,cost:1,dx,objId:i,label:`Destroy Creation: the ${ob.t} ${dd} hex${dd===1?"":"es"} away (1 ST; needs ${dx} or less)`}); }); continue; }
   if(d.dispel){ if(mx>=5) L.push({sp:name,cost:5,dx:base,label:`Dispel Illusions (5 ST; needs ${base} or less): every illusion and image within 5 megahexes vanishes, yours too`}); continue; }
   if(d.reveal){ if(mx>=1) L.push({sp:name,cost:1,dx:base,label:`Reveal Magic (1 ST; needs ${base} or less): you learn which enemy figures within 5 megahexes are protected by Reverse Missiles, a Spell Shield, Stone Flesh, Iron Flesh or a Shock Shield, and where slippery floors lie`}); continue; }
@@ -590,7 +680,7 @@ function payST(u,c){ u.hp-=c; }
 function doCast(u,o,pa){
   let c=castList(u,o).find(x=>x.sp===pa.sp&&(pa.n==null||x.n===pa.n)&&(pa.on==null||x.on===pa.on)&&(pa.objId==null||x.objId===pa.objId)&&(pa.form==null||x.form===pa.form));
   if(!c){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} cast that now.`); return; }
-  if(c.hexsel){ const ok=pa.dest&&creaHexes(u,o,c.hexsel).some(h=>same(h,pa.dest)); if(!ok){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} create that there.`); return; } c=Object.assign({},c,{dest:{q:pa.dest.q,r:pa.dest.r}}); if(SP[c.sp].slick) c=Object.assign({},c,{dx:c.dx-dist(u,c.dest)}); }
+  if(c.hexsel){ const ok=pa.dest&&creaHexes(u,o,c.hexsel,c.sp).some(h=>same(h,pa.dest)); if(!ok){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} create that there.`); return; } c=Object.assign({},c,{dest:{q:pa.dest.q,r:pa.dest.r}}); if(SP[c.sp].slick) c=Object.assign({},c,{dx:c.dx-dist(u,c.dest)}); }
   if(c.tele){ const h=pa.dest&&P.find(x=>x.q===pa.dest.q&&x.r===pa.dest.r); const tc=h?Math.max(1,mhDist(u,h)):0;
     if(!h||same(h,o)||same(h,u)||tc>u.hp){ lg(`${sub(u)} ${vb(u,"cannot","cannot")} teleport there.`); return; } c=Object.assign({},c,{cost:tc,dest:h,label:`Teleport ${tc} megahex${tc>1?"es":""}`}); }
   const d=SP[c.sp], dice=rollN(3), t=sum(dice); let hit,mult=1,fizz=false; const secret=c.sp==='Stone Flesh'||c.sp==='Iron Flesh'||c.sp==='Spell Shield'||c.sp==='Reverse Missiles'||c.sp==='Shock Shield'||c.sp==='Mage Sight'||c.sp==='Slippery Floor';
@@ -702,6 +792,7 @@ function options(u,o){
   if(inF&&(eng||half)&&SHIELDS[u.left]&&u.p.cls!=="wizard") L.push({t:"rush",label:`Shield-rush with the ${iname(u.left).toLowerCase()} (no weapon attack; if it hits, the target saves vs DX on ${u.p.st>=o.p.st?3:2} dice or falls)`});
   if(!u.minion&&u.moved<=1&&o.minion&&o.hp>0) L.push({t:"disbelieve",label:`Disbelieve ${o.p.name} (move at most 1 hex; if it is an illusion or an image, its owner secretly rolls 3 dice against your IQ ${effIQ(u)}; you are only told if it vanishes)`});
   if(u.rope>0&&u.moved===0) L.push({t:"unrope",label:ropeNum(u)>1?`Struggle free of one of the two ropes (stand still and do nothing else; roll ${adjDXu(u,"single",null)} or less on 3 dice; each success takes off one rope)`:`Struggle free of the rope (stand still and do nothing else; roll ${adjDXu(u,"single",null)} or less on 3 dice)`});
+  if(u.size>1&&u.p.breath&&u.hp>u.p.breath.cost+1&&!u.down&&(eng||half)) L.push({t:"breathe",label:`Breathe fire at ${o.p.name} (${u.p.breath.dice} dice damage, costs ${u.p.breath.cost} ST, −1 DX per hex of range)`});
   L.push({t:"none",label:"Do nothing"});
   return L.filter(x=>!x.off);
 }
@@ -717,6 +808,7 @@ function aiAct(u,o){
   if(!enemiesOf(u).length) return {t:"none"};
   if(u.ctl&&u.ctl.hp>0&&o&&o.p.st>2*u.p.st){ const sv=sum(rollN(3)), iq=effIQ(u); if(sv<=iq){ releaseCtl(u,"it refused to attack a far stronger foe"); return {t:"none"}; } }
   if(u.standUp||u.fresh||u.sleep||u.frozen>0) return {t:"none"};
+  if(u.size>1){ const L0=options(u,o), br=L0.find(x=>x.t==="breathe"), at=L0.find(x=>x.t==="attack"); if(br&&(!at||(u.hp>12&&Math.random()<.3))) return br; return at||{t:"none"}; }   /* a big creature claws what is in front of it, or breathes fire at range */
   const L=options(u,o), has=t=>L.find(x=>x.t===t);
   if(u.low){ if(dist(u,o)<=2&&has("rise")) return has("rise"); const sh=has("fire")||has("last"); return sh||(u.cool>0?{t:"none"}:has("rise"));}
   if(!u.low&&dist(u,o)>=5){ const pf=L.find(x=>x.t==="fire"&&x.pos==="prone"); if(pf&&Math.random()<.5) return pf; }
@@ -793,8 +885,8 @@ function endCheck(){
 }
 function resolveTurn(pa,pb){
   G.me.act=pa; G.foe.act=pb; const U=allU().filter(u=>u.hp>0); for(const u of U) if(u!==G.me&&u!==G.foe) u.act=aiAct(u,other(u)); G.phase="resolve"; U.forEach(u=>{ u.defending=u.act.t==="defend"; u.dodging=u.act.t==="dodge"; });
-  const N2={disbelieve:"try to disbelieve something",unrope:"struggle with the rope",cast:"cast a spell",drop:"drop down",rise:"stand up",hth:"close for hand-to-hand",hattack:"fight hand to hand",hdraw:"try to draw a dagger",hesc:"break away from the grapple",jab:"jab with a pole weapon",rush:"shield-rush",attack:"attack",dual:"attack with a weapon and the main-gauche",defend:"defend",dodge:"dodge",fire:"fire a missile weapon",last:"fire one last shot",throw:"throw a weapon",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
-  const N3={disbelieve:"tries to disbelieve something",unrope:"struggles with the rope",cast:"casts a spell",drop:"drops down",rise:"starts to stand up",hth:"closes for hand-to-hand",hattack:"fights hand to hand",hdraw:"tries to draw a dagger",hesc:"tries to break away",jab:"jabs with a pole weapon",rush:"shield-rushes",attack:"attacks",dual:"attacks with a weapon and the main-gauche",defend:"defends",dodge:"dodges",fire:"fires a missile weapon",last:"fires one last shot",throw:"throws a weapon",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
+  const N2={breathe:"breathe fire",disbelieve:"try to disbelieve something",unrope:"struggle with the rope",cast:"cast a spell",drop:"drop down",rise:"stand up",hth:"close for hand-to-hand",hattack:"fight hand to hand",hdraw:"try to draw a dagger",hesc:"break away from the grapple",jab:"jab with a pole weapon",rush:"shield-rush",attack:"attack",dual:"attack with a weapon and the main-gauche",defend:"defend",dodge:"dodge",fire:"fire a missile weapon",last:"fire one last shot",throw:"throw a weapon",disengage:"disengage",ready:"ready a weapon",none:"do nothing"};
+  const N3={breathe:"breathes fire",disbelieve:"tries to disbelieve something",unrope:"struggles with the rope",cast:"casts a spell",drop:"drops down",rise:"starts to stand up",hth:"closes for hand-to-hand",hattack:"fights hand to hand",hdraw:"tries to draw a dagger",hesc:"tries to break away",jab:"jabs with a pole weapon",rush:"shield-rushes",attack:"attacks",dual:"attacks with a weapon and the main-gauche",defend:"defends",dodge:"dodges",fire:"fires a missile weapon",last:"fires one last shot",throw:"throws a weapon",disengage:"disengages",ready:"readies a weapon",none:"does nothing"};
   U.forEach(u=>{ if(u.act.pos&&(u.act.t==="drop"||u.act.t==="fire")&&!u.low){ u.low=u.act.pos; lg(`${sub(u)} ${vb(u,"go","goes")} ${u.act.pos==="prone"?"prone":"down on one knee"}.`); } if(u.act.t==="rise") u.standUp=true; });
   U.forEach(u=>lg(u.minion?`${sub(u)} ${N3[u.act.t]}.`:`${sub(u)} chooses to ${N2[u.act.t]}.`)); U.forEach(u=>{ u.lastTgt=null; });
   U.forEach(u=>{ const o=other(u); u.extra=0; u.poleVs=false; u.pri=false;
@@ -809,8 +901,10 @@ function resolveTurn(pa,pb){
     if(G.phase==="over")break; const u=e.u,o=other(u); let t=u.act.t;
     if((u.down&&!u.hth)||u.hp<=0||u.frozen>0||u.sleep)continue;
     if(u.hth&&ATK.concat(["jab","fire","last","throw"]).includes(t)) t="hattack";
+    if(pass===1&&u.size>1&&!u.air) tailLash(u);
     if(pass===1){
-      if(t==="cast") doCast(u,o,u.act);
+      if(t==="breathe"){ if(u.size>1&&u.p.breath&&u.hp>u.p.breath.cost) doBreath(u,o); }
+      else if(t==="cast") doCast(u,o,u.act);
       else if(t==="unrope") doUnrope(u);
       else if(t==="disbelieve"){ if(o.minion&&o.hp>0) doDisbelieve(u,o); }
       else if(t==="hth") startHth(u,o);
@@ -830,7 +924,8 @@ function resolveTurn(pa,pb){
       else if(t==="throw"){ const wid=u.act.wid; if((u.right===wid||u.left===wid)&&inFront(u,o)) doAttack(u,o,wid,"single","thrown"); else lg(`${sub(u)} ${vb(u,"have","has")} no throw.`); }
       else if(t==="disengage"){ const dest=u.act.dest; if(dest&&!same(dest,o)&&dist(dest,u)===1){ u.q=dest.q; u.r=dest.r; lg(`${sub(u)} ${vb(u,"disengage","disengages")}.`);} }
       else if(t==="ready"){ applyReady(u,u.act.it); lg(`${sub(u)} ${vb(u,"ready","readies")} ${iname(u.act.it.id).toLowerCase()} (usable next turn).`); u.justReady=true; }
-    } else if(t==="dual"){ if(u.left==="mg"&&relOf(u,o)==="front") doAttack(u,o,u.left,"mg"); }
+    } else if(t==="attack"&&u.size>1){ const T=enemiesOf(u).filter(x=>x.hp>0&&relOf(u,x)==="front"); if(T.length&&u.hp>0){ const x=T.includes(o)&&Math.random()<.6?o:pick(T); doAttack(u,x,u.right,"single"); } }   /* a dragon strikes twice with its claws, at the same or another target */
+    else if(t==="dual"){ if(u.left==="mg"&&relOf(u,o)==="front") doAttack(u,o,u.left,"mg"); }
     else if(t==="fire"&&u.act.dbl&&(u.right===u.act.wid||u.left===u.act.wid)&&inFront(u,o)) doAttack(u,o,u.act.wid,"single","missile");
   }
   if(G.phase!=="over"){ U.forEach(u=>{ if(u.standUp&&(u.down||u.low)){ u.down=false; u.low=null; lg(`${sub(u)} ${vb(u,"are","is")} back on ${"their"} feet.`); } }); afterActions(); }
@@ -839,7 +934,8 @@ function resolveTurn(pa,pb){
 function afterActions(){
   const w=allU().find(u=>u.dealt&&!u.tookHit&&u.hp>0&&u.lastTgt&&u.lastTgt.hp>0);
   if(!w){ endTurn(); return; }
-  const d=w.lastTgt, opts=freeNeighbors(d).filter(h=>dist(h,w)>dist(d,w));   /* one hex farther from the attacker */
+  const d=w.lastTgt; if(d.size>1||w.size>1){ lg(`${sub(w)} could force a retreat, but ${d.size>1?"a creature that big cannot be forced back":"a creature that big does not follow up"}.`); endTurn(); return; }
+  const opts=freeNeighbors(d).filter(h=>dist(h,w)>dist(d,w));   /* one hex farther from the attacker */
   if(!opts.length){ lg(`${sub(w)} could force a retreat, but there is no free hex behind ${sub(d)}.`); endTurn(); return; }
   if(w.minion){ const pick1=opts[ri(opts.length)], from={q:d.q,r:d.r}; d.q=pick1.q; d.r=pick1.r; w.q=from.q; w.r=from.r; lg(`${w.p.name} forces ${d.p.name} back one hex and follows.`); endTurn(); return; }
   G.phase="retreat"; G.rdec=w; G.cur=w; G.rd=d; G.ropts=new Map(opts.map(h=>[key(h.q,h.r),h])); G.rfrom={q:d.q,r:d.r};
@@ -874,7 +970,7 @@ function ui(){
     t=`${nm(cur)}: choose your action. ${esc(opp(cur).p.name)} must not look. `+esc(G.note||"")+(cur.stone||cur.iron||cur.shield||cur.rev||cur.shock||cur.sight?` <b>Your secret protection: ${[cur.iron?"Iron Flesh (stops 6)":cur.stone?"Stone Flesh (stops 4)":"",cur.shield?"Spell Shield (no spells can be cast on you, or by you on yourself)":"",cur.rev?"Reverse Missiles":"",cur.sight?"Mage Sight":"",cur.shock?"Shock Shield (hurts anything in your hex at the end of each turn)":""].filter(Boolean).join("; ")}.</b>`:"");
     b=G.opts.length?G.opts.map((o,i)=>`<button data-opt="${i}"${i===0&&o.t!=="none"?' class="pri"':""}>${esc(o.label)}</button>`).join(""):`<button class="pri" data-opt="-1">Continue</button>`; }
   else if(G.phase==="rcover"){ t=`<b>Secret spells.</b> Pass the tablet to ${nm(cur)}. ${esc(opp(cur).p.name)}, look away.`; b=`<button class="pri" id="bRc">${esc(cur.p.name)} is ready</button>`; }
-  else if(G.phase==="renew"){ t=`${nm(cur)}: renew your spells? Each costs 1 ST this turn; spells you do not renew end now.`; b=G.rlist.map((r,i)=>`<button data-rn="${i}"${r.on?' class="pri"':""}>${r.on?"Keep ":"Drop "}${rname(r)} (1 ST)</button>`).join("")+`<button class="pri" id="bRn">Done</button>`; }
+  else if(G.phase==="renew"){ t=`${nm(cur)}: renew your spells? Each costs 1 ST this turn (a summoned Dragon costs 2); spells you do not renew end now.`; b=G.rlist.map((r,i)=>`<button data-rn="${i}"${r.on?' class="pri"':""}>${r.on?"Keep ":"Drop "}${rname(r)} (${r.k==="minion"?upOf(r.m):1} ST)</button>`).join("")+`<button class="pri" id="bRn">Done</button>`; }
   else if(G.phase==="spells"){ t=`${nm(cur)}: choose a spell. A thrown spell that misses costs 1 ST, a missile spell costs everything you put into it, and a roll of 17 or 18 costs the full price.`; b=G.sopts.map((x,i)=>`<button data-sp="${i}">${esc(x.label)}</button>`).join("")+`<button id="bBack">Back</button>`; }
   else if(G.phase==="dest"){ t=`${nm(cur)}: click the highlighted hex on the map that you want to move or teleport into (on a phone, scroll to the map).`; b=`<button id="bBack">Back</button>`; }
   else if(G.phase==="retreat"){ const d=G.rd; t=`${nm(G.rdec)} hit ${esc(d.p.name)} and took no hits, so may force a retreat: click a highlighted hex on the map to push ${esc(d.p.name)} there (on a phone, scroll to the map). Or skip it.`; b=`<button id="bSkip">Skip the retreat</button>`; }
@@ -888,7 +984,7 @@ function ui(){
   on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door? This ends the duel.")) quitDuel(cur,"escape"); });
   on("bNew",()=>{ G=null; placeStep=0; $("setup").open=true; ui(); drawMap(); });
   on("bRc",()=>{ G.phase="renew"; ui(); drawMap(); }); c.querySelectorAll("[data-rn]").forEach(e=>e.onclick=()=>{ const r=G.rlist[+e.dataset.rn]; r.on=!r.on; ui(); }); on("bRn",()=>{ doRenew(); ui(); drawMap(); });
-  c.querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>{ const x=G.sopts[+e.dataset.sp]; if(x.hexsel){ G.destT="cast"; G.destX={sp:x.sp,form:x.form}; G.phase="dest"; G.dopts=new Map(creaHexes(G.cur,G.oth,x.hexsel).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } if(x.tele){ const U=G.cur, V=G.oth; G.destT="cast"; G.destX={sp:"Teleport"}; G.phase="dest"; G.dopts=new Map(P.filter(h=>!same(h,U)&&!same(h,V)&&Math.max(1,mhDist(U,h))<=U.hp).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } takePick({t:"cast",sp:x.sp,n:x.n,on:x.on,objId:x.objId,form:x.form}); });
+  c.querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>{ const x=G.sopts[+e.dataset.sp]; if(x.hexsel){ G.destT="cast"; G.destX={sp:x.sp,form:x.form}; G.phase="dest"; G.dopts=new Map(creaHexes(G.cur,G.oth,x.hexsel,x.sp).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } if(x.tele){ const U=G.cur, V=G.oth; G.destT="cast"; G.destX={sp:"Teleport"}; G.phase="dest"; G.dopts=new Map(P.filter(h=>!same(h,U)&&!same(h,V)&&Math.max(1,mhDist(U,h))<=U.hp).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } takePick({t:"cast",sp:x.sp,n:x.n,on:x.on,objId:x.objId,form:x.form}); });
   c.querySelectorAll("[data-opt]").forEach(e=>e.onclick=()=>{
     const o=G.opts[+e.dataset.opt]||{t:"none"};
     if(o.t==="cast"){ G.sopts=castList(G.cur,G.oth); G.phase="spells"; ui(); drawMap(); }
@@ -898,6 +994,21 @@ function ui(){
 }
 
 /* ---- map ---- */
+const dragonArt=c=>`<path d="M300,141 C262,141 232,138 206,142 C180,146 160,142 150,152 C160,164 184,168 208,160 C236,152 266,159 300,159 Z" fill="${c}"/>
+<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M288,146 L272,122 L258,96 M288,154 L272,178 L258,204" stroke-width="8"/><path d="M258,96 L250,86 M258,96 L258,84 M258,96 L266,86 M258,204 L250,214 M258,204 L258,216 M258,204 L266,214" stroke-width="2.5"/></g>
+<path d="M400,142 L428,74 Q452,92 446,108 Q440,106 438,116 Q436,126 428,128 Q420,126 414,138 Q408,136 400,142 Z M400,158 L428,226 Q452,208 446,192 Q440,194 438,184 Q436,174 428,172 Q420,174 414,162 Q408,164 400,158 Z" fill="${c}"/>
+<path d="M428,76 L444,106 M428,76 L436,122 M428,76 L418,136 M428,224 L444,194 M428,224 L436,178 M428,224 L418,164" fill="none" stroke="var(--card)" stroke-width="1.5" stroke-linecap="round"/>
+<ellipse cx="345" cy="150" rx="48" ry="15" fill="${c}"/><path d="M385,138 L450,142 L460,144 L460,156 L450,158 L385,162 Z M456,140 Q482,136 505,142 L530,149 L532,152 L528,155 L505,160 Q482,164 456,160 Z M470,141 L452,126 L482,138 Z M470,159 L452,174 L482,162 Z" fill="${c}"/>
+<line x1="210" y1="150" x2="450" y2="150" stroke="var(--card)" stroke-width="2" stroke-dasharray="1 8" stroke-linecap="round"/><circle cx="506" cy="146" r="2.5" fill="var(--card)"/><circle cx="506" cy="154" r="2.5" fill="var(--card)"/>`;
+const skullArt=c=>`<g fill="none" stroke="${c}" stroke-linecap="round" stroke-width="9"><path d="M292,118 L388,182 M292,182 L388,118"/></g><g fill="${c}"><circle cx="288" cy="115" r="6"/><circle cx="296" cy="122" r="6"/><circle cx="392" cy="185" r="6"/><circle cx="384" cy="178" r="6"/><circle cx="288" cy="185" r="6"/><circle cx="296" cy="178" r="6"/><circle cx="392" cy="115" r="6"/><circle cx="384" cy="122" r="6"/></g>
+<g stroke="var(--card)" stroke-width="3"><ellipse cx="340" cy="144" rx="27" ry="25" fill="${c}"/><rect x="326" y="160" width="28" height="18" rx="4" fill="${c}"/></g>
+<g fill="var(--card)"><circle cx="330" cy="144" r="7"/><circle cx="350" cy="144" r="7"/><path d="M340,152 L335,162 L345,162 Z"/></g><path d="M333,166 L333,176 M340,166 L340,176 M347,166 L347,176" stroke="var(--card)" stroke-width="2"/>`;
+const smallDragonArt=c=>`<path d="M-.8,-.2 C-1.2,-.2 -1.5,-.45 -2.1,-.32 C-1.75,-.08 -1.75,.1 -2.1,.32 C-1.5,.45 -1.2,.2 -.8,.2 Z" fill="${c}"/>
+<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M-.7,-.18 L-.95,-.62 L-.8,-.9 M-.7,.18 L-.95,.62 L-.8,.9" stroke-width=".14"/><path d="M-.8,-.9 L-.95,-1 M-.8,-.9 L-.78,-1.02 M-.8,-.9 L-.64,-.98 M-.8,.9 L-.95,1 M-.8,.9 L-.78,1.02 M-.8,.9 L-.64,.98" stroke-width=".05"/></g>
+<path d="M.55,-.22 L.15,-1.5 Q.55,-1.38 .65,-1.05 Q.95,-1.25 1.05,-.9 Q1.15,-.55 1,-.22 Z M.55,.22 L.15,1.5 Q.55,1.38 .65,1.05 Q.95,1.25 1.05,.9 Q1.15,.55 1,.22 Z" fill="${c}"/>
+<path d="M.17,-1.4 L.7,-.3 M.17,-1.4 L.95,-.3 M.17,1.4 L.7,.3 M.17,1.4 L.95,.3" fill="none" stroke="var(--card)" stroke-width=".035" stroke-linecap="round"/>
+<ellipse cx="-.05" cy="0" rx="1.05" ry=".33" fill="${c}"/><path d="M.9,-.16 L1.55,-.12 L1.6,.12 L.9,.16 Z M1.5,-.2 L2.25,-.12 L2.42,0 L2.25,.12 L1.5,.2 Z M1.7,-.17 L1.55,-.36 L1.95,-.16 Z M1.7,.17 L1.55,.36 L1.95,.16 Z" fill="${c}"/>
+<line x1="-1.7" y1="0" x2="1.5" y2="0" stroke="var(--card)" stroke-width=".04" stroke-dasharray=".01 .16" stroke-linecap="round"/><circle cx="2.05" cy="-.05" r=".045" fill="var(--card)"/><circle cx="2.05" cy=".05" r=".045" fill="var(--card)"/>`;
 function drawMap(){
   const xs=P.map(h=>h.p[0]),ys=P.map(h=>h.p[1]);
   const x0=Math.min(...xs)-1.2,x1=Math.max(...xs)+1.2,y0=Math.min(...ys)-1.2,y1=Math.max(...ys)+1.2;
@@ -926,6 +1037,11 @@ function drawMap(){
     return `<g transform="translate(${x.toFixed(2)},${y.toFixed(2)}) rotate(${rot}) scale(${f.hth?.8:1.12})" pointer-events="none" opacity="${f.inv&&!dead?.4:(f.down||f.low==='prone')&&!dead?.6:1}">
       <rect x="-.56" y="-.56" width="1.12" height="1.12" rx=".09" fill="var(--card)" stroke="${c}" stroke-width=".07"/>${fig}
       <text x="-.46" y=".5" font-size=".26" font-weight="700" fill="${c}" transform="rotate(${-rot} -.46 .5)" text-anchor="middle">${L}</text></g>`; };
+  const bigTok=(u,c)=>{ const dead=u.hp<=0; let o=""; for(const x of cells(u)){ const h=M.get(key(x.q,x.r)); if(h) o+=`<polygon points="${poly(h)}" fill="var(--card)" stroke="${c}" stroke-width=".1" opacity="${dead?.5:1}" pointer-events="none"/>`; }
+    const [cx,cy]=cenXY(u), rot=vang(u.f), L=(u.p.name||"?").trim().charAt(0).toUpperCase();
+    if(u.size===7) return o+`<g transform="translate(${cx.toFixed(2)},${cy.toFixed(2)}) rotate(${rot.toFixed(1)}) scale(.0208333) translate(-340,-150)" pointer-events="none" opacity="${dead?.7:1}">${dead?skullArt(c):dragonArt(c)}</g>`;
+    if(u.size===4) return o+`<g transform="translate(${cx.toFixed(2)},${cy.toFixed(2)}) rotate(${rot.toFixed(1)})" pointer-events="none" opacity="${dead?.7:1}">${dead?`<g transform="scale(.0156) translate(-340,-150)">${skullArt(c)}</g>`:smallDragonArt(c)}</g>`;   /* original small-dragon art on the 4-hex diamond; a dead one shows the skull */   /* original dragon art, drawn on the 7-hex footprint (head toward +x) */
+    return o+`<g transform="translate(${cx.toFixed(2)},${cy.toFixed(2)}) rotate(${rot.toFixed(1)})" pointer-events="none" opacity="${dead?.5:1}"><path d="M-1 -.32 L.5 -.32 L.5 -.62 L1.3 0 L.5 .62 L.5 .32 L-1 .32 Z" fill="${c}" opacity=".85"/><text x="-.3" y=".14" font-size=".5" font-weight="700" fill="var(--card)" text-anchor="middle" transform="rotate(${(-rot).toFixed(1)} -.3 0)">${L}</text></g>`; };
   let layer="";
   const hl=(map,attr,col)=>[...map.values()].map(h=>`<polygon ${attr}="${key(h.q,h.r)}" points="${poly(h)}" fill="var(${col})" fill-opacity=".3" stroke="var(${col})" stroke-width=".07" style="cursor:pointer"/>`).join("");
   if(!G){
@@ -936,7 +1052,7 @@ function drawMap(){
       layer=pk+tokn(fm,"var(--me)",me)+tokn(ff,"var(--foe)",foe); }
     else layer=P.filter(h=>h.e).map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
   } else {
-    for(const [f,c] of allU().map(x=>[x,sideOf(x)==="me"?"--me":"--foe"])) if(!f.down&&f.low!=="prone"&&f.hp>0) for(const k of [-1,0,1]){ const n=nbr(f,(f.f+k+6)%6); if(n) layer+=`<polygon points="${poly(n)}" fill="var(${c})" fill-opacity=".13" pointer-events="none"/>`; }
+    for(const [f,c] of allU().map(x=>[x,sideOf(x)==="me"?"--me":"--foe"])) if(!f.down&&f.low!=="prone"&&f.hp>0&&!(f.size>1)) for(const k of [-1,0,1]){ const n=nbr(f,(f.f+k+6)%6); if(n) layer+=`<polygon points="${poly(n)}" fill="var(${c})" fill-opacity=".13" pointer-events="none"/>`; }
     if(G.phase==="move"){
       for(const r of G.reach.values()){ const h=M.get(key(r.q,r.r)); layer+=`<polygon data-go="${key(r.q,r.r)}" points="${poly(h)}" fill="var(--acc)" fill-opacity="${same(r,G.cur)?0:.22}" stroke="var(--acc)" stroke-width=".05" style="cursor:pointer"/>`; }
     }
@@ -944,8 +1060,8 @@ function drawMap(){
     if(G.phase==="retreat") layer+=hl(G.ropts,"data-ret","--acc");
     layer+=(G.objs||[]).filter(slickVis).map(o=>{ const h=M.get(key(o.q,o.r)); if(!h) return ""; const [x,y]=h.p, col=o.t==="fire"?"#e8590c":o.t==="shadow"?"#111":o.t==="slick"?"#38bdf8":"#6b7280"; return `<polygon points="${poly(h)}" fill="${col}" fill-opacity="${o.t==="wall"?.92:.5}" stroke="${col}" stroke-width=".06" pointer-events="none"/><text x="${x}" y="${y+.3}" text-anchor="middle" font-size=".8" pointer-events="none">${o.t==="fire"?"🔥":o.t==="wall"?"▦":""}</text>`; }).join("");
     layer+=G.floor.map(f=>{ const [x,y]=M.get(key(f.q,f.r)).p; return `<path d="M${x-.35} ${y+.45} L${x+.35} ${y+.25}" stroke="var(--mut)" stroke-width=".07" stroke-linecap="round" pointer-events="none"/>`; }).join("");
-    layer+=allU().filter(u=>u.hp>0||!u.minion).map(u=>tokn(u,sideOf(u)==="me"?"var(--me)":"var(--foe)",u.p)).join("");
-    { const cu=G.cur; if(cu&&["move","pick"].includes(G.phase)){ const E=enemiesOf(cu); if(E.length>1){ const T=other(cu); layer+=E.map(e=>{ const [x,y]=M.get(key(e.q,e.r)).p; return `<circle cx="${x}" cy="${y}" r=".72" fill="none" stroke="var(--acc)" stroke-width="${e===T?.12:.03}" stroke-dasharray=".2 .15" pointer-events="none"/><circle data-tgt="${allU().indexOf(e)}" cx="${x}" cy="${y}" r=".7" fill="transparent" style="cursor:pointer"/>`; }).join(""); } } }
+    layer+=allU().filter(u=>u.hp>0||!u.minion).map(u=>u.size>1?bigTok(u,sideOf(u)==="me"?"var(--me)":"var(--foe)"):tokn(u,sideOf(u)==="me"?"var(--me)":"var(--foe)",u.p)).join("");
+    { const cu=G.cur; if(cu&&["move","pick"].includes(G.phase)){ const E=enemiesOf(cu); if(E.length>1){ const T=other(cu); layer+=E.map(e=>{ const [x,y]=cenXY(e); return `<circle cx="${x}" cy="${y}" r=".72" fill="none" stroke="var(--acc)" stroke-width="${e===T?.12:.03}" stroke-dasharray=".2 .15" pointer-events="none"/><circle data-tgt="${allU().indexOf(e)}" cx="${x}" cy="${y}" r=".7" fill="transparent" style="cursor:pointer"/>`; }).join(""); } } }
     if(G.phase==="move"){ const [x,y]=M.get(key(G.cur.q,G.cur.r)).p, cc=G.cur===G.me?"var(--me)":"var(--foe)";
       for(let d=0;d<6;d++){ const a=SCR[d]*Math.PI/180; const cx=(x+Math.cos(a)*.98).toFixed(2), cy=(y+Math.sin(a)*.98).toFixed(2);
         layer+=`<circle data-face="${d}" cx="${cx}" cy="${cy}" r=".2" fill="${d===G.cur.f?cc:"var(--card)"}" stroke="${cc}" stroke-width=".07" style="cursor:pointer"/><circle data-face="${d}" cx="${cx}" cy="${cy}" r=".42" fill="transparent" style="cursor:pointer"/>`; } }
