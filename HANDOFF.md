@@ -31,3 +31,10 @@
 - Git: the stop hook sometimes complains about unpushed branches that are already on origin; check with `git ls-remote --heads origin <branch>` before pushing again.
 
 - Oct 29: big summons, images and illusions only need their tail hex in your megahex or the ones next to it (rest may stick out); a "No room right now" note names spells that cannot be placed. 4-/7-Hex Image and Illusion are in (dragon forms). Open question: the owner saw a Gargoyle illusion beat a 7-hex Dragon opponent; my sims say the placeholder Dragon should win every time, ask for the fight log.
+
+## Oct 30: multi-player duel (branch `duel-multiplayer`, not merged: the owner tests it first)
+- Goal (owner's idea): play the duel with more than two people without passing the screen around: a tablet shows the board, each person enters secret moves on their own phone, a bell (and a buzz on Android) says whose turn it is. No timers: the group chats and plays slowly; add a "ring again" button on the tablet instead.
+- Step 1 is done on the branch: duel.html handles 2 to 4 players, teams, group initiative, N secret picks, XP for everyone (see NOTES.md "Duel with 3 or 4 players"). Tests `tests/duel_multi_test.py` 20/20, old duel tests and fuzzers pass.
+- Plan: step 2 = tablet runs the game (host page with room code), phones join (PeerJS or Firebase relay, no server to host on GitHub Pages) and send commands; send each phone only what its player may see; step 3 = bell per player, vibration, wake lock, phone map for hex picks, rejoin after sleep. iPhones cannot vibrate from a web page, so the tablet bell is the main signal. Needs an engine boundary: serializable state, commands like `{player,type,...}`, and `viewFor(state,player)`.
+- Owner's order from before is unchanged otherwise: the stomp, the encounter page, 3-/4-/7-Hex Fire, Shadow, Wall and Megahex Avert/Sleep.
+
