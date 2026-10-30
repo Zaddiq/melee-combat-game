@@ -186,6 +186,7 @@ summary{cursor:pointer;font:600 12px var(--f-mono);letter-spacing:.08em;text-tra
   <header class="top">
     <h1>Wizard</h1>
     <div class="sub">Character builder for The Fantasy Trip: Wizard and Melee. Original Wizard spell table and Melee gear. Advanced Wizard spells are not included.</div>
+    <div class="btnrow noprint"><button id="newChar" class="primary">New character</button></div>
   </header>
 
   <div class="grid">
@@ -307,6 +308,8 @@ const EXAMPLE = {name:"Yzor (example)",cls:"wizard",race:"human",total:32,st:9,d
   spells:["Staff","Magic Fist","Blur","Slow Movement","Drop Weapon","Image","Dazzle","Illusion","Sleep","Fire","Rope"],
   a:"none",b:"none",s1:"none",d1:"dagger",d2:"none",armor:"none",ep:0,notes:"",silver:false};
 let S = JSON.parse(JSON.stringify(EXAMPLE));
+/* A new character: a Human fighter, 8/8/8 with 8 points still to spend (total 32), no name, no spells, no gear. */
+const BLANK = {name:"",cls:"fighter",race:"human",total:32,st:8,dx:8,iq:8,spells:[],a:"none",b:"none",s1:"none",d1:"none",d2:"none",armor:"none",ep:0,notes:"",silver:false};
 
 /* Right hand (a): any weapon except the main-gauche. Left hand (b): shield, main-gauche or a one-handed weapon. */
 const okA=id=>id==="none"||(W[id]&&!W[id].left&&id!=="staff");
@@ -619,6 +622,9 @@ document.addEventListener("click",e=>{
   if(t.dataset.cls){ S.cls=t.dataset.cls; commit(); return; }
   if(t.dataset.inc){ const k=t.dataset.inc; if(S.st+S.dx+S.iq<S.total){ S[k]++; commit(); } return; }
   if(t.dataset.dec){ const k=t.dataset.dec; if(S[k]>RACES[S.race][k]){ S[k]--; commit(); } return; }
+  if(t.id==="newChar"){ const strip=o=>{ const c=Object.assign({},o); delete c._notes; return JSON.stringify(c); };
+    if(strip(S)!==strip(normalize(BLANK)) && !confirm("Start a new character? The one on screen will be replaced. Use Copy data first if you want to keep it.")) return;
+    S=normalize(BLANK); $("name").value=""; $("notes").value=""; commit(); window.scrollTo(0,0); toast("New character: ST 8, DX 8, IQ 8 and 8 points to spend."); return; }
   if(t.id==="trade"){ if(S.ep>=100){ S.ep-=100; S.total++; commit(); } return; }
   if(t.id==="benchA"||t.id==="benchB"){ try{ const c=Object.assign({},S); delete c._notes; let B={}; try{ B=JSON.parse(localStorage.getItem("melee-bench-v1")||"{}")||{}; }catch(e){} const k=t.id==="benchA"?"a":"b"; B[k]=c; localStorage.setItem("melee-bench-v1",JSON.stringify(B)); toast((c.name||"This fighter")+" is on the bench as "+k.toUpperCase()+". Open the simulator or the duel to use it."); }catch(e){ toast("Could not write to this browser's storage."); } return; }
   if(t.id==="copyJson"){ copy($("json").value,"Data copied."); return; }
