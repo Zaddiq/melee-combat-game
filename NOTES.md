@@ -295,3 +295,6 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Tests: S146-S151 (arena), D14 (duel). Fuzzer `tests/fuzz/creaturefz.py` with the new spells added ran clean (3 x 72 fights).
 - Not done: 3-Hex Fire/Shadow/Wall, 7-Hex Fire/Shadow/Wall, Megahex Avert and Megahex Sleep.
 - Owner question (Oct 29): a Gargoyle illusion beat a 7-hex Dragon opponent. In my simulation (elf wizard ST 12 DX 13 IQ 16, Illusion of a Gargoyle on turn 1, then standing still) the placeholder test Dragon (ST 60) wins 40 of 40 fights, usually in 2 to 5 turns, so a win needs something else (own dragon, other spells). Waiting for the owner's log.
+
+## Builder: New character button (Oct 30, branch builder-new-char)
+- A "New character" button at the top of builder.html starts a Human fighter at ST 8, DX 8, IQ 8 with 8 points left to spend (total 32), no name, no spells, no gear. It asks before replacing a character that has been changed or named. Tests: `tests/builder_test.py` (B1 to B9).
