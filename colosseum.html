@@ -32,12 +32,12 @@ svg{width:100%;height:auto;max-height:80vh}
  <details class="setup" id="setup" open><summary>The fighters</summary>
  <div class="card"><h2>Map</h2><div class="row"><select id="mapSel"><option value="melee">Melee map (two boards, 99 hexes)</option><option value="wizard">Wizard map (166 hexes, 21 megahexes)</option></select><span class="mut" id="mapNote"></span></div></div>
 
- <div class="card"><h2>Players</h2><div class="row"><select id="npSel"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><span class="mut" id="npNote">Everyone fights for themselves. With 3 or 4 players you can put players on the same team.</span></div></div>
+ <div class="card"><h2>Players</h2><div class="row"><select id="npSel"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><select id="modeSel"><option value="ffa">Free for all</option><option value="teams">Teams (two sides)</option></select></div><div class="mut" id="npNote"></div></div>
  <div id="pcards"></div>
 </details>
  <div class="card" id="stats"><h2>Fighters</h2><div class="mut">Load the fighters to see their stats here.</div></div>
 </div>
-<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">Bottom: the entrance for Teams 1 and 3 (Players 1 and 3 unless you change teams). Top: Teams 2 and 4 (Players 2 and 4). Before the duel, each player taps one of the four outlined hexes at their own end to start there.</div></div></div>
+<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">The starred (pink) hexes are the entrances. Two players start at the bottom and top. With 3 or 4 players in free for all, each also gets a west or east entrance; in Teams mode Team A starts at the bottom and Team B at the top. Before the duel, each player taps one of the four outlined hexes of their own entrance to start there.</div></div></div>
 </main>
 <script src="rules.js"></script>
 <script src="maps.js"></script>
@@ -156,7 +156,11 @@ let me=null, foe=null, placeStep=0;
 const MAXP=4, SIDEIDS=["me","foe","s3","s4"], PCV=["--me","--foe","--p3","--p4"], PCLS=["me","foe","p3","p4"], ROM=["","","II","III","IV"];
 const slot=[null,null,null,null];
 let NP=2;                              /* how many players are in the next duel (2 to 4) */
-const team=[0,1,2,3];                  /* each player's team (0 to 3); players on the same team are allies. Teams 0 and 2 start at the bottom end, teams 1 and 3 at the top. */
+let MODE="ffa";                        /* with 3 or 4 players: "ffa" (everyone alone, each from their own entrance) or "teams" (two sides, Team A at the bottom end, Team B at the top). Never a mix. */
+const tmAB=[0,1,0,1];                  /* the side (0 = Team A, 1 = Team B) each player picked in Teams mode */
+const team=[0,1,2,3];                  /* the live team id of each player (set by applyMode); players with the same id are allies */
+const teamsOn=()=>NP>2&&MODE==="teams";
+function applyMode(){ for(let i=0;i<MAXP;i++) team[i]=teamsOn()?tmAB[i]:i; }
 const starts=[null,null,null,null];    /* each player's chosen start hex (a key) */
 function showSlot(i){ $("pf"+i).innerHTML=slot[i]?card(slot[i],PCLS[i]):""; showStats(); }
 function epLine(f){ const r=loadRec()[rkey(f)]; return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/100 EP${r&&r.pend>0?" · attribute point waiting (spend it in the solo arena)":""}</div>`; }
@@ -171,7 +175,7 @@ function loadBuilder(i){ let t=null; try{t=localStorage.getItem(KEY);}catch(e){}
   try{ setP(i,fromBuilder(JSON.parse(t)),"Loaded from the builder."); }catch(e){ $("msg"+i).textContent="Could not read the saved fighter."; } }
 const EXAMPLES=[{name:"Flavius (example)",race:"human",cls:"fighter",st:11,dx:12,iq:9,a:"broad",b:"small",armor:"leather",d1:"dagger"},{name:"Wulf (example)",race:"human",cls:"fighter",st:13,dx:11,iq:8,a:"battle",b:"none",armor:"none",d1:"dagger"},{name:"Brynn (example)",race:"elf",cls:"fighter",st:9,dx:15,iq:8,a:"rapier",b:"none",armor:"cloth",d1:"dagger"},{name:"Durgan (example)",race:"dwarf",cls:"fighter",st:14,dx:10,iq:8,a:"mace",b:"small",armor:"leather",d1:"dagger"}];
 const pcard=i=>`<div class="card" id="pcard${i}"><h2 class="${PCLS[i]}">Player ${i+1}</h2>
-  <div class="row tmrow"><label class="mut">Team <select id="tm${i}">${[0,1,2,3].map(t=>`<option value="${t}"${t===team[i]?" selected":""}>Team ${t+1}</option>`).join("")}</select></label></div>
+  <div class="row tmrow"><label class="mut">Team <select id="tm${i}">${[0,1].map(t=>`<option value="${t}"${t===tmAB[i]?" selected":""}>Team ${t?"B":"A"}</option>`).join("")}</select></label></div>
   <div class="row"><button class="pri" id="load${i}">Load from builder</button><button id="ex${i}">Use example</button><button id="bn${i}">Load bench ${i%2?"B":"A"}</button></div>
   <div class="row"><select id="rs${i}"></select><button id="rg${i}">Use this saved fighter</button></div>
   <details><summary class="mut">Or paste a fighter (copy it from the builder)</summary><textarea id="paste${i}" placeholder="paste JSON here"></textarea><div class="row"><button id="pg${i}">Use pasted fighter</button></div></details>
@@ -184,12 +188,13 @@ for(const i of [0,1,2,3]){
   $("pg"+i).onclick=()=>{ try{ setP(i,fromBuilder(JSON.parse($("paste"+i).value)),"Loaded pasted fighter."); }catch(e){ $("msg"+i).textContent="That does not look like a builder fighter."; } };
   $("rg"+i).onclick=()=>{ const r=REC[$("rs"+i).value]; if(r&&r.src) setP(i,fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx,name:r.name})),"Loaded from your arena roster (its own record is not touched)."); };
 }
-function refreshPlayers(){ for(let i=0;i<MAXP;i++){ const c=$("pcard"+i); if(c) c.style.display=i<NP?"":"none"; const r=$("tm"+i); if(r&&r.closest) r.closest(".tmrow").style.display=NP>2?"":"none"; } }
-$("npSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("npSel").value=String(NP); $("npNote").textContent="Finish the duel first (or leave it with Rematch)."; return; }
-  NP=+$("npSel").value; G=null; placeStep=0; starts.fill(null); if(NP===2){ team[0]=0; team[1]=1; $("tm0").value="0"; $("tm1").value="1"; }
-  $("npNote").textContent=NP===2?"Everyone fights for themselves. With 3 or 4 players you can put players on the same team.":"Pick a team for each player. Everyone on a different team fights for themselves."; $("setup").open=true; refreshPlayers(); showStats(); ui(); drawMap(); };
-for(let i=0;i<MAXP;i++) $("tm"+i).onchange=()=>{ if(G&&G.phase!=="over"){ $("tm"+i).value=String(team[i]); return; } team[i]=+$("tm"+i).value; starts.fill(null); placeStep=0; ui(); drawMap(); };
-refreshPlayers();
+const noteText=()=>NP===2?"Two players: one against the other.":teamsOn()?"Two teams fight each other: pick Team A or Team B for each player. Teammates start at the same end and can never hurt each other.":"Free for all: everyone fights for themselves and starts from their own entrance (bottom, top, west, east).";
+function refreshPlayers(){ for(let i=0;i<MAXP;i++){ const c=$("pcard"+i); if(c) c.style.display=i<NP?"":"none"; const r=$("tm"+i); if(r&&r.closest) r.closest(".tmrow").style.display=teamsOn()?"":"none"; } $("modeSel").style.display=NP>2?"":"none"; $("modeSel").value=MODE; $("npNote").textContent=noteText(); }
+const resetSetup=()=>{ applyMode(); G=null; placeStep=0; starts.fill(null); $("setup").open=true; refreshPlayers(); showStats(); ui(); drawMap(); };
+$("npSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("npSel").value=String(NP); $("npNote").textContent="Finish the duel first (or leave it with Rematch)."; return; } NP=+$("npSel").value; resetSetup(); };
+$("modeSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("modeSel").value=MODE; $("npNote").textContent="Finish the duel first (or leave it with Rematch)."; return; } MODE=$("modeSel").value; resetSetup(); };
+for(let i=0;i<MAXP;i++) $("tm"+i).onchange=()=>{ if(G&&G.phase!=="over"){ $("tm"+i).value=String(tmAB[i]); return; } tmAB[i]=+$("tm"+i).value; resetSetup(); };
+applyMode(); refreshPlayers();
 /* the solo arena's saved fighters can be borrowed; duel XP is written to the same record */
 const RKEY="melee-arena-v1";
 const loadRec=()=>{ try{ return JSON.parse(localStorage.getItem(RKEY)||"{}")||{}; }catch(e){ return {}; } };
@@ -385,20 +390,30 @@ const engagedAny=u=>{ const X=enemiesOf(u).filter(e=>isEngaged(u,e)); return u.s
 function other(u){ const E=enemiesOf(u); if(!E.length) return opp(u); if(u.tgtSel&&E.includes(u.tgtSel)) return u.tgtSel;
   let best=null; for(const e of E){ const sc=dist(u,e)*10+(relOf(u,e)==="front"&&!u.down?0:6)+(G.players.includes(e)?0:1);   /* prefer an enemy the figure can actually strike (in its front) */ if(!best||sc<best.s) best={e,s:sc}; } return best.e; }
 const lg=t=>G.log.push(t);
-function startHexes(){
+/* The four places a player can enter: the two ends of the board (the starred hexes) and, for free-for-all play, four hexes in the middle of the west and east edges. */
+function zones(){
   const ends=P.filter(h=>h.e), ys=P.map(h=>h.p[1]), xs=P.map(h=>h.p[0]);
-  const my=ys.reduce((a,b)=>a+b,0)/ys.length, mx=xs.reduce((a,b)=>a+b,0)/xs.length;
-  const bottom=ends.filter(h=>h.p[1]>my), top=ends.filter(h=>h.p[1]<=my);
+  const my=ys.reduce((a,b)=>a+b,0)/ys.length, midY=(Math.min(...ys)+Math.max(...ys))/2;
+  const edge=h=>[0,1,2,3,4,5].some(d=>!M.get(key(h.q+DIRS[d][0],h.r+DIRS[d][1]))), side=P.filter(h=>edge(h)&&!h.e);
+  const near=(tx,ty)=>[...side].sort((a,b)=>Math.hypot(a.p[0]-tx,a.p[1]-ty)-Math.hypot(b.p[0]-tx,b.p[1]-ty)).slice(0,4);
+  return [{name:"south",hexes:ends.filter(h=>h.p[1]>my),end:1},{name:"north",hexes:ends.filter(h=>h.p[1]<=my),end:-1},{name:"west",hexes:near(Math.min(...xs),midY),mid:midY},{name:"east",hexes:near(Math.max(...xs),midY),mid:midY}];
+}
+function startHexes(){
+  const Z=zones(), xs=P.map(h=>h.p[0]), mx=xs.reduce((a,b)=>a+b,0)/xs.length;
+  const zi=Array.from({length:NP},(_,i)=>teamsOn()?(team[i]===0?0:1):i);   /* Teams mode: Team A enters at the south end, Team B at the north end; free for all: one entrance each (south, north, west, east) */
   const front=(arr,sign)=>{ const fy=sign>0?Math.min(...arr.map(h=>h.p[1])):Math.max(...arr.map(h=>h.p[1]));
     return arr.filter(h=>Math.abs(h.p[1]-fy)<.1).sort((a,b)=>Math.abs(a.p[0]-mx)-Math.abs(b.p[0]-mx))[0]; };
   const pick=[];
-  for(let i=0;i<NP;i++){ const bot=team[i]%2===0, arr=bot?bottom:top;
-    const free=arr.filter(h=>!pick.some(x=>x===h));   /* players on the same end start on different hexes */
-    const shares=team.slice(i+1,NP).some(t=>t%2===team[i]%2), corners=free.filter(h=>free.some(o=>hdist(h,o)>=2));   /* if another player will share this end, start on a corner of the entrance so the two can be two hexes apart */
-    const mates=pick.filter(x=>arr.includes(x));   /* a second player at the same end defaults to the free hex farthest from the first, so nobody starts in melee */
-    const dflt=mates.length?[...free].sort((a,b)=>Math.min(...mates.map(m=>hdist(b,m)))-Math.min(...mates.map(m=>hdist(a,m)))||Math.abs(a.p[0]-mx)-Math.abs(b.p[0]-mx))[0]:(shares&&corners.length?corners.sort((a,b)=>Math.abs(a.p[0]-mx)-Math.abs(b.p[0]-mx))[0]:front(free,bot?1:-1));
+  for(let i=0;i<NP;i++){ const z=Z[zi[i]], arr=z.hexes;
+    const free=arr.filter(h=>!pick.some(x=>x===h));   /* players in the same entrance (teammates) start on different hexes */
+    const shares=zi.slice(i+1).some(t=>t===zi[i]), corners=free.filter(h=>free.some(o=>hdist(h,o)>=2));
+    const mates=pick.filter(x=>arr.includes(x));
+    let dflt;
+    if(mates.length) dflt=[...free].sort((a,b)=>Math.min(...mates.map(m=>hdist(b,m)))-Math.min(...mates.map(m=>hdist(a,m)))||Math.abs(a.p[0]-mx)-Math.abs(b.p[0]-mx))[0];   /* a second teammate takes the free hex farthest from the first */
+    else if(z.end) dflt=shares&&corners.length?corners.sort((a,b)=>Math.abs(a.p[0]-mx)-Math.abs(b.p[0]-mx))[0]:front(free,z.end);
+    else dflt=[...free].sort((a,b)=>Math.abs(a.p[1]-z.mid)-Math.abs(b.p[1]-z.mid))[0];   /* west and east: the hex nearest the middle of the edge */
     const h=free.find(h=>key(h.q,h.r)===starts[i])||dflt; pick.push(h); starts[i]=key(h.q,h.r); }
-  return {bottom,top,pick,mine:pick[0],theirs:pick[1]};
+  return {zones:Z,zi,pick,mine:pick[0],theirs:pick[1],bottom:Z[0].hexes,top:Z[1].hexes};
 }
 const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,conf:0,confN:0,shock:false,inv:false,sight:false,avert:null,fresh:false,gone:false,tgtSel:null,rev:false,revHit:false,rope:0,ropeN:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,pn:[],cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
@@ -407,7 +422,7 @@ function startFight(){
   G={turn:0,phase:"",log:[],order:[],idx:0,start:null,reach:null,eng:false,moved:0,floor:[],objs:[],exhib:true,settled:false,cur:null};
   G.players=pl.map((p,i)=>{ const u=mk(s.pick[i],p); u.side=SIDEIDS[team[i]]; return u; }); G.me=G.players[0]; G.foe=G.players[1];
   G.units=[...G.players]; WALLS=new Set();
-  for(const u of G.players){ const i=G.players.indexOf(u), far=G.players.filter((x,j)=>sideOf(x)!==sideOf(u)&&team[j]%2!==team[i]%2); u.f=faceToward(u,far.length?far.sort((a,b)=>dist(u,a)-dist(u,b))[0]:other(u)); }   /* face the nearest enemy at the other end; rivals who share an entrance look up the board, not at each other */
+  for(const u of G.players) u.f=faceToward(u,other(u));   /* everyone starts facing their nearest enemy */
   $("setup").open=false;
   nextTurn(); ui(); drawMap();
 }
@@ -1003,7 +1018,7 @@ function ui(){
   const nm=u=>`<b class="${PCLS[Math.max(0,G.players.indexOf(ownerOf(u)))]}">${esc(u.p.name)}</b>`, lookAway=u=>G.players.length===2?`${esc(opp(u).p.name)}, look away.`:"Everyone else, look away.";
   const st=allU().filter(u=>u.hp>0||!u.minion).map(u=>`${nm(u)}${u.fake&&sideOf(u)===sideOf(cur)&&["pick","spells","dest"].includes(G.phase)?" (your "+u.fake+")":""} ST ${Math.max(u.hp,0)}/${u.p.st}${flags(u)}`).join(" · ")+"<br>"+(G.players.length===2?`${esc(A.p.name)} is ${engagedAny(A)?"<b>engaged</b>":"not engaged"}; ${esc(B.p.name)} is ${engagedAny(B)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).`:G.players.filter(u=>!u.esc).map(u=>`${esc(u.p.name)} is ${u.hp<=0?"out":engagedAny(u)?"<b>engaged</b>":"not engaged"}`).join("; ")+".");
   const live=["move","cover","pick"].includes(G.phase);
-  if(live){ const sh=startHexes(), own=(team[G.players.indexOf(cur)]%2===0?sh.bottom:sh.top).some(h=>same(h,cur));
+  if(live){ const sh=startHexes(), own=sh.zones[sh.zi[G.players.indexOf(cur)]].hexes.some(h=>same(h,cur));
     b="";  G.qb=`<div style="margin-top:6px">${G.phase==="move"&&own&&!G.eng?`<button id="bEsc">${esc(cur.p.name)} escapes through the door</button>`:""}</div>`; } else G.qb="";
   if(G.phase==="choose"){ const w=G.players[G.chooser], lastW=G.rolls.length>2?"last":"second"; t=`${nm(w)} won the initiative roll. Move first or ${lastW}?`; b=`<button class="pri" id="b1">Move first</button><button id="b2">Move ${lastW}</button>`; }
   else if(G.phase==="move"){
@@ -1058,9 +1073,10 @@ function drawMap(){
   const x0=Math.min(...xs)-1.2,x1=Math.max(...xs)+1.2,y0=Math.min(...ys)-1.2,y1=Math.max(...ys)+1.2;
   const corner=(h,i)=>{const a=Math.PI/180*(60*i+90); return [h.p[0]+Math.cos(a),h.p[1]+Math.sin(a)];};
   const poly=h=>[0,1,2,3,4,5].map(i=>corner(h,i).map(v=>v.toFixed(2)).join(",")).join(" ");
+  const sideSet=new Set(); if(NP>2&&!teamsOn()) zones().slice(2,NP).forEach(z=>z.hexes.forEach(h=>sideSet.add(key(h.q,h.r))));   /* the west and east entrances in use */
   let s="",edges="";
   for(const h of P){
-    s+=`<polygon points="${poly(h)}" fill="var(${h.e?"--hexend":"--hex"})" stroke="var(--line)" stroke-width=".05"/>`;
+    s+=`<polygon points="${poly(h)}" fill="var(${h.e||sideSet.has(key(h.q,h.r))?"--hexend":"--hex"})" stroke="var(--line)" stroke-width=".05"/>`;
     for(let d=0;d<6;d++){ const n=nbr(h,d);
       if(!n||n.g!==h.g){ const a=SCR[d]; const a0=Math.PI/180*(a-30),a1=Math.PI/180*(a+30);
         edges+=`<line x1="${(h.p[0]+Math.cos(a0)).toFixed(2)}" y1="${(h.p[1]+Math.sin(a0)).toFixed(2)}" x2="${(h.p[0]+Math.cos(a1)).toFixed(2)}" y2="${(h.p[1]+Math.sin(a1)).toFixed(2)}" stroke="var(--acc)" stroke-width=".16" stroke-linecap="round"/>`; } }
@@ -1090,12 +1106,12 @@ function drawMap(){
   const hl=(map,attr,col)=>[...map.values()].map(h=>`<polygon ${attr}="${key(h.q,h.r)}" points="${poly(h)}" fill="var(${col})" fill-opacity=".3" stroke="var(${col})" stroke-width=".07" style="cursor:pointer"/>`).join("");
   if(!G){
     if(slot.slice(0,NP).every(Boolean)){ const st=startHexes(), cv=i=>"var("+PCV[i]+")";
-      const arr=team[placeStep]%2===0?st.bottom:st.top;
+      const arr=st.zones[st.zi[placeStep]].hexes;
       const pk=arr.map(h=>st.pick.some((x,i)=>i!==placeStep&&x===h)?"":`<polygon data-k="${key(h.q,h.r)}" points="${poly(h)}" fill="${h===st.pick[placeStep]?"none":cv(placeStep)}" fill-opacity=".18" stroke="${cv(placeStep)}" stroke-width=".1" style="cursor:pointer"/>`).join("");
       const toks=st.pick.map((h,i)=>({...h,f:0,i}));
-      for(const t of toks){ const E=toks.filter(o=>team[o.i]!==team[t.i]), F=E.filter(o=>team[o.i]%2!==team[t.i]%2), L=(F.length?F:E).sort((a,b)=>hdist(t,a)-hdist(t,b)); t.f=L.length?faceToward(t,L[0]):0; }
+      for(const t of toks){ const L=toks.filter(o=>team[o.i]!==team[t.i]).sort((a,b)=>hdist(t,a)-hdist(t,b)); t.f=L.length?faceToward(t,L[0]):0; }
       layer=pk+toks.map(t=>tokn(t,cv(t.i),slot[t.i])).join(""); }
-    else layer=P.filter(h=>h.e).map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
+    else layer=[...P.filter(h=>h.e),...(NP>2&&!teamsOn()?zones().slice(2,NP).flatMap(z=>z.hexes):[])].map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
   } else {
     for(const [f,c] of allU().map(x=>[x,PCV[Math.max(0,G.players.indexOf(ownerOf(x)))]])) if(!f.down&&f.low!=="prone"&&f.hp>0&&!(f.size>1)) for(const k of [-1,0,1]){ const n=nbr(f,(f.f+k+6)%6); if(n) layer+=`<polygon points="${poly(n)}" fill="var(${c})" fill-opacity=".13" pointer-events="none"/>`; }
     if(G.phase==="move"){

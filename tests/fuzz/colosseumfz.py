@@ -4,12 +4,13 @@ JS=r'''
 ()=>{
  const races=Object.keys(RACES), ws=Object.keys(W).filter(k=>!W[k].hid&&k!=="mg"&&k!=="staff"), ar=Object.keys(ARMOR);
  const rnd=a=>a[Math.floor(Math.random()*a.length)];
- const out={games:0,over:0,errors:[],escapes:0,wiz:0};
+ const out={games:0,over:0,errors:[],escapes:0,wiz:0,hits:0};
+ const _da=doAttack; doAttack=function(a,d,...r){ out.hits++; if(a!==d&&sideOf(a)===sideOf(d)) out.errors.push("friendly fire: "+a.p.name+" attacked ally "+d.p.name); return _da.apply(this,[a,d,...r]); };
  const mkp=g=>{ const r=rnd(races), R=RACES[r], wz=Math.random()<.35; return fromBuilder(Object.assign({name:"P"+g+Math.random().toString(36).slice(2,4),race:r,cls:wz?"wizard":"fighter",st:R.st+Math.floor(Math.random()*7),dx:R.dx+Math.floor(Math.random()*7),iq:wz?15:R.iq,a:wz?"none":rnd(ws),b:Math.random()<.5?rnd(["small","large"]):"none",armor:rnd(ar),d1:"dagger"},wz?{spells:["Staff","Summon Wolf","Summon Bear","Fire","Blur","Stone Flesh","Giant Rope","Sleep","Image"]}:{})); };
- const layouts=[[3,[0,1,2,3]],[3,[0,1,0,3]],[4,[0,1,2,3]],[4,[0,1,0,1]],[4,[0,1,0,3]]];
+ const layouts=[[3,null],[4,null],[3,[0,1,0]],[4,[0,1,0,1]],[4,[0,0,0,1]]];   /* free for all, or two teams: never a mix */
  for(let g=0;g<20;g++){
   try{
-   const [n,tm]=rnd(layouts); G=null; NP=n; for(let i=0;i<4;i++) team[i]=tm[i]; starts.fill(null);
+   const [n,tm]=rnd(layouts); G=null; NP=n; MODE=tm?"teams":"ffa"; for(let i=0;i<4;i++) tmAB[i]=tm?tm[i]:i%2; applyMode(); starts.fill(null);
    const names=new Set(); for(let i=0;i<4;i++){ slot[i]=i<n?mkp(i+1):null; if(slot[i]) names.add(slot[i].name); }
    startFight(); if(!G){ out.errors.push("no fight started"); continue; }
    let guard=0;
