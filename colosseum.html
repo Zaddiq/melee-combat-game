@@ -29,6 +29,7 @@ svg{width:100%;height:auto;max-height:80vh}
 <p class="mut">Two to four players, one screen. Movement is in the open; each turn the players pick their actions in secret, one after the other, and the tablet is passed around. Experience is awarded (30 for the winner, 20 for the loser) and added to each fighter's arena EP, but nobody can die for good and no win or loss is marked. Any player may escape through their own door (stand on one of your four entrance hexes at the start of your move).</p>
 <div class="grid"><div>
  <div class="card"><h2>Duel</h2><div id="ctl" class="mut">Load both fighters first (the boxes below).</div></div>
+ <details class="card" id="online"><summary style="cursor:pointer;font-weight:600">Phones (online table)</summary><div id="onBody" class="mut" style="margin-top:8px"></div></details>
  <details class="setup" id="setup" open><summary>The fighters</summary>
  <div class="card"><h2>Map</h2><div class="row"><select id="mapSel"><option value="melee">Melee map (two boards, 99 hexes)</option><option value="wizard">Wizard map (166 hexes, 21 megahexes)</option></select><span class="mut" id="mapNote"></span></div></div>
 
@@ -41,6 +42,8 @@ svg{width:100%;height:auto;max-height:80vh}
 </main>
 <script src="rules.js"></script>
 <script src="maps.js"></script>
+<script src="firebase-config.js"></script>
+<script src="net.js"></script>
 <script>
 "use strict";
 const RACES=RULES.RACES, W=RULES.W, SHIELDS=RULES.SHIELDS;
@@ -1193,4 +1196,5 @@ function initMap(){
 }
 initMap();
 ui(); drawMap();
-</script></body></html>
+</script>
+<script src="online-host.js"></script></body></html>

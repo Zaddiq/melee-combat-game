@@ -57,3 +57,7 @@ Owner has only one phone, so test with several browser tabs or windows.
 **Owner preferences:** one feature at a time; they test it themselves; Claude branches, tests, merges to main and pushes. Git: after pushing a branch run `git fetch origin <branch>:refs/remotes/origin/<branch>` to quiet the stop hook; don't run the stop-hook script by hand.
 
 **Older open items (see above):** the stomp, the encounter page, 3-/4-/7-Hex Fire/Shadow/Wall, Megahex Avert/Sleep. The old branch `duel-multiplayer` is obsolete (owner had no preference about deleting it).
+
+## Oct 31, later: online table step 1 (branch colosseum-online-rooms)
+- Owner chose Firebase (project colosseum-48705, Spark plan, Realtime Database in us-central1, Anonymous sign-in on). Rules file `database.rules.json` must be pasted into the console Rules tab by the owner (until then the live site cannot join). Design and files: see NOTES.md "Colosseum online table, step 1". Tests: `python3 tests/online_test.py` (14).
+- Next: step 2, secret picks from phones (host sends option labels, phone sends the index back). Owner wants remote players too, so Firebase rather than PeerJS. Full resume of a fight if the tablet closes is NOT planned (rejoin only).

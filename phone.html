@@ -1,0 +1,73 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Colosseum: phone</title>
+<style>
+:root{--bg:#f6f4ef;--fg:#1d1d1f;--mut:#666;--card:#fff;--line:#d8d4ca;--acc:#1d4e9e;--ok:#2f7d1c;--bad:#a3121e}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e8e8ea;--mut:#9aa0a8;--card:#1f2228;--line:#363a42;--acc:#7fa8ee;--ok:#a6e22e;--bad:#e8344a}}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.45 system-ui,sans-serif}
+main{max-width:520px;margin:0 auto;padding:16px}
+h1{font-size:24px;margin:0 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+label{display:block;margin:10px 0 4px;color:var(--mut);font-size:15px}
+input{font:inherit;width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+input#code{font-size:30px;letter-spacing:6px;text-transform:uppercase;text-align:center}
+button{font:inherit;padding:12px 18px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;margin-top:12px}
+button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
+.mut{color:var(--mut);font-size:15px}.err{color:var(--bad);margin-top:10px}
+.big{font-size:26px;font-weight:700}
+.dot{display:inline-block;width:10px;height:10px;border-radius:5px;background:var(--mut);margin-right:6px}.dot.on{background:var(--ok)}
+</style></head><body><main>
+<h1>Colosseum</h1>
+<div class="card" id="joinCard">
+  <label for="code">Table code</label><input id="code" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false">
+  <label for="nm">Your name</label><input id="nm" maxlength="20" autocomplete="nickname">
+  <button class="pri" id="go">Join the table</button>
+  <div class="err" id="err"></div>
+</div>
+<div class="card" id="inCard" style="display:none">
+  <div class="mut"><span class="dot" id="dot"></span><span id="conn">Connecting…</span></div>
+  <div class="big" id="seat" style="margin-top:6px"></div>
+  <div class="mut" id="seatNote"></div>
+  <button id="leave">Leave the table</button>
+</div>
+<p class="mut">Keep this page open. When it is your turn to pick, your choices will show up here.</p>
+</main>
+<script src="firebase-config.js"></script>
+<script src="net.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const KEY="colosseum-phone";
+const ST=Net.wanted()==="mem"?sessionStorage:localStorage;   /* the test fake shares localStorage between tabs, so each tab keeps its own memory */
+const rd=()=>{ try{ return JSON.parse(ST.getItem(KEY)||"null"); }catch(e){ return null; } };
+const wr=v=>{ try{ if(v) ST.setItem(KEY,JSON.stringify(v)); else ST.removeItem(KEY); }catch(e){} };
+let room=null, offPub=null, offMe=null, removed=false, closed=false;
+const q=new URLSearchParams(location.search), saved=rd();
+$("code").value=Net.clean(q.get("room")||(saved&&saved.room)||"");
+$("nm").value=(saved&&saved.name)||"";
+function showIn(on){ $("joinCard").style.display=on?"none":""; $("inCard").style.display=on?"":"none"; }
+function seatText(pub){
+  const me=pub&&pub.seats&&pub.seats[Net.uid];
+  if(!pub||!pub.open) return ["The table was closed.","Ask the host for a new code."];
+  if(!me) return ["Waiting for a seat…","The host will put you at a player's place."];
+  if(me.p<0) return ["You are watching.","The host has not given you a player's place."];
+  return ["You are Player "+(me.p+1)+(me.fighter?" – "+me.fighter:""),"Your choices will appear here on your turn to pick."];
+}
+async function enter(c,name){
+  $("err").textContent="";
+  try{ await Net.start(); await Net.joinRoom(c,name); }catch(e){ $("err").textContent=e.message; showIn(false); return; }
+  room=c; removed=false; closed=false; wr({room:c,name}); showIn(true); $("seat").textContent="Waiting for a seat…"; $("conn").textContent="Connecting…";
+  offPub=Net.watchPub(c,(pub,e)=>{
+    if(!pub||!pub.open) closed=true;
+    if(removed&&!closed) return;
+    if(e){ $("conn").textContent="Connection problem"; $("dot").className="dot"; return; }
+    $("conn").textContent=pub?"Connected":"Table not found"; $("dot").className="dot"+(pub?" on":"");
+    const [a,b]=seatText(pub); $("seat").textContent=a; $("seatNote").textContent=b;
+  });
+  offMe=Net.watchMe(c,v=>{ if(v===null&&room&&!closed){ removed=true; $("dot").className="dot"; $("conn").textContent="Not at the table"; $("seat").textContent="You were removed from the table."; $("seatNote").textContent="Leave and join again if that was a mistake."; } else if(v&&v.on===false) Net.setOn(c,true).catch(()=>{}); });
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&room) Net.setOn(room,true).catch(()=>{}); });
+}
+function leave(){ const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); offPub=offMe=null; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); }
+$("go").onclick=()=>{ const c=Net.clean($("code").value), n=$("nm").value.trim(); if(c.length<5){ $("err").textContent="Type the 5-letter code from the tablet."; return; } if(!n){ $("err").textContent="Type your name."; return; } enter(c,n); };
+$("leave").onclick=leave;
+if(saved&&saved.room&&saved.room===$("code").value&&saved.name) enter(saved.room,saved.name);   /* coming back after the phone slept */
+</script></body></html>
