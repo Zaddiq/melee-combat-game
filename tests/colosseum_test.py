@@ -58,6 +58,8 @@ JS=r'''
  ok("M30 a player standing in their own west or east entrance can escape from it, and the others fight on",(()=>{ const u=G.players[3]; G.phase="move"; G.cur=u; G.eng=false; ui(); const has=!!$("bEsc"); const before=G.players.filter(x=>x.hp>0&&!x.esc).length; quitDuel(u,"escape"); return has&&G.phase!=="over"&&before===4&&G.players.filter(x=>x.hp>0&&!x.esc).length===3; })());
  begin(4);
  ok("M31 the map shades 16 entrance hexes (both ends and the west and east entrances) when four play free for all",(()=>{ drawMap(); return [...document.querySelectorAll("#map polygon")].filter(p=>p.getAttribute("fill")==="var(--hexend)").length===16; })());
+ begin(4);
+ ok("M32 each counter shows the first letter of its name, and two names that start alike get two letters",(()=>{ const nm=["Anna","Bob","Bea","Cy"]; G.players.forEach((u,i)=>{ u.p.name=nm[i]; }); drawMap(); const h=$("map").innerHTML; return [">A<",">Bo<",">Be<",">C<"].every(x=>h.includes(x))&&!h.includes(">B<"); })());
  return R;
 }'''
 with sync_playwright() as p:
