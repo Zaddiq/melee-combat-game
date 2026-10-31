@@ -40,3 +40,20 @@
 - Owner's earlier order is unchanged otherwise: the stomp, the encounter page, 3-/4-/7-Hex Fire, Shadow, Wall and Megahex Avert/Sleep.
 
 - Oct 31: Colosseum can have computer creatures (picker + count, 50 XP to each winner). Tests: colosseum_test 41, fuzz includes creature layouts.
+
+## Pick up here (Oct 31) — Colosseum (colosseum.html)
+**State:** `main` has everything, pushed. `duel.html` is untouched (2-player duel). `colosseum.html` is the multi-player page: 2 to 4 players on one device, secret picks with cover screens, shared `rules.js`/`maps.js`.
+
+**Done in Colosseum:** 3–4 players; either Free-for-all (each player has their own entrance: south, north, west, east) or Teams (A south, B north), never a mix; teammates can't hurt each other; four contrasting player colors (green, blood red, deep blue, orange) with a first-letter badge on each counter; computer creatures (Wolf, Myrmidon, Bear, Gargoyle, Giant, Small Dragon, Dragon; 1–3 of one kind, max 2 Small Dragons, 1 Dragon) as one computer side against all humans, charcoal color, 50 XP to each human on the winning side. Builder has a "New character" button (Human fighter 8/8/8, 8 points to spend, no name).
+
+**Tests:** `python3 tests/colosseum_test.py` (41), `tests/builder_test.py` (9), `duel_summon_test.py` (14), `rules_test.py` (70), `spells_test.py` (151); fuzzer `tests/fuzz/colosseumfz.py` (includes creature layouts).
+
+**Owner wishes, not built yet (in order):**
+1. Tablet host + phone controllers (room code, PeerJS or Firebase relay): tablet runs the engine and shows the public board; each phone sends secret moves.
+2. A bell (a different tone per player; phone buzz on Android) to say whose turn it is. No timers; a "ring again" button on the tablet. Wake lock, phone map for hex picks, reconnect.
+3. Players build characters on their own phones and upload them to the host's roster (builder shared, not duplicated).
+Owner has only one phone, so test with several browser tabs or windows.
+
+**Owner preferences:** one feature at a time; they test it themselves; Claude branches, tests, merges to main and pushes. Git: after pushing a branch run `git fetch origin <branch>:refs/remotes/origin/<branch>` to quiet the stop hook; don't run the stop-hook script by hand.
+
+**Older open items (see above):** the stomp, the encounter page, 3-/4-/7-Hex Fire/Shadow/Wall, Megahex Avert/Sleep. The old branch `duel-multiplayer` is obsolete (owner had no preference about deleting it).
