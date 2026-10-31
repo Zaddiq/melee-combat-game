@@ -20,10 +20,10 @@ function render(){
   const e=err?`<div style="color:var(--foe);margin:6px 0">${esc(err)}</div>`:"";
   if(!code){
     const old=saved();
-    body.innerHTML=`<div>Let players join from their own phones. Each phone gets a short code; the tablet keeps the board.</div>${e}<div class="row"><button class="pri" id="onOpen">Open a table</button>${old?`<button id="onRe">Reopen table ${esc(old)}</button>`:""}</div>`;
+    body.innerHTML=`<div class="mut">Table version 2 (secret picks)</div><div>Let players join from their own phones. Each phone gets a short code; the tablet keeps the board.</div>${e}<div class="row"><button class="pri" id="onOpen">Open a table</button>${old?`<button id="onRe">Reopen table ${esc(old)}</button>`:""}</div>`;
     $("onOpen").onclick=open; if(old) $("onRe").onclick=()=>reopen(old); return; }
   const ids=Object.keys(joins).sort((a,b)=>(joins[a].t||0)-(joins[b].t||0));
-  body.innerHTML=`<div>Table code: <b style="font-size:28px;letter-spacing:3px">${esc(code)}</b></div>
+  body.innerHTML=`<div class="mut">Table version 2 (secret picks)</div><div>Table code: <b style="font-size:28px;letter-spacing:3px">${esc(code)}</b></div>
    <div class="mut">On each phone open <b>${esc(url())}</b> and type the code${Net.kind==="mem"?" (test mode)":""}.</div>${e}
    <div id="onList" style="margin-top:8px">${ids.length?ids.map(u=>`<div class="row" data-u="${esc(u)}"><span title="${joins[u].on?"connected":"not connected"}" style="color:${joins[u].on?"var(--me)":"var(--mut)"}">●</span> <b>${esc(joins[u].name)}</b>
      <select data-seat="${esc(u)}"><option value="-1">watching only</option>${[...Array(NP)].map((_,i)=>`<option value="${i}"${seat[u]===i?" selected":""}>${esc(pname(i))}</option>`).join("")}</select>
