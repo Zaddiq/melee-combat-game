@@ -87,6 +87,11 @@ const Net={
   setOn(c,on){ return this.b.set("rooms/"+c+"/join/"+this.uid+"/on",!!on); },
   leaveRoom(c){ return this.b.remove("rooms/"+c+"/join/"+this.uid); },
   watchMe(c,cb){ return this.b.on("rooms/"+c+"/join/"+this.uid,cb); },
+  /* host <-> one phone: the host writes priv/UID (what that player may see), the phone writes cmd/UID (what they chose) */
+  sendPriv(c,uid,obj){ return this.b.set("rooms/"+c+"/priv/"+uid,obj); },
+  watchCmds(c,cb){ return this.b.on("rooms/"+c+"/cmd",cb); },
+  watchPriv(c,cb){ return this.b.on("rooms/"+c+"/priv/"+this.uid,cb); },
+  sendCmd(c,obj){ return this.b.set("rooms/"+c+"/cmd/"+this.uid,obj); },
   watchPub(c,cb){ return this.b.on("rooms/"+c+"/pub",cb); }
 };
 window.Net=Net;

@@ -1055,7 +1055,7 @@ function ui(){
     if(pl.every(Boolean)){ const pn=pl[placeStep], last=placeStep===NP-1, tmOK=new Set(team.slice(0,NP)).size>1;
       c.innerHTML=`<div><b class="${PCLS[placeStep]}">${esc(pn.name)}</b> (Player ${placeStep+1}): tap one of your four outlined hexes on the map to choose where to start. The open hex is your current choice.</div><div style="margin-top:6px">${tmOK?(last?`<button class="pri" id="bGo">Done: start the duel</button> `:`<button class="pri" id="bNext">Done: pass to Player ${placeStep+2}</button> `):`<span class="mut">Everyone is on one team: put at least two teams in play. </span>`}${placeStep?`<button id="bPrev">Back to Player ${placeStep}</button>`:""}</div><div class="mut" style="margin-top:6px">XP is awarded when the duel ends; nobody dies for good.</div>`;
       if($("bNext")) $("bNext").onclick=()=>{ placeStep++; ui(); drawMap(); }; if($("bPrev")) $("bPrev").onclick=()=>{ placeStep--; ui(); drawMap(); };
-      if($("bGo")) $("bGo").onclick=startFight; } else c.innerHTML=NP===2?"Load both fighters first (the boxes below).":"Load all "+NP+" fighters first (the boxes below)."; return; }
+      if($("bGo")) $("bGo").onclick=startFight; } else c.innerHTML=NP===2?"Load both fighters first (the boxes below).":"Load all "+NP+" fighters first (the boxes below)."; if(window.Online) Online.hook(c); return; }
   const A=G.me,B=G.foe,cur=G.cur; let t="",b="";
   const fx=u=>[u.blur&&"Blur",u.inv&&"Invisible",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.conf>0&&"confused −"+u.confN+" IQ",u.avert&&"averted",u.rope>0&&(ropeNum(u)>1?"2 ropes −":"roped −")+(ropeNum(u)*(u.rope+1))+" DX",u.air&&"flying",u.fly&&!u.air&&"taking off",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"")+(fx(u).length?" ["+fx(u).join(", ")+"]":"");
@@ -1094,6 +1094,7 @@ function ui(){
     else if(o.t==="disengage"||o.t==="hesc"){ G.destT=o.t; G.phase="dest"; G.dopts=new Map(freeNeighbors(G.cur).map(h=>[key(h.q,h.r),h])); if(!G.dopts.size){G.phase="pick";G.note="There is no free hex to move into. ";} ui(); drawMap(); }
     else takePick(o);
   });
+  if(window.Online) Online.hook(c,t);
 }
 
 /* ---- map ---- */

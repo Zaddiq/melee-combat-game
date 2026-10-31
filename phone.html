@@ -14,6 +14,9 @@ button{font:inherit;padding:12px 18px;border-radius:10px;border:1px solid var(--
 button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
 .mut{color:var(--mut);font-size:15px}.err{color:var(--bad);margin-top:10px}
 .big{font-size:26px;font-weight:700}
+.opt{display:block;width:100%;text-align:left;margin-top:10px;padding:14px 16px;font-size:18px}.opt.pri{background:var(--acc);color:#fff;border-color:var(--acc)}.opt[disabled]{opacity:.5}
+.tgs{margin-top:12px}.tg{display:inline-block;width:auto;margin:6px 6px 0 0;padding:8px 12px;font-size:16px}.tg.on{border:2px solid var(--acc);font-weight:700}
+.ring{background:#ffe9a8;color:#3a2a00;border-radius:10px;padding:10px 12px;margin-top:12px;font-weight:700}
 .dot{display:inline-block;width:10px;height:10px;border-radius:5px;background:var(--mut);margin-right:6px}.dot.on{background:var(--ok)}
 </style></head><body><main>
 <h1>Colosseum</h1>
@@ -27,6 +30,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
   <div class="mut"><span class="dot" id="dot"></span><span id="conn">Connecting…</span></div>
   <div class="big" id="seat" style="margin-top:6px"></div>
   <div class="mut" id="seatNote"></div>
+  <div id="play" style="margin-top:12px"></div>
   <button id="leave">Leave the table</button>
 </div>
 <p class="mut">Keep this page open. When it is your turn to pick, your choices will show up here.</p>
@@ -40,7 +44,7 @@ const KEY="colosseum-phone";
 const ST=Net.wanted()==="mem"?sessionStorage:localStorage;   /* the test fake shares localStorage between tabs, so each tab keeps its own memory */
 const rd=()=>{ try{ return JSON.parse(ST.getItem(KEY)||"null"); }catch(e){ return null; } };
 const wr=v=>{ try{ if(v) ST.setItem(KEY,JSON.stringify(v)); else ST.removeItem(KEY); }catch(e){} };
-let room=null, offPub=null, offMe=null, removed=false, closed=false;
+let room=null, offPub=null, offMe=null, offPriv=null, removed=false, closed=false, lastRing=null, ringT=null, sentSeq=null;
 const q=new URLSearchParams(location.search), saved=rd();
 $("code").value=Net.clean(q.get("room")||(saved&&saved.room)||"");
 $("nm").value=(saved&&saved.name)||"";
@@ -52,21 +56,39 @@ function seatText(pub){
   if(me.p<0) return ["You are watching.","The host has not given you a player's place."];
   return ["You are Player "+(me.p+1)+(me.fighter?" – "+me.fighter:""),"Your choices will appear here on your turn to pick."];
 }
+
+function showPlay(p){
+  const el=$("play"); if(!p){ el.innerHTML=""; return; }
+  const ringUp=lastRing!==null&&(p.ring||0)>lastRing; lastRing=p.ring||0;
+  if(p.mode==="wait"){ el.innerHTML=`<div class="mut">${esc(p.text||"")}</div>`; return; }
+  const sent=sentSeq===p.seq;
+  el.innerHTML=(ringUp?`<div class="ring">The table is waiting for you.</div>`:"")+`<div style="margin-top:6px">${esc(p.text||"")}</div>`
+    +((p.tg||[]).length?`<div class="tgs mut">Target:<br>${p.tg.map((x,i)=>`<button class="tg${x.on?" on":""}" data-t="${i}"${sent?" disabled":""}>${esc(x.l)}</button>`).join("")}</div>`:"")
+    +(p.btns||[]).map((b,i)=>`<button class="opt${b.p?" pri":""}" data-b="${i}"${sent?" disabled":""}>${esc(b.l)}</button>`).join("")
+    +(sent?`<div class="mut" style="margin-top:10px">Sent.</div>`:"");
+  const send=(k,i)=>{ sentSeq=p.seq; Net.sendCmd(room,{seq:p.seq,k,i,t:Date.now()}).catch(e=>{ sentSeq=null; $("err").textContent=e.message; }); showPlay(p); };
+  el.querySelectorAll("[data-b]").forEach(e=>e.onclick=()=>send("b",+e.dataset.b));
+  el.querySelectorAll("[data-t]").forEach(e=>e.onclick=()=>send("t",+e.dataset.t));
+  if(ringUp&&navigator.vibrate) try{ navigator.vibrate([300,150,300]); }catch(e){}
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 async function enter(c,name){
   $("err").textContent="";
   try{ await Net.start(); await Net.joinRoom(c,name); }catch(e){ $("err").textContent=e.message; showIn(false); return; }
   room=c; removed=false; closed=false; wr({room:c,name}); showIn(true); $("seat").textContent="Waiting for a seat…"; $("conn").textContent="Connecting…";
   offPub=Net.watchPub(c,(pub,e)=>{
-    if(!pub||!pub.open) closed=true;
+    if(!pub||!pub.open){ closed=true; $("play").innerHTML=""; }
     if(removed&&!closed) return;
     if(e){ $("conn").textContent="Connection problem"; $("dot").className="dot"; return; }
     $("conn").textContent=pub?"Connected":"Table not found"; $("dot").className="dot"+(pub?" on":"");
     const [a,b]=seatText(pub); $("seat").textContent=a; $("seatNote").textContent=b;
   });
-  offMe=Net.watchMe(c,v=>{ if(v===null&&room&&!closed){ removed=true; $("dot").className="dot"; $("conn").textContent="Not at the table"; $("seat").textContent="You were removed from the table."; $("seatNote").textContent="Leave and join again if that was a mistake."; } else if(v&&v.on===false) Net.setOn(c,true).catch(()=>{}); });
+  lastRing=null; sentSeq=null;
+  offPriv=Net.watchPriv(c,v=>{ if(!removed&&!closed) showPlay(v); });
+  offMe=Net.watchMe(c,v=>{ if(v===null&&room&&!closed){ removed=true; $("play").innerHTML=""; $("dot").className="dot"; $("conn").textContent="Not at the table"; $("seat").textContent="You were removed from the table."; $("seatNote").textContent="Leave and join again if that was a mistake."; } else if(v&&v.on===false) Net.setOn(c,true).catch(()=>{}); });
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&room) Net.setOn(room,true).catch(()=>{}); });
 }
-function leave(){ const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); offPub=offMe=null; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); }
+function leave(){ const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); offPub=offMe=offPriv=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); }
 $("go").onclick=()=>{ const c=Net.clean($("code").value), n=$("nm").value.trim(); if(c.length<5){ $("err").textContent="Type the 5-letter code from the tablet."; return; } if(!n){ $("err").textContent="Type your name."; return; } enter(c,n); };
 $("leave").onclick=leave;
 if(saved&&saved.room&&saved.room===$("code").value&&saved.name) enter(saved.room,saved.name);   /* coming back after the phone slept */
