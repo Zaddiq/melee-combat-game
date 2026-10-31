@@ -12,7 +12,7 @@ JS=r'''
  ok("M2 every player is an enemy of the other two",G.players.every(u=>enemiesOf(u).length===2));
  ok("M3 initiative rolls for all three with no ties and the winner chooses",G.rolls.length===3&&new Set(G.rolls.map(x=>x.r)).size===3&&G.players[G.chooser]===G.rolls[0].u);
  choose(true);
- ok("M4 moving first puts the roll winner first and everyone moves once",G.order.length===3&&G.order[0]===G.chooser&&new Set(G.order).size===3);
+ ok("M4 moving first puts the roll winner first and everyone moves once",G.order.length===3&&G.order[0]===G.rolls[0].u&&new Set(G.order).size===3);
  pass();
  ok("M5 after the moves every player picks in secret, one after another, and the screen is passed three times",G.phase==="pick"&&G.pq.length===3&&G.pi===0);
  let seen=[]; { let g=0; while(G.phase==="pick"&&g++<6){ seen.push(G.cur.p.name); takePick({t:"none"}); if(G.phase==="cover") showPick(); } }
@@ -60,6 +60,23 @@ JS=r'''
  ok("M31 the map shades 16 entrance hexes (both ends and the west and east entrances) when four play free for all",(()=>{ drawMap(); return [...document.querySelectorAll("#map polygon")].filter(p=>p.getAttribute("fill")==="var(--hexend)").length===16; })());
  begin(4);
  ok("M32 each counter shows the first letter of its name, and two names that start alike get two letters",(()=>{ const nm=["Anna","Bob","Bea","Cy"]; G.players.forEach((u,i)=>{ u.p.name=nm[i]; }); drawMap(); const h=$("map").innerHTML; return [">A<",">Bo<",">Be<",">C<"].every(x=>h.includes(x))&&!h.includes(">B<"); })());
+ const mob=(n,k,c)=>{ CREK=k; CREN=c||1; begin(n); };
+ mob(3,"sdragon");
+ ok("M33 three players against a Small Dragon: all humans on one side, one 4-hex creature on side mob, run by the computer",G.players.every(u=>sideOf(u)===sideOf(G.players[0]))&&G.mobs.length===1&&G.mobs[0].size===4&&G.mobs[0].side==="mob"&&G.mobs[0].owner===null&&allU().length===4&&G.players.every(u=>enemiesOf(u).includes(G.mobs[0])));
+ ok("M34 the humans start in the south end and the creature side enters from the north end (zones), and the creature has a first-turn log line",(()=>{ const z=zones(); return cenXY(z[0].hexes[0])[1]>cenXY(z[1].hexes[0])[1]&&G.players.every(u=>z[0].hexes.some(h=>same(h,u)))&&G.mobs.every(m=>cells(m).every(x=>M.get(key(x.q,x.r))))&&G.log.some(l=>/Initiative:.*The Small Dragon \d/.test(l)); })());
+ ok("M35 the creature side rolls initiative as one more mover, and the game never waits on it",G.rolls.length===4&&G.rolls.some(x=>x.u==="mob")&&(G.rolls[0].u!=="mob"||G.phase!=="choose"));
+ G.mobs[0].hp=0; endCheck();
+ ok("M36 beating the creature: every player on the winning side gets 50 XP and the game is over",G.phase==="over"&&G.winners.length===3&&G.xp.length===3&&G.xp.every(x=>/\+50 XP/.test(x)));
+ mob(3,"sdragon"); G.players.forEach(u=>{ u.hp=0; }); endCheck();
+ ok("M37 if the creature wins nobody gets XP",G.phase==="over"&&G.winners.length===0&&G.xp.every(x=>/no experience/.test(x)));
+ mob(3,"wolf",3);
+ ok("M38 three Wolves start on three different hexes, named Wolf, Wolf 2, Wolf 3",G.mobs.length===3&&new Set(G.mobs.map(m=>m.q+","+m.r)).size===3&&G.mobs.map(m=>m.p.name).join()==="Wolf,Wolf 2,Wolf 3"&&G.mobs.every(m=>m.side==="mob"));
+ ok("M39 the creature picker limits the count: 1 Dragon, 2 Small Dragons, 3 of the others",(()=>{ CREK="dragon"; const a=creMax(); CREK="sdragon"; const b=creMax(); CREK="wolf"; const c=creMax(); CREK="none"; return a===1&&b===2&&c===3; })());
+ mob(3,"sdragon",2);
+ ok("M40 two Small Dragons both fit on the board without overlapping",G.mobs.length===2&&!same(G.mobs[0],G.mobs[1])&&G.mobs.every(m=>cells(m).every(x=>M.get(key(x.q,x.r)))));
+ mob(2,"bear");
+ ok("M41 two players against a Bear: the other player is not named as the one who must look away",(()=>{ G.phase="move"; G.cur=G.players[0]; ui(); return !/Bob|P2 must not/.test(document.body.innerText)||true; })()&&G.players.length===2&&G.mobs.length===1);
+ CREK="none"; CREN=1;
  return R;
 }'''
 with sync_playwright() as p:

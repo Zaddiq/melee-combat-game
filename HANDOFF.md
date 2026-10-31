@@ -38,3 +38,5 @@
 - Next: step 2 = the tablet runs the game with a room code, phones join and send commands (PeerJS or Firebase relay, nothing to host on GitHub Pages), each phone gets only what its player may see; step 3 = bell per player, vibration, wake lock, phone map for hex picks, rejoin after sleep. iPhones cannot vibrate from a web page, so the tablet bell is the main signal. Needs an engine boundary: serializable state, commands like `{player,type,...}`, and `viewFor(state,player)`.
 - Branch `duel-multiplayer` (the same work inside duel.html) is obsolete; delete it when the owner says so. The builder's New character button (Human fighter 8/8/8, 8 points to spend, no name) is merged too (`tests/builder_test.py`). The owner has more builder features in mind before the phone work: ask.
 - Owner's earlier order is unchanged otherwise: the stomp, the encounter page, 3-/4-/7-Hex Fire, Shadow, Wall and Megahex Avert/Sleep.
+
+- Oct 31: Colosseum can have computer creatures (picker + count, 50 XP to each winner). Tests: colosseum_test 41, fuzz includes creature layouts.

@@ -307,3 +307,10 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Not done: tablet host and phone controllers (room code, secret picks on each phone, bell on the tablet, phone map for hex picks, reconnects); there is no link to the Colosseum from the other pages except the menu.
 ## Builder: New character button (Oct 30, branch builder-new-char)
 - A "New character" button at the top of builder.html starts a Human fighter at ST 8, DX 8, IQ 8 with 8 points left to spend (total 32), no name, no spells, no gear. It asks before replacing a character that has been changed or named. Tests: `tests/builder_test.py` (B1 to B9).
+
+
+## Colosseum: computer creatures (Oct 31)
+- Setup has a creature picker (None, Wolf, Myrmidon, Bear, Gargoyle, Giant, Small Dragon, Dragon) and a count: up to 3 of one kind, 2 Small Dragons, 1 Dragon. With a creature chosen, all the human players are one team (south end) against the creatures (north end, side "mob", charcoal color, no owner). The Free-for-all/Teams selector is hidden then.
+- The creatures roll initiative as one more mover ("The Wolves 4"); if they win the roll they pick first/last at random. They move and act with the same computer rules as summons (aiMove/aiAct), no pick screen.
+- XP (owner's choice): 50 to each human on the winning side (downed winners count, anyone who escaped does not); nothing if the creatures win.
+- Control Person on a creature of the computer's side releases it (it does not vanish) when the spell ends.

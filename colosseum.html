@@ -1,8 +1,8 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Colosseum</title>
 <style>
-:root{--bg:#f6f4ef;--fg:#1d1d1f;--mut:#666;--card:#fff;--line:#d8d4ca;--acc:#1d4e9e;--me:#4a9a1c;--foe:#a3121e;--p3:#1546b8;--p4:#d96a00;--hex:#e9eef7;--hexend:#ffd9d9}
-@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e8e8ea;--mut:#9aa0a8;--card:#1f2228;--line:#363a42;--acc:#7fa8ee;--me:#a6e22e;--foe:#e8344a;--p3:#4f8cff;--p4:#ffa94d;--hex:#262c38;--hexend:#4a2a2c}}
+:root{--bg:#f6f4ef;--fg:#1d1d1f;--mut:#666;--card:#fff;--line:#d8d4ca;--acc:#1d4e9e;--me:#4a9a1c;--foe:#a3121e;--p3:#1546b8;--p4:#d96a00;--mob:#3d3d3d;--hex:#e9eef7;--hexend:#ffd9d9}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e8e8ea;--mut:#9aa0a8;--card:#1f2228;--line:#363a42;--acc:#7fa8ee;--me:#a6e22e;--foe:#e8344a;--p3:#4f8cff;--p4:#ffa94d;--mob:#d4d4d4;--hex:#262c38;--hexend:#4a2a2c}}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif}
 main{max-width:1000px;margin:0 auto;padding:16px}
 h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 6px}
@@ -17,7 +17,7 @@ details.setup>summary{cursor:pointer;font-weight:600;margin-bottom:8px}
 button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
 button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
 textarea{width:100%;box-sizing:border-box;min-height:70px;font:12px monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px}
-.mut{color:var(--mut);font-size:14px}.me{color:var(--me)}.foe{color:var(--foe)}.p3{color:var(--p3)}.p4{color:var(--p4)}
+.mut{color:var(--mut);font-size:14px}.me{color:var(--me)}.foe{color:var(--foe)}.p3{color:var(--p3)}.mob{color:var(--mob)}.p4{color:var(--p4)}
 table{border-collapse:collapse;width:100%}td{padding:2px 0}td:first-child{color:var(--mut);width:42%}
 svg{width:100%;height:auto;max-height:80vh}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
@@ -32,12 +32,12 @@ svg{width:100%;height:auto;max-height:80vh}
  <details class="setup" id="setup" open><summary>The fighters</summary>
  <div class="card"><h2>Map</h2><div class="row"><select id="mapSel"><option value="melee">Melee map (two boards, 99 hexes)</option><option value="wizard">Wizard map (166 hexes, 21 megahexes)</option></select><span class="mut" id="mapNote"></span></div></div>
 
- <div class="card"><h2>Players</h2><div class="row"><select id="npSel"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><select id="modeSel"><option value="ffa">Free for all</option><option value="teams">Teams (two sides)</option></select></div><div class="mut" id="npNote"></div></div>
+ <div class="card"><h2>Players</h2><div class="row"><select id="npSel"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><select id="modeSel"><option value="ffa">Free for all</option><option value="teams">Teams (two sides)</option></select><select id="creSel" title="A side run by the computer"></select><select id="creN" title="How many"></select></div><div class="mut" id="npNote"></div></div>
  <div id="pcards"></div>
 </details>
  <div class="card" id="stats"><h2>Fighters</h2><div class="mut">Load the fighters to see their stats here.</div></div>
 </div>
-<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">The starred (pink) hexes are the entrances. Two players start at the bottom and top. With 3 or 4 players in free for all, each also gets a west or east entrance; in Teams mode Team A starts at the bottom and Team B at the top. Before the duel, each player taps one of the four outlined hexes of their own entrance to start there.</div></div></div>
+<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">The starred (pink) hexes are the entrances. Two players start at the bottom and top. With 3 or 4 players in free for all, each also gets a west or east entrance; in Teams mode Team A starts at the bottom and Team B at the top. With computer creatures, all the players start at the bottom and the creatures come in from the top. Before the duel, each player taps one of the four outlined hexes of their own entrance to start there.</div></div></div>
 </main>
 <script src="rules.js"></script>
 <script src="maps.js"></script>
@@ -155,12 +155,19 @@ function card(f,cls){
 let me=null, foe=null, placeStep=0;
 const MAXP=4, SIDEIDS=["me","foe","s3","s4"], PCV=["--me","--foe","--p3","--p4"], PCLS=["me","foe","p3","p4"], ROM=["","","II","III","IV"];
 const slot=[null,null,null,null];
+const pcI=u=>G.players.indexOf(ownerOf(u)), pcVar=u=>pcI(u)<0?"--mob":PCV[pcI(u)], pcCls=u=>pcI(u)<0?"mob":PCLS[pcI(u)];   /* the color and class of whoever runs a figure; the computer's creatures are charcoal */
 let NP=2;                              /* how many players are in the next duel (2 to 4) */
 let MODE="ffa";                        /* with 3 or 4 players: "ffa" (everyone alone, each from their own entrance) or "teams" (two sides, Team A at the bottom end, Team B at the top). Never a mix. */
 const tmAB=[0,1,0,1];                  /* the side (0 = Team A, 1 = Team B) each player picked in Teams mode */
 const team=[0,1,2,3];                  /* the live team id of each player (set by applyMode); players with the same id are allies */
-const teamsOn=()=>NP>2&&MODE==="teams";
-function applyMode(){ for(let i=0;i<MAXP;i++) team[i]=teamsOn()?tmAB[i]:i; }
+let CREK="none", CREN=1;                /* a side run by the computer: "none" or a key of CRE (wolf, bear, sdragon ...), and how many. Then all the players are on one team against it. */
+const mobOn=()=>CREK!=="none"&&!!CRE[CREK];
+const teamsOn=()=>NP>2&&MODE==="teams"&&!mobOn();
+const ffaOn=()=>NP>2&&!teamsOn()&&!mobOn();
+const PLURAL={"Wolf":"Wolves","Myrmidon":"Myrmidons","Bear":"Bears","Gargoyle":"Gargoyles","Giant":"Giants","Small Dragon":"Small Dragons","Dragon":"Dragons"};
+const mobName=()=>mobOn()?(CREN>1?(PLURAL[CRE[CREK].name]||CRE[CREK].name+"s"):CRE[CREK].name):"";
+const creMax=()=>!mobOn()?1:CRE[CREK].size===7?1:CRE[CREK].size===4?2:3;   /* a Dragon is 7 hexes, a Small Dragon 4: they only fit one or two on the board */
+function applyMode(){ for(let i=0;i<MAXP;i++) team[i]=mobOn()?0:teamsOn()?tmAB[i]:i; }
 const starts=[null,null,null,null];    /* each player's chosen start hex (a key) */
 function showSlot(i){ $("pf"+i).innerHTML=slot[i]?card(slot[i],PCLS[i]):""; showStats(); }
 function epLine(f){ const r=loadRec()[rkey(f)]; return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/100 EP${r&&r.pend>0?" · attribute point waiting (spend it in the solo arena)":""}</div>`; }
@@ -188,10 +195,16 @@ for(const i of [0,1,2,3]){
   $("pg"+i).onclick=()=>{ try{ setP(i,fromBuilder(JSON.parse($("paste"+i).value)),"Loaded pasted fighter."); }catch(e){ $("msg"+i).textContent="That does not look like a builder fighter."; } };
   $("rg"+i).onclick=()=>{ const r=REC[$("rs"+i).value]; if(r&&r.src) setP(i,fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx,name:r.name})),"Loaded from your arena roster (its own record is not touched)."); };
 }
-const noteText=()=>NP===2?"Two players: one against the other.":teamsOn()?"Two teams fight each other: pick Team A or Team B for each player. Teammates start at the same end and can never hurt each other.":"Free for all: everyone fights for themselves and starts from their own entrance (bottom, top, west, east).";
-function refreshPlayers(){ for(let i=0;i<MAXP;i++){ const c=$("pcard"+i); if(c) c.style.display=i<NP?"":"none"; const r=$("tm"+i); if(r&&r.closest) r.closest(".tmrow").style.display=teamsOn()?"":"none"; } $("modeSel").style.display=NP>2?"":"none"; $("modeSel").value=MODE; $("npNote").textContent=noteText(); }
+const noteText=()=>mobOn()?`All ${NP} players fight together against ${CREN>1?CREN+" "+mobName():"a "+mobName()} run by the computer. The creatures come in from the north end, the players from the south. If you win, each of you gets 50 XP.`:NP===2?"Two players: one against the other.":teamsOn()?"Two teams fight each other: pick Team A or Team B for each player. Teammates start at the same end and can never hurt each other.":"Free for all: everyone fights for themselves and starts from their own entrance (bottom, top, west, east).";
+function refreshPlayers(){ for(let i=0;i<MAXP;i++){ const c=$("pcard"+i); if(c) c.style.display=i<NP?"":"none"; const r=$("tm"+i); if(r&&r.closest) r.closest(".tmrow").style.display=teamsOn()?"":"none"; }
+  $("modeSel").style.display=NP>2&&!mobOn()?"":"none"; $("modeSel").value=MODE;
+  $("creSel").innerHTML=`<option value="none">No computer creatures</option>`+Object.keys(CRE).map(k=>`<option value="${k}">${CRE[k].name}</option>`).join(""); $("creSel").value=mobOn()?CREK:"none";
+  CREN=Math.max(1,Math.min(CREN,creMax())); $("creN").innerHTML=[...Array(creMax())].map((_,i)=>`<option value="${i+1}">${i+1}</option>`).join(""); $("creN").value=String(CREN); $("creN").style.display=mobOn()&&creMax()>1?"":"none";
+  $("npNote").textContent=noteText(); }
 const resetSetup=()=>{ applyMode(); G=null; placeStep=0; starts.fill(null); $("setup").open=true; refreshPlayers(); showStats(); ui(); drawMap(); };
 $("npSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("npSel").value=String(NP); $("npNote").textContent="Finish the duel first (or leave it with Rematch)."; return; } NP=+$("npSel").value; resetSetup(); };
+$("creSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("creSel").value=mobOn()?CREK:"none"; $("npNote").textContent="Finish the duel first (or leave it with Rematch)."; return; } CREK=$("creSel").value; CREN=1; resetSetup(); };
+$("creN").onchange=()=>{ if(G&&G.phase!=="over"){ $("creN").value=String(CREN); return; } CREN=+$("creN").value; resetSetup(); };
 $("modeSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("modeSel").value=MODE; $("npNote").textContent="Finish the duel first (or leave it with Rematch)."; return; } MODE=$("modeSel").value; resetSetup(); };
 for(let i=0;i<MAXP;i++) $("tm"+i).onchange=()=>{ if(G&&G.phase!=="over"){ $("tm"+i).value=String(tmAB[i]); return; } tmAB[i]=+$("tm"+i).value; resetSetup(); };
 applyMode(); refreshPlayers();
@@ -341,6 +354,10 @@ function reach(a,B,ma,eng){
 }
 function settle(){
   if(G.settled) return; G.settled=true;
+  if(G.mobs.length){   /* a fight against the computer's creatures: each human on the winning side gets 50 XP, nobody else gets any */
+    const win=new Set(G.winners||[]);
+    G.xp=G.players.map(u=>{ if(!win.has(u)) return `${u.p.name}: no experience${u.esc?" (left the fight)":""}.`; const r=awardXp(u.p,50); return `${u.p.name}: +50 XP (now ${r.ep}/100)${r.pend>0?", attribute point earned":""}`; });
+    lg(win.size?`The ${mobName()} ${CREN>1?"are":"is"} beaten: every player on the winning side gets 50 XP.`:"No experience this time."); G.xp.forEach(x=>lg(x)); showStats(); return; }
   const PL=G.players, sums=PL.map(u=>u.p.st+u.p.dx), win=new Set(G.winners||[]);
   const bonus=u=>{ const i=PL.indexOf(u); return PL.some((v,j)=>sideOf(v)!==sideOf(u)&&sums[j]-sums[i]>=3)?10:0; };   /* +10 if some opponent is 3 or more points stronger */
   const lostOf=u=>u.p.st-u.hp, unhurt=u=>!!u.esc&&lostOf(u)<Math.ceil(u.p.st/3);
@@ -359,8 +376,9 @@ function settle(){
 function quitDuel(u,type){ if(G.phase==="over") return;
   const rest=G.players.filter(x=>x!==u&&x.hp>0&&!x.esc);
   u.esc=type; u.out=true;
-  for(const m of allU()) if(m.minion&&m.hp>0&&ownerOf(m)===u) m.hp=0;   /* the creatures of someone who leaves vanish */
-  if(new Set(rest.map(sideOf)).size>1){   /* the others fight on: the leaver is off the board */
+  for(const m of allU()) if(m.ctl===u) releaseCtl(m,"its controller left");
+  for(const m of allU()) if(m.minion&&m.owner&&m.hp>0&&ownerOf(m)===u) m.hp=0;   /* the creatures of someone who leaves vanish */
+  if(new Set([...rest,...G.mobs.filter(m=>m.hp>0)].map(sideOf)).size>1){   /* the others fight on: the leaver is off the board */
     lg(type==="escape"?`${u.p.name} escapes through the door.`:`${u.p.name} surrenders.`);
     G.units=G.units.filter(x=>x!==u); endCheck();
     if(G.phase!=="over"&&G.phase==="move"&&G.cur===u){ G.idx++; advance(); }
@@ -383,7 +401,7 @@ const ANIMAL=["wolf","bear"], PERSON=["myrmidon","gargoyle","giant"];
 function ctlOK(u,o,kind){ if(!o||o.hp<=0||sideOf(o)===sideOf(u)) return false;
   const k=o.kind; if(o.minion||o.fake) return (kind==="animal"?ANIMAL:PERSON).includes(k);
   return kind==="person"&&CTLMAIN&&G.players.includes(o); }
-function releaseCtl(x,why){ x.ctl=null; if(x.minion){ x.hp=0; } lg(`${x.p.name} is free of the control spell${x.minion?" and vanishes":""}${why?" ("+why+")":""}.`); }
+function releaseCtl(x,why){ x.ctl=null; const gone=x.minion&&x.owner; if(gone){ x.hp=0; } lg(`${x.p.name} is free of the control spell${gone?" and vanishes":""}${why?" ("+why+")":""}.`); }
 const opp=u=>{ const E=G.players.filter(x=>sideOf(x)!==sideOf(u)); return E.find(x=>x.hp>0&&!x.esc)||E[0]||u; };   /* an opposing player's own figure (the first one still standing) */
 const enemiesOf=u=>allU().filter(x=>x!==u&&x.hp>0&&sideOf(x)!==sideOf(u));
 const engagedAny=u=>{ const X=enemiesOf(u).filter(e=>isEngaged(u,e)); return u.size>1?(X.length>=2||X.some(e=>e.size>1)):X.length>0; };   /* a big figure needs two attackers in front of it */
@@ -400,7 +418,7 @@ function zones(){
 }
 function startHexes(){
   const Z=zones(), xs=P.map(h=>h.p[0]), mx=xs.reduce((a,b)=>a+b,0)/xs.length;
-  const zi=Array.from({length:NP},(_,i)=>teamsOn()?(team[i]===0?0:1):i);   /* Teams mode: Team A enters at the south end, Team B at the north end; free for all: one entrance each (south, north, west, east) */
+  const zi=Array.from({length:NP},(_,i)=>mobOn()?0:teamsOn()?(team[i]===0?0:1):i);   /* Teams mode: Team A enters at the south end, Team B at the north end; free for all: one entrance each (south, north, west, east) */
   const front=(arr,sign)=>{ const fy=sign>0?Math.min(...arr.map(h=>h.p[1])):Math.max(...arr.map(h=>h.p[1]));
     return arr.filter(h=>Math.abs(h.p[1]-fy)<.1).sort((a,b)=>Math.abs(a.p[0]-mx)-Math.abs(b.p[0]-mx))[0]; };
   const pick=[];
@@ -417,11 +435,23 @@ function startHexes(){
 }
 const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,conf:0,confN:0,shock:false,inv:false,sight:false,avert:null,fresh:false,gone:false,tgtSel:null,rev:false,revHit:false,rope:0,ropeN:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,pn:[],cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
+/* a side run by the computer: creatures at book stats that enter from the north end. They are ordinary minions with no owner (side "mob"), so the creature rules, the dragon rules and the computer's moves and actions all apply as they do for summons. */
+function newMob(kind,h,n){ const C=CRE[kind], p=fromBuilder({name:C.name+(n>0?" "+(n+1):""),race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"});
+  const m=mk(h,p); m.minion=true; m.kind=kind; m.side="mob"; m.owner=null; m.fresh=false; if(kind==="gargoyle") m.natFly=true; if(C.up) m.up=C.up;
+  if(C.size>1){ m.size=C.size; p.breath=C.breath; m.natFly=C.fly||false; } return m; }
+function spawnMobs(){ const north=zones()[1].hexes, hum=G.players, near=u=>[...hum].sort((a,b)=>hdist(u,a)-hdist(u,b))[0];
+  const c0={q:Math.round(north.reduce((a,h)=>a+h.q,0)/north.length),r:Math.round(north.reduce((a,h)=>a+h.r,0)/north.length)};
+  const free=[...north].sort((a,b)=>hdist(a,c0)-hdist(b,c0));
+  for(let k=0;k<CREN;k++){ const C=CRE[CREK]; let m;
+    if(C.size>1){ m=newMob(CREK,free[0],CREN>1?k:0); placeBig(m,c0,near(free[0])); }
+    else { const h=free.find(x=>!allU().some(y=>y.hp>0&&same(y,x)))||free[0]; m=newMob(CREK,h,CREN>1?k:0); m.f=faceToward(m,near(m)); }
+    G.units.push(m); G.mobs.push(m); } }
 function startFight(){
-  const pl=slot.slice(0,NP); if(pl.length<2||!pl.every(Boolean)||new Set(team.slice(0,NP)).size<2) return; const s=startHexes();
-  G={turn:0,phase:"",log:[],order:[],idx:0,start:null,reach:null,eng:false,moved:0,floor:[],objs:[],exhib:true,settled:false,cur:null};
+  const pl=slot.slice(0,NP); if(pl.length<2||!pl.every(Boolean)||(!mobOn()&&new Set(team.slice(0,NP)).size<2)) return; const s=startHexes();
+  G={turn:0,phase:"",log:[],order:[],idx:0,start:null,reach:null,eng:false,moved:0,floor:[],objs:[],exhib:true,settled:false,cur:null,mobs:[]};
   G.players=pl.map((p,i)=>{ const u=mk(s.pick[i],p); u.side=SIDEIDS[team[i]]; return u; }); G.me=G.players[0]; G.foe=G.players[1];
   G.units=[...G.players]; WALLS=new Set();
+  if(mobOn()) spawnMobs();
   for(const u of G.players) u.f=faceToward(u,other(u));   /* everyone starts facing their nearest enemy */
   $("setup").open=false;
   nextTurn(); ui(); drawMap();
@@ -431,26 +461,30 @@ function nextTurn(){
     u.fireT=false; if(u.rope>0){ u.rope++; if(adjDXu(u,"single",null)<=2&&!u.down){ u.down=true; lg(`${sub(u)} ${vb(u,"are","is")} so tangled in rope that ${vb(u,"you fall","it falls")} helpless.`); } }
     for(const k of ["slow","stop","spd","daz","clum","aid","frozen","conf"]) if(u[k]>0) u[k]--; if(!u.conf) u.confN=0; if(!u.aid) u.aidN=0; if(!u.clum) u.clumN=0; u.pn=[]; u.rvl=u.rvlNew||""; u.rvlNew=""; u.revHit=false; }
   if(G.objs&&G.objs.length){ G.objs.forEach(o=>o.age++); const n0=G.objs.length; G.objs=G.objs.filter(o=>o.age<=12); if(G.objs.length<n0){ syncWalls(); lg("Some created things fade away (they last 12 turns)."); } }
-  G.turn++; const act=G.players.filter(u=>u.hp>0&&!u.esc); let R; do{ R=act.map(()=>d6()); }while(new Set(R).size<R.length);   /* every player still in rolls; no ties */
-  G.rolls=act.map((u,i)=>({u,r:R[i]})).sort((x,y)=>y.r-x.r);
-  lg(`— Turn ${G.turn}. Initiative: ${act.map((u,i)=>`${u.p.name} ${R[i]}`).join(", ")}.`);
+  G.turn++; const act=G.players.filter(u=>u.hp>0&&!u.esc), movers=[...act,...(G.mobs.some(m=>m.hp>0&&ownerOf(m)===m)?["mob"]:[])]; let R; do{ R=movers.map(()=>d6()); }while(new Set(R).size<R.length);   /* every player still in rolls, and the computer's creatures roll as one more side; no ties */
+  G.rolls=movers.map((u,i)=>({u,r:R[i]})).sort((x,y)=>y.r-x.r);
+  lg(`— Turn ${G.turn}. Initiative: ${movers.map((u,i)=>`${u==="mob"?"The "+mobName():u.p.name} ${R[i]}`).join(", ")}.`);
   for(const u of act) if(u.wound2) lg(`${u.p.name} took 5 or more hits: DX −2 for the next attack.`);
-  G.chooser=G.players.indexOf(G.rolls[0].u); G.phase="choose";
+  G.chooser=G.players.indexOf(G.rolls[0].u);
   for(const x of allU()) if(x.avert&&x.avert.hp<=0) x.avert=null;
   G.rq=G.players.filter(u=>u.hp>0&&!u.esc&&(CONT.some(k=>u[k])||avertsOf(u).length||allU().some(m=>m.minion&&m.hp>0&&ownerOf(m)===u)));   /* step 2: each wizard with continuing spells decides, in secret */
-  if(G.rq.length) nextRenew();
+  if(G.rq.length) nextRenew(); else toChoose();
 }
+/* the winner of the initiative roll chooses first or last; if that is the computer's creatures they choose for themselves */
+function toChoose(){ G.phase="choose"; if(G.rolls[0].u==="mob"){ lg(`The ${mobName()} won the initiative roll.`); choose(Math.random()<.5); } }
 const CONT=["blur","stone","iron","shield","rev","fly","shock","inv","sight"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield",rev:"Reverse Missiles",fly:"Flight",shock:"Shock Shield",inv:"Invisibility",sight:"Mage Sight"};
-function nextRenew(){ if(!G.rq.length){ G.phase="choose"; return; } G.rcur=G.rq.shift(); G.rlist=CONT.filter(k=>G.rcur[k]).map(k=>({k,on:G.rcur.hp>=3})).concat(allU().filter(m=>m.minion&&!m.fake&&m.hp>0&&ownerOf(m)===G.rcur).map(m=>({k:"minion",m,on:G.rcur.hp>=3}))).concat(avertsOf(G.rcur).map(m=>({k:"avert",m,on:G.rcur.hp>=3}))); G.cur=G.rcur; G.oth=other(G.rcur); G.phase="rcover"; }
+function nextRenew(){ if(!G.rq.length){ toChoose(); return; } G.rcur=G.rq.shift(); G.rlist=CONT.filter(k=>G.rcur[k]).map(k=>({k,on:G.rcur.hp>=3})).concat(allU().filter(m=>m.minion&&!m.fake&&m.hp>0&&ownerOf(m)===G.rcur).map(m=>({k:"minion",m,on:G.rcur.hp>=3}))).concat(avertsOf(G.rcur).map(m=>({k:"avert",m,on:G.rcur.hp>=3}))); G.cur=G.rcur; G.oth=other(G.rcur); G.phase="rcover"; }
 const rname=r=>r.k==="minion"?r.m.p.name:r.k==="avert"?"Avert on "+r.m.p.name:CONTN[r.k];
 const avertsOf=u=>allU().filter(x=>x.avert===u&&x.hp>0&&!x.fake);
-function doRenew(){ const u=G.rcur; for(const r of G.rlist){ if(r.on&&u.hp>=(r.k==="minion"?upOf(r.m):1)){ u.hp-=(r.k==="minion"?upOf(r.m):1); if(r.k==="blur") lg(`${u.p.name} keeps Blur going.`); } else if(r.k==="minion"){ r.m.hp=0; endCheck(); } else if(r.k==="avert"){ r.m.avert=null; lg(`${u.p.name}'s Avert on ${r.m.p.name} ends.`); } else { u[r.k]=false; if(r.k==="fly"){ land(u); lg(`${u.p.name} lands.`); } if(r.k==="blur") lg(`${u.p.name}'s Blur ends.`); } }
+function doRenew(){ const u=G.rcur; for(const r of G.rlist){ if(r.on&&u.hp>=(r.k==="minion"?upOf(r.m):1)){ u.hp-=(r.k==="minion"?upOf(r.m):1); if(r.k==="blur") lg(`${u.p.name} keeps Blur going.`); } else if(r.k==="minion"){ if(r.m.owner){ r.m.hp=0; endCheck(); } else releaseCtl(r.m,"its controller stopped paying"); } else if(r.k==="avert"){ r.m.avert=null; lg(`${u.p.name}'s Avert on ${r.m.p.name} ends.`); } else { u[r.k]=false; if(r.k==="fly"){ land(u); lg(`${u.p.name} lands.`); } if(r.k==="blur") lg(`${u.p.name}'s Blur ends.`); } }
   endCheck(); if(G.phase!=="over") nextRenew(); }
-function choose(first){ const w=G.chooser, rest=G.rolls.map(x=>G.players.indexOf(x.u)).filter(i=>i!==w); G.order=first?[w,...rest]:[...rest,w]; G.idx=0; lg(`${G.players[w].p.name} moves ${first?"first":(G.rolls.length>2?"last":"second")}.`); advance(); ui(); drawMap(); }
+function choose(first){ const w=G.rolls[0].u, rest=G.rolls.slice(1).map(x=>x.u); G.order=first?[w,...rest]:[...rest,w]; G.idx=0;
+  const who=w==="mob"?"The "+mobName():w.p.name, vbm=w==="mob"&&CREN>1?"move":"moves"; lg(`${who} ${vbm} ${first?"first":(G.rolls.length>2?"last":"second")}.`); advance(); ui(); drawMap(); }
 function minionMove(o){ for(const m of allU().filter(x=>x.minion&&x.hp>0&&ownerOf(x)===o)) aiMove(m); }   /* a player's creatures move right after their owner */
 function advance(){
   if(G.phase==="over") return; if(G.idx>=G.order.length){ beginActions(); return; }
-  const u=G.players[G.order[G.idx]]; if(u.hp<=0||u.esc){ G.idx++; advance(); return; } G.cur=u; G.oth=other(u); const skip=()=>{ minionMove(u); G.idx++; advance(); };
+  const mv=G.order[G.idx]; if(mv==="mob"){ for(const c of G.mobs.filter(x=>x.hp>0&&ownerOf(x)===x)) aiMove(c); G.idx++; advance(); return; }   /* the computer's creatures move on their turn */
+  const u=mv; if(u.hp<=0||u.esc){ G.idx++; advance(); return; } G.cur=u; G.oth=other(u); const skip=()=>{ minionMove(u); G.idx++; advance(); };
   if(u.sleep||u.frozen>0){ lg(`${u.p.name} cannot move (${u.sleep?"asleep":"frozen"}).`); skip(); return; }
   if(u.hth||u.low){ skip(); return; }
   if(u.down){ if(slickAt(u)&&!slickStand(u)){ skip(); return; } u.standUp=true; lg(`${u.p.name} starts to stand up: no other action, and stays on the floor until the end of the combat phase.`); skip(); return; }
@@ -934,7 +968,14 @@ function endCheck(){
   if(G.phase==="over") return;
   const down=u=>`${u.p.name} ${u.hp<0?"is dead":"falls unconscious at ST 0"}`;
   const fresh=G.players.filter(u=>u.hp<=0&&!u.out); fresh.forEach(u=>{ u.out=true; });
-  const live=G.players.filter(u=>u.hp>0&&!u.esc);
+  const live=G.players.filter(u=>u.hp>0&&!u.esc), mobsUp=G.mobs.filter(m=>m.hp>0);
+  if(G.mobs.length){   /* the players against the computer's creatures */
+    if(new Set([...live,...mobsUp].map(sideOf)).size>1){ if(fresh.length) lg(fresh.map(down).join(", and ")+"."); return; }
+    G.phase="over"; G.end="fight"; const lead=fresh.length?fresh.map(down).join(", and ")+". ":"";
+    if(live.length){ G.winners=G.players.filter(u=>!u.esc); G.winner=live[0]; lg(`${lead}${G.winners.map(u=>u.p.name).join(", ")} win${G.winners.length>1?"":"s"} against the ${mobName()}!`); }
+    else if(mobsUp.length){ G.winners=[]; G.winner=null; lg(`${lead}The ${mobName()} win${CREN>1?"":"s"}.`); }
+    else { G.winners=[]; G.winner=null; lg(`${lead}Nobody wins.`); }
+    settle(); return; }
   if(new Set(live.map(sideOf)).size>1){ if(fresh.length) lg(fresh.map(down).join(", and ")+"."); return; }   /* two or more sides still stand: the fight goes on */
   G.phase="over"; G.end="fight"; G.winners=live; G.winner=live[0]||null;
   const lead=fresh.length?fresh.map(down).join(", and ")+". ":"";
@@ -1015,8 +1056,8 @@ function ui(){
   const A=G.me,B=G.foe,cur=G.cur; let t="",b="";
   const fx=u=>[u.blur&&"Blur",u.inv&&"Invisible",u.slow>0&&"slowed "+u.slow,u.stop>0&&"stopped "+u.stop,u.clum>0&&"clumsy −"+u.clumN+" DX",u.aid>0&&"Aid +"+u.aidN,u.sleep&&"asleep",u.conf>0&&"confused −"+u.confN+" IQ",u.avert&&"averted",u.rope>0&&(ropeNum(u)>1?"2 ropes −":"roped −")+(ropeNum(u)*(u.rope+1))+" DX",u.air&&"flying",u.fly&&!u.air&&"taking off",u.spd>0&&"speed "+u.spd,u.daz>0&&"dazzled "+u.daz,u.brkW&&"broken "+iname(u.brkW).toLowerCase(),u.frozen>0&&"frozen "+u.frozen].filter(Boolean);
   const flags=u=>(u.down?" (down)":u.low?" ("+posName(u.low)+")":"")+(u.wound2?" (DX −2 next attack)":"")+(fx(u).length?" ["+fx(u).join(", ")+"]":"");
-  const nm=u=>`<b class="${PCLS[Math.max(0,G.players.indexOf(ownerOf(u)))]}">${esc(u.p.name)}</b>`, lookAway=u=>G.players.length===2?`${esc(opp(u).p.name)}, look away.`:"Everyone else, look away.";
-  const st=allU().filter(u=>u.hp>0||!u.minion).map(u=>`${nm(u)}${u.fake&&sideOf(u)===sideOf(cur)&&["pick","spells","dest"].includes(G.phase)?" (your "+u.fake+")":""} ST ${Math.max(u.hp,0)}/${u.p.st}${flags(u)}`).join(" · ")+"<br>"+(G.players.length===2?`${esc(A.p.name)} is ${engagedAny(A)?"<b>engaged</b>":"not engaged"}; ${esc(B.p.name)} is ${engagedAny(B)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).`:G.players.filter(u=>!u.esc).map(u=>`${esc(u.p.name)} is ${u.hp<=0?"out":engagedAny(u)?"<b>engaged</b>":"not engaged"}`).join("; ")+".");
+  const duel2=G.players.length===2&&!G.mobs.length, nm=u=>`<b class="${pcCls(u)}">${esc(u.p.name)}</b>`, lookAway=u=>duel2?`${esc(opp(u).p.name)}, look away.`:"Everyone else, look away.";
+  const st=allU().filter(u=>u.hp>0||!u.minion).map(u=>`${nm(u)}${u.fake&&sideOf(u)===sideOf(cur)&&["pick","spells","dest"].includes(G.phase)?" (your "+u.fake+")":""} ST ${Math.max(u.hp,0)}/${u.p.st}${flags(u)}`).join(" · ")+"<br>"+(duel2?`${esc(A.p.name)} is ${engagedAny(A)?"<b>engaged</b>":"not engaged"}; ${esc(B.p.name)} is ${engagedAny(B)?"<b>engaged</b>":"not engaged"}. Hexes apart: ${dist(A,B)} (${mhDist(A,B)} megahex${mhDist(A,B)===1?"":"es"}).`:G.players.filter(u=>!u.esc).map(u=>`${esc(u.p.name)} is ${u.hp<=0?"out":engagedAny(u)?"<b>engaged</b>":"not engaged"}`).join("; ")+".");
   const live=["move","cover","pick"].includes(G.phase);
   if(live){ const sh=startHexes(), own=sh.zones[sh.zi[G.players.indexOf(cur)]].hexes.some(h=>same(h,cur));
     b="";  G.qb=`<div style="margin-top:6px">${G.phase==="move"&&own&&!G.eng?`<button id="bEsc">${esc(cur.p.name)} escapes through the door</button>`:""}</div>`; } else G.qb="";
@@ -1026,7 +1067,7 @@ function ui(){
     b=`<button class="pri" id="bOk">End movement</button>`+(G.moved?`<button id="bUn">Undo move</button>`:""); }
   else if(G.phase==="cover"){ t=`<b>Actions are secret.</b> Pass the tablet to ${nm(cur)}. ${lookAway(cur)}`; b=`<button class="pri" id="bShow">${esc(cur.p.name)} is ready</button>`; }
   else if(G.phase==="pick"){
-    t=`${nm(cur)}: choose your action. ${G.players.length===2?esc(opp(cur).p.name):"The others"} must not look. `+esc(G.note||"")+nrNote(cur,G.oth)+(cur.stone||cur.iron||cur.shield||cur.rev||cur.shock||cur.sight?` <b>Your secret protection: ${[cur.iron?"Iron Flesh (stops 6)":cur.stone?"Stone Flesh (stops 4)":"",cur.shield?"Spell Shield (no spells can be cast on you, or by you on yourself)":"",cur.rev?"Reverse Missiles":"",cur.sight?"Mage Sight":"",cur.shock?"Shock Shield (hurts anything in your hex at the end of each turn)":""].filter(Boolean).join("; ")}.</b>`:"");
+    t=`${nm(cur)}: choose your action. ${duel2?esc(opp(cur).p.name):"The others"} must not look. `+esc(G.note||"")+nrNote(cur,G.oth)+(cur.stone||cur.iron||cur.shield||cur.rev||cur.shock||cur.sight?` <b>Your secret protection: ${[cur.iron?"Iron Flesh (stops 6)":cur.stone?"Stone Flesh (stops 4)":"",cur.shield?"Spell Shield (no spells can be cast on you, or by you on yourself)":"",cur.rev?"Reverse Missiles":"",cur.sight?"Mage Sight":"",cur.shock?"Shock Shield (hurts anything in your hex at the end of each turn)":""].filter(Boolean).join("; ")}.</b>`:"");
     b=G.opts.length?G.opts.map((o,i)=>`<button data-opt="${i}"${i===0&&o.t!=="none"?' class="pri"':""}>${esc(o.label)}</button>`).join(""):`<button class="pri" data-opt="-1">Continue</button>`; }
   else if(G.phase==="rcover"){ t=`<b>Secret spells.</b> Pass the tablet to ${nm(cur)}. ${lookAway(cur)}`; b=`<button class="pri" id="bRc">${esc(cur.p.name)} is ready</button>`; }
   else if(G.phase==="renew"){ t=`${nm(cur)}: renew your spells? Each costs 1 ST this turn (a summoned Dragon costs 2); spells you do not renew end now.`; b=G.rlist.map((r,i)=>`<button data-rn="${i}"${r.on?' class="pri"':""}>${r.on?"Keep ":"Drop "}${rname(r)} (${r.k==="minion"?upOf(r.m):1} ST)</button>`).join("")+`<button class="pri" id="bRn">Done</button>`; }
@@ -1040,7 +1081,7 @@ function ui(){
   const on=(id,f)=>{const e=$(id); if(e)e.onclick=f;};
   on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bUn",undoMove); on("bShow",showPick);
   on("bSkip",()=>{lg(`${G.rdec.p.name} does not force a retreat.`);endTurn();ui();drawMap();}); on("bBack",()=>{G.destX=null;G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false));
-  on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door?"+(new Set(G.players.filter(x=>x!==cur&&x.hp>0&&!x.esc).map(sideOf)).size<2?" This ends the duel.":" They are out of the fight."))) quitDuel(cur,"escape"); });
+  on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door?"+(new Set([...G.players.filter(x=>x!==cur&&x.hp>0&&!x.esc),...G.mobs.filter(m=>m.hp>0)].map(sideOf)).size<2?" This ends the duel.":" They are out of the fight."))) quitDuel(cur,"escape"); });
   on("bNew",()=>{ G=null; placeStep=0; $("setup").open=true; ui(); drawMap(); });
   on("bRc",()=>{ G.phase="renew"; ui(); drawMap(); }); c.querySelectorAll("[data-rn]").forEach(e=>e.onclick=()=>{ const r=G.rlist[+e.dataset.rn]; r.on=!r.on; ui(); }); on("bRn",()=>{ doRenew(); ui(); drawMap(); });
   c.querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>{ const x=G.sopts[+e.dataset.sp]; if(x.hexsel){ G.destT="cast"; G.destX={sp:x.sp,form:x.form}; G.phase="dest"; G.dopts=new Map(creaHexes(G.cur,G.oth,x.hexsel,x.sp,x.form).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } if(x.tele){ const U=G.cur, V=G.oth; G.destT="cast"; G.destX={sp:"Teleport"}; G.phase="dest"; G.dopts=new Map(P.filter(h=>!same(h,U)&&!same(h,V)&&Math.max(1,mhDist(U,h))<=U.hp).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } takePick({t:"cast",sp:x.sp,n:x.n,on:x.on,objId:x.objId,form:x.form}); });
@@ -1073,7 +1114,7 @@ function drawMap(){
   const x0=Math.min(...xs)-1.2,x1=Math.max(...xs)+1.2,y0=Math.min(...ys)-1.2,y1=Math.max(...ys)+1.2;
   const corner=(h,i)=>{const a=Math.PI/180*(60*i+90); return [h.p[0]+Math.cos(a),h.p[1]+Math.sin(a)];};
   const poly=h=>[0,1,2,3,4,5].map(i=>corner(h,i).map(v=>v.toFixed(2)).join(",")).join(" ");
-  const sideSet=new Set(); if(NP>2&&!teamsOn()) zones().slice(2,NP).forEach(z=>z.hexes.forEach(h=>sideSet.add(key(h.q,h.r))));   /* the west and east entrances in use */
+  const sideSet=new Set(); if(ffaOn()) zones().slice(2,NP).forEach(z=>z.hexes.forEach(h=>sideSet.add(key(h.q,h.r))));   /* the west and east entrances in use */
   let s="",edges="";
   for(const h of P){
     s+=`<polygon points="${poly(h)}" fill="var(${h.e||sideSet.has(key(h.q,h.r))?"--hexend":"--hex"})" stroke="var(--line)" stroke-width=".05"/>`;
@@ -1105,7 +1146,7 @@ function drawMap(){
     if(u.size===7) return o+`<g transform="translate(${cx.toFixed(2)},${cy.toFixed(2)}) rotate(${rot.toFixed(1)}) scale(.0208333) translate(-340,-150)" pointer-events="none" opacity="${dead?.7:1}">${dead?skullArt(c):dragonArt(c)}</g>`;
     if(u.size===4) return o+`<g transform="translate(${cx.toFixed(2)},${cy.toFixed(2)}) rotate(${rot.toFixed(1)})" pointer-events="none" opacity="${dead?.7:1}">${dead?`<g transform="scale(.0156) translate(-340,-150)">${skullArt(c)}</g>`:smallDragonArt(c)}</g>`;   /* original small-dragon art on the 4-hex diamond; a dead one shows the skull */   /* original dragon art, drawn on the 7-hex footprint (head toward +x) */
     return o+`<g transform="translate(${cx.toFixed(2)},${cy.toFixed(2)}) rotate(${rot.toFixed(1)})" pointer-events="none" opacity="${dead?.5:1}"><path d="M-1 -.32 L.5 -.32 L.5 -.62 L1.3 0 L.5 .62 L.5 .32 L-1 .32 Z" fill="${c}" opacity=".85"/><text x="-.3" y=".14" font-size=".5" font-weight="700" fill="var(--card)" text-anchor="middle" transform="rotate(${(-rot).toFixed(1)} -.3 0)">${L}</text></g>`; };
-  let layer=""; const cvOf=u=>"var("+PCV[Math.max(0,G.players.indexOf(ownerOf(u)))]+")";
+  let layer=""; const cvOf=u=>"var("+pcVar(u)+")";
   const hl=(map,attr,col)=>[...map.values()].map(h=>`<polygon ${attr}="${key(h.q,h.r)}" points="${poly(h)}" fill="var(${col})" fill-opacity=".3" stroke="var(${col})" stroke-width=".07" style="cursor:pointer"/>`).join("");
   if(!G){
     if(slot.slice(0,NP).every(Boolean)){ const st=startHexes(), cv=i=>"var("+PCV[i]+")";
@@ -1114,9 +1155,9 @@ function drawMap(){
       const toks=st.pick.map((h,i)=>({...h,f:0,i}));
       for(const t of toks){ const L=toks.filter(o=>team[o.i]!==team[t.i]).sort((a,b)=>hdist(t,a)-hdist(t,b)); t.f=L.length?faceToward(t,L[0]):0; }
       layer=pk+toks.map(t=>tokn(t,cv(t.i),slot[t.i])).join(""); }
-    else layer=[...P.filter(h=>h.e),...(NP>2&&!teamsOn()?zones().slice(2,NP).flatMap(z=>z.hexes):[])].map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
+    else layer=[...P.filter(h=>h.e),...(ffaOn()?zones().slice(2,NP).flatMap(z=>z.hexes):[])].map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
   } else {
-    for(const [f,c] of allU().map(x=>[x,PCV[Math.max(0,G.players.indexOf(ownerOf(x)))]])) if(!f.down&&f.low!=="prone"&&f.hp>0&&!(f.size>1)) for(const k of [-1,0,1]){ const n=nbr(f,(f.f+k+6)%6); if(n) layer+=`<polygon points="${poly(n)}" fill="var(${c})" fill-opacity=".13" pointer-events="none"/>`; }
+    for(const [f,c] of allU().map(x=>[x,pcVar(x)])) if(!f.down&&f.low!=="prone"&&f.hp>0&&!(f.size>1)) for(const k of [-1,0,1]){ const n=nbr(f,(f.f+k+6)%6); if(n) layer+=`<polygon points="${poly(n)}" fill="var(${c})" fill-opacity=".13" pointer-events="none"/>`; }
     if(G.phase==="move"){
       for(const r of G.reach.values()){ const h=M.get(key(r.q,r.r)); layer+=`<polygon data-go="${key(r.q,r.r)}" points="${poly(h)}" fill="var(--acc)" fill-opacity="${same(r,G.cur)?0:.22}" stroke="var(--acc)" stroke-width=".05" style="cursor:pointer"/>`; }
     }
