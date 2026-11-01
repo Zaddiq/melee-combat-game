@@ -362,3 +362,8 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 ## Colosseum: Start button and starting facing with computer creatures (Nov 1, branch mob-start-fix)
 - Bug: with a creature side chosen, all players are on one team, so the setup's "at least two teams" check hid the Start button (the tests started fights by code, so they missed it). Fixed: `tmOK=mobOn()||...`. The pre-fight preview also faced counters by team (default direction with a creature side); it now faces the creatures' end. The actual start already faced each figure at its nearest enemy. The setup text now says facing is changed during your own move (the small circles beside your counter).
 - Test: `tests/colosseum_start_test.py` (9) clicks through the real buttons for 2 players against 3 wolves.
+
+## Colosseum: "fight" instead of "duel", and Send to builder on the phone (Nov 1, branch fight-wording-send-builder)
+- The Colosseum screens (colosseum.html, online-host.js) now say "fight" where they said "duel", since it is not only two people. duel.html and the "Melee Duel" link keep their name (it really is two players). Code names (quitDuel, duel2) are unchanged.
+- Phone page: a "Send to builder (with XP)" button (same data as the arena's button: gear from the character's builder data plus name, ST, DX, IQ, total with earned points, EP, wins) writes the character into that phone's builder storage; the builder reads it when it opens. New XP records made by the Colosseum now keep the character's IQ. The XP result message says the point can be spent in the arena or the builder.
+- Version label 7. Tests: online_chars_test now 16.

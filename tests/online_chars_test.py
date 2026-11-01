@@ -54,6 +54,11 @@ with sync_playwright() as p:
     ok("C10 the finished duel screen on the tablet is not cleared by that update", host.evaluate("()=>G&&G.phase==='over'"))
     ok("C11 the tablet's own roster still has no entry for the phone's character", host.evaluate("()=>!(JSON.parse(localStorage.getItem('melee-arena-v1')||'{}')['flavius (example)'])"))
 
+    ph.wait_for_function("document.getElementById('sendRow').style.display!=='none'")
+    ph.once("dialog", lambda d: d.accept()); ph.click("#toBuilder")
+    sent = ph.evaluate("()=>JSON.parse(sessionStorage.getItem('wizard-builder-v1'))")
+    ok("C15 'Send to builder' puts the character in the builder with its new EP, points and IQ", sent["name"] == "Flavius (example)" and sent["ep"] == 20 and sent["iq"] == 9)
+    ok("C16 the phone says where to open it", "builder" in ph.inner_text("#sendMsg").lower())
     host.evaluate("()=>{ G=null; ui(); drawMap(); }")
     host.wait_for_function("slot[0]&&slot[0].phone&&slot[0].phone.rec&&slot[0].phone.rec.ep===20")
     ok("C12 after Rematch the updated record comes back to the table for the next duel", True)

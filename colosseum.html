@@ -28,7 +28,7 @@ svg{width:100%;height:auto;max-height:80vh}
 <p style="margin:0 0 6px"><a href="index.html" style="color:var(--acc)">← Menu</a> · <a href="arena.html" style="color:var(--acc)">Solo arena</a> · <a href="duel.html" style="color:var(--acc)">Melee Duel (two players)</a> · <a href="phone.html" style="color:var(--acc)">Join with a phone</a> · <a href="builder.html" style="color:var(--acc)">Character builder</a></p>
 <p class="mut">Two to four players, one screen. Movement is in the open; each turn the players pick their actions in secret, one after the other, and the tablet is passed around. Experience is awarded (30 for the winner, 20 for the loser) and added to each fighter's arena EP, but nobody can die for good and no win or loss is marked. Any player may escape through their own door (stand on one of your four entrance hexes at the start of your move).</p>
 <div class="grid"><div>
- <div class="card"><h2>Duel</h2><div id="ctl" class="mut">Load both fighters first (the boxes below).</div></div>
+ <div class="card"><h2>The fight</h2><div id="ctl" class="mut">Load both fighters first (the boxes below).</div></div>
  <details class="card" id="online"><summary style="cursor:pointer;font-weight:600">Phones (online table)</summary><div id="onBody" class="mut" style="margin-top:8px"></div></details>
  <details class="setup" id="setup" open><summary>The fighters</summary>
  <div class="card"><h2>Map</h2><div class="row"><select id="mapSel"><option value="melee">Melee map (two boards, 99 hexes)</option><option value="wizard">Wizard map (166 hexes, 21 megahexes)</option></select><span class="mut" id="mapNote"></span></div></div>
@@ -38,7 +38,7 @@ svg{width:100%;height:auto;max-height:80vh}
 </details>
  <div class="card" id="stats"><h2>Fighters</h2><div class="mut">Load the fighters to see their stats here.</div></div>
 </div>
-<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">The starred (pink) hexes are the entrances. Two players start at the bottom and top. With 3 or 4 players in free for all, each also gets a west or east entrance; in Teams mode Team A starts at the bottom and Team B at the top. With computer creatures, all the players start at the bottom and the creatures come in from the top. Before the duel, each player taps one of the four outlined hexes of their own entrance to start there.</div></div></div>
+<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">The starred (pink) hexes are the entrances. Two players start at the bottom and top. With 3 or 4 players in free for all, each also gets a west or east entrance; in Teams mode Team A starts at the bottom and Team B at the top. With computer creatures, all the players start at the bottom and the creatures come in from the top. Before the fight, each player taps one of the four outlined hexes of their own entrance to start there.</div></div></div>
 </main>
 <script src="rules.js"></script>
 <script src="maps.js"></script>
@@ -177,7 +177,7 @@ function showSlot(i){ $("pf"+i).innerHTML=slot[i]?card(slot[i],PCLS[i]):""; show
 function epLine(f){ const r=loadRec()[rkey(f)]; return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/100 EP${r&&r.pend>0?" · attribute point waiting (spend it in the solo arena)":""}</div>`; }
 function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot.slice(0,NP).some(Boolean)?`<div class="two">${slot.slice(0,NP).map((f,i)=>f?`<div>${card(f,PCLS[i])}${epLine(f)}</div>`:"").join("")}</div>`:`<div class="mut">Load the fighters to see their stats here.</div>`); }
 function setP(i,f,msg){
-  if(G&&G.phase!=="over"&&!confirm("Leave the duel in progress?")) return; G=null;
+  if(G&&G.phase!=="over"&&!confirm("Leave the fight in progress?")) return; G=null;
   placeStep=0; f.rname=f.name; if(!f.phone){ const r0=loadRec()[rkey(f)]; if(r0){ f.st=r0.st; f.dx=r0.dx; } } slot[i]=f; const taken=n=>slot.some((o,j)=>j!==i&&o&&o.name.trim().toLowerCase()===n.trim().toLowerCase()); if(taken(f.name)){ const base=f.name; let k=2; while(k<4&&taken(base+" "+ROM[k])) k++; f.name=base+" "+ROM[k]; }
   me=slot[0]; foe=slot[1]; $("msg"+i).textContent=msg||""; slot.forEach((_,j)=>showSlot(j)); $("setup").open=true; ui(); drawMap();
 }
@@ -206,10 +206,10 @@ function refreshPlayers(){ for(let i=0;i<MAXP;i++){ const c=$("pcard"+i); if(c) 
   CREN=Math.max(1,Math.min(CREN,creMax())); $("creN").innerHTML=[...Array(creMax())].map((_,i)=>`<option value="${i+1}">${i+1}</option>`).join(""); $("creN").value=String(CREN); $("creN").style.display=mobOn()&&creMax()>1?"":"none";
   $("npNote").textContent=noteText(); }
 const resetSetup=()=>{ applyMode(); G=null; placeStep=0; starts.fill(null); $("setup").open=true; refreshPlayers(); showStats(); ui(); drawMap(); };
-$("npSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("npSel").value=String(NP); $("npNote").textContent="Finish the duel first (or leave it with Rematch)."; return; } NP=+$("npSel").value; resetSetup(); };
-$("creSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("creSel").value=mobOn()?CREK:"none"; $("npNote").textContent="Finish the duel first (or leave it with Rematch)."; return; } CREK=$("creSel").value; CREN=1; resetSetup(); };
+$("npSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("npSel").value=String(NP); $("npNote").textContent="Finish the fight first (or leave it with Rematch)."; return; } NP=+$("npSel").value; resetSetup(); };
+$("creSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("creSel").value=mobOn()?CREK:"none"; $("npNote").textContent="Finish the fight first (or leave it with Rematch)."; return; } CREK=$("creSel").value; CREN=1; resetSetup(); };
 $("creN").onchange=()=>{ if(G&&G.phase!=="over"){ $("creN").value=String(CREN); return; } CREN=+$("creN").value; resetSetup(); };
-$("modeSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("modeSel").value=MODE; $("npNote").textContent="Finish the duel first (or leave it with Rematch)."; return; } MODE=$("modeSel").value; resetSetup(); };
+$("modeSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("modeSel").value=MODE; $("npNote").textContent="Finish the fight first (or leave it with Rematch)."; return; } MODE=$("modeSel").value; resetSetup(); };
 for(let i=0;i<MAXP;i++) $("tm"+i).onchange=()=>{ if(G&&G.phase!=="over"){ $("tm"+i).value=String(tmAB[i]); return; } tmAB[i]=+$("tm"+i).value; resetSetup(); };
 applyMode(); refreshPlayers();
 /* the solo arena's saved fighters can be borrowed; duel XP is written to the same record */
@@ -224,10 +224,10 @@ function applyXp(r,x){
 }
 function awardXp(f,x){   /* friendly duel: XP only, never a death or a win/loss mark */
   if(f.phone){   /* a character that came from a phone keeps its record on that phone: update the copy it sent and send it back */
-    const r=Object.assign({name:f.phone.name,st:f.st,dx:f.dx,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false},f.phone.rec||{});
+    const r=Object.assign({name:f.phone.name,st:f.st,dx:f.dx,iq:f.iq,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false},f.phone.rec||{});
     applyXp(r,x); f.phone.rec=r; if(window.Online) Online.result(f); return r; }
   const R=loadRec(), k=rkey(f); let r=R[k];
-  if(!r) r={name:f.rname||f.name,st:f.st,dx:f.dx,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false,src:f.src||null};
+  if(!r) r={name:f.rname||f.name,st:f.st,dx:f.dx,iq:f.iq,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false,src:f.src||null};
   applyXp(r,x);
   R[k]=r; try{ localStorage.setItem(RKEY,JSON.stringify(R)); }catch(e){} REC=R; return r;
 }
@@ -989,7 +989,7 @@ function endCheck(){
   if(new Set(live.map(sideOf)).size>1){ if(fresh.length) lg(fresh.map(down).join(", and ")+"."); return; }   /* two or more sides still stand: the fight goes on */
   G.phase="over"; G.end="fight"; G.winners=live; G.winner=live[0]||null;
   const lead=fresh.length?fresh.map(down).join(", and ")+". ":"";
-  lg(live.length?`${lead}${live.map(u=>u.p.name).join(" and ")} win${live.length>1?"":"s"} the duel!`:`${lead}Nobody wins.`);
+  lg(live.length?`${lead}${live.map(u=>u.p.name).join(" and ")} win${live.length>1?"":"s"} the fight!`:`${lead}Nobody wins.`);
   settle();
 }
 function resolveTurn(acts){ if(!Array.isArray(acts)) acts=Array.from(arguments);
@@ -1060,7 +1060,7 @@ function ui(){
   const c=$("ctl"); if(!c)return;
   if(!G){ const pl=slot.slice(0,NP);
     if(pl.every(Boolean)){ const pn=pl[placeStep], last=placeStep===NP-1, tmOK=mobOn()||new Set(team.slice(0,NP)).size>1;
-      c.innerHTML=`<div><b class="${PCLS[placeStep]}">${esc(pn.name)}</b> (Player ${placeStep+1}): tap one of your four outlined hexes on the map to choose where to start. The open hex is your current choice.</div><div style="margin-top:6px">${tmOK?(last?`<button class="pri" id="bGo">Done: start the duel</button> `:`<button class="pri" id="bNext">Done: pass to Player ${placeStep+2}</button> `):`<span class="mut">Everyone is on one team: put at least two teams in play. </span>`}${placeStep?`<button id="bPrev">Back to Player ${placeStep}</button>`:""}</div><div class="mut" style="margin-top:6px">Everyone starts facing the nearest enemy. You can turn during your own move: click one of the small circles beside your counter. XP is awarded when the duel ends; nobody dies for good.</div>`;
+      c.innerHTML=`<div><b class="${PCLS[placeStep]}">${esc(pn.name)}</b> (Player ${placeStep+1}): tap one of your four outlined hexes on the map to choose where to start. The open hex is your current choice.</div><div style="margin-top:6px">${tmOK?(last?`<button class="pri" id="bGo">Done: start the fight</button> `:`<button class="pri" id="bNext">Done: pass to Player ${placeStep+2}</button> `):`<span class="mut">Everyone is on one team: put at least two teams in play. </span>`}${placeStep?`<button id="bPrev">Back to Player ${placeStep}</button>`:""}</div><div class="mut" style="margin-top:6px">Everyone starts facing the nearest enemy. You can turn during your own move: click one of the small circles beside your counter. XP is awarded when the fight ends; nobody dies for good.</div>`;
       if($("bNext")) $("bNext").onclick=()=>{ placeStep++; ui(); drawMap(); }; if($("bPrev")) $("bPrev").onclick=()=>{ placeStep--; ui(); drawMap(); };
       if($("bGo")) $("bGo").onclick=startFight; } else c.innerHTML=NP===2?"Load both fighters first (the boxes below).":"Load all "+NP+" fighters first (the boxes below)."; if(window.Online) Online.hook(c); return; }
   const A=G.me,B=G.foe,cur=G.cur; let t="",b="";
@@ -1085,13 +1085,13 @@ function ui(){
   else if(G.phase==="dest"){ t=`${nm(cur)}: click the highlighted hex on the map that you want to move or teleport into (on a phone, scroll to the map).`; b=`<button id="bBack">Back</button>`; }
   else if(G.phase==="retreat"){ const d=G.rd; t=`${nm(G.rdec)} hit ${esc(d.p.name)} and took no hits, so may force a retreat: click a highlighted hex on the map to push ${esc(d.p.name)} there (on a phone, scroll to the map). Or skip it.`; b=`<button id="bSkip">Skip the retreat</button>`; }
   else if(G.phase==="advance"){ t=`${nm(G.rdec)}: move into the hex they left, or hold your ground?`; b=`<button class="pri" id="bAdv">Advance</button><button id="bStay">Stay</button>`; }
-  else if(G.phase==="over"){ t=(G.winner?`<b>${(G.winners&&G.winners.length>1?G.winners:[G.winner]).map(u=>esc(u.p.name)).join(" and ")} win${G.winners&&G.winners.length>1?"":"s"} the duel!</b>`:"Nobody wins.")+`<br><span class="mut">${(G.xp||[]).map(esc).join("<br>")}</span>`; b=`<button class="pri" id="bNew">Rematch</button> <a href="index.html"><button>Back to menu</button></a>`; }
+  else if(G.phase==="over"){ t=(G.winner?`<b>${(G.winners&&G.winners.length>1?G.winners:[G.winner]).map(u=>esc(u.p.name)).join(" and ")} win${G.winners&&G.winners.length>1?"":"s"} the fight!</b>`:"Nobody wins.")+`<br><span class="mut">${(G.xp||[]).map(esc).join("<br>")}</span>`; b=`<button class="pri" id="bNew">Rematch</button> <a href="index.html"><button>Back to menu</button></a>`; }
   c.innerHTML=`<div class="mut" style="margin-bottom:4px">Turn ${G.turn}</div><div>${t}</div><div class="mut" style="margin:4px 0">${st}</div><div>${b}</div>${G.qb||""}<div id="log">${(G.phase==="cover"||G.phase==="pick"?G.log.slice(-60):G.log.slice(-60)).map(esc).join("<br>")}</div>`;
   const lgE=$("log"); if(lgE) lgE.scrollTop=lgE.scrollHeight;
   const on=(id,f)=>{const e=$(id); if(e)e.onclick=f;};
   on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bUn",undoMove); on("bShow",showPick);
   on("bSkip",()=>{lg(`${G.rdec.p.name} does not force a retreat.`);endTurn();ui();drawMap();}); on("bBack",()=>{G.destX=null;G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false));
-  on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door?"+(new Set([...G.players.filter(x=>x!==cur&&x.hp>0&&!x.esc),...G.mobs.filter(m=>m.hp>0)].map(sideOf)).size<2?" This ends the duel.":" They are out of the fight."))) quitDuel(cur,"escape"); });
+  on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door?"+(new Set([...G.players.filter(x=>x!==cur&&x.hp>0&&!x.esc),...G.mobs.filter(m=>m.hp>0)].map(sideOf)).size<2?" This ends the fight.":" They are out of the fight."))) quitDuel(cur,"escape"); });
   on("bNew",()=>{ G=null; placeStep=0; $("setup").open=true; ui(); drawMap(); });
   on("bRc",()=>{ G.phase="renew"; ui(); drawMap(); }); c.querySelectorAll("[data-rn]").forEach(e=>e.onclick=()=>{ const r=G.rlist[+e.dataset.rn]; r.on=!r.on; ui(); }); on("bRn",()=>{ doRenew(); ui(); drawMap(); });
   c.querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>{ const x=G.sopts[+e.dataset.sp]; if(x.hexsel){ G.destT="cast"; G.destX={sp:x.sp,form:x.form}; G.phase="dest"; G.dopts=new Map(creaHexes(G.cur,G.oth,x.hexsel,x.sp,x.form).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } if(x.tele){ const U=G.cur, V=G.oth; G.destT="cast"; G.destX={sp:"Teleport"}; G.phase="dest"; G.dopts=new Map(P.filter(h=>!same(h,U)&&!same(h,V)&&Math.max(1,mhDist(U,h))<=U.hp).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); return; } takePick({t:"cast",sp:x.sp,n:x.n,on:x.on,objId:x.objId,form:x.form}); });
