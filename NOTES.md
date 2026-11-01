@@ -367,3 +367,10 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - The Colosseum screens (colosseum.html, online-host.js) now say "fight" where they said "duel", since it is not only two people. duel.html and the "Melee Duel" link keep their name (it really is two players). Code names (quitDuel, duel2) are unchanged.
 - Phone page: a "Send to builder (with XP)" button (same data as the arena's button: gear from the character's builder data plus name, ST, DX, IQ, total with earned points, EP, wins) writes the character into that phone's builder storage; the builder reads it when it opens. New XP records made by the Colosseum now keep the character's IQ. The XP result message says the point can be spent in the arena or the builder.
 - Version label 7. Tests: online_chars_test now 16.
+
+## Colosseum: one player against the computer (Nov 1, branch colosseum-solo)
+- Players box now has "1 player (against the computer)". With one player a computer side is required (the picker has no "none"; choosing 1 player selects the Gladiator).
+- New computer side "Gladiator" (CRE.man): a fighter made by the arena's `makeOpponent` (from the average ST+DX of the human players, so an even match; 1 to 3 of them; names like "Grak the Gladiator", II/III for more). It is a normal computer side ("mob", charcoal) run by the same `aiMove/aiAct` as the beasts, so it fights with a weapon and shield and does not cast spells (computer wizards are not in yet). XP to the human winners is the same 50 as for beasts (owner has not been asked about a different amount).
+- A lone player has nobody to hide from: no "pass the tablet" cover screens, no "must not look" line (also for the spell-renew cover).
+- `makeOpponent` no longer depends on the `me` global (uses the first player's fighter), so tests/fuzzers that fill slots directly work.
+- Tests: `tests/colosseum_solo_test.py` (9) through the real buttons; `tests/fuzz/colosseumfz.py` now includes solo layouts (45 games per run; a couple of stalemates are normal).

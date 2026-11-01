@@ -33,7 +33,7 @@ svg{width:100%;height:auto;max-height:80vh}
  <details class="setup" id="setup" open><summary>The fighters</summary>
  <div class="card"><h2>Map</h2><div class="row"><select id="mapSel"><option value="melee">Melee map (two boards, 99 hexes)</option><option value="wizard">Wizard map (166 hexes, 21 megahexes)</option></select><span class="mut" id="mapNote"></span></div></div>
 
- <div class="card"><h2>Players</h2><div class="row"><select id="npSel"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><select id="modeSel"><option value="ffa">Free for all</option><option value="teams">Teams (two sides)</option></select><select id="creSel" title="A side run by the computer"></select><select id="creN" title="How many"></select></div><div class="mut" id="npNote"></div></div>
+ <div class="card"><h2>Players</h2><div class="row"><select id="npSel"><option value="1">1 player (against the computer)</option><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><select id="modeSel"><option value="ffa">Free for all</option><option value="teams">Teams (two sides)</option></select><select id="creSel" title="A side run by the computer"></select><select id="creN" title="How many"></select></div><div class="mut" id="npNote"></div></div>
  <div id="pcards"></div>
 </details>
  <div class="card" id="stats"><h2>Fighters</h2><div class="mut">Load the fighters to see their stats here.</div></div>
@@ -56,6 +56,7 @@ Object.assign(ARMOR,{scales:{n:"Scales",stops:3,ma:8,pen:0,hid:1},scales4:{n:"Sc
 const CRE={wolf:{name:"Wolf",st:10,dx:14,iq:6,w:"bite",armor:"wolfhide"},myrmidon:{name:"Myrmidon",st:12,dx:12,iq:8,w:"broad",armor:"none"},bear:{name:"Bear",st:30,dx:11,iq:6,w:"bite2",armor:"bearhide"},gargoyle:{name:"Gargoyle",st:20,dx:11,iq:8,w:"fist2",armor:"stonehide"},giant:{name:"Giant",st:30,dx:9,iq:8,w:"club3",armor:"bighide"},sdragon:{name:"Small Dragon",st:30,dx:12,iq:12,w:"claw",armor:"scales",size:4,fly:20,breath:{dice:2,cost:3}},dragon:{name:"Dragon",st:60,dx:12,iq:14,w:"claw3",armor:"scales4",size:7,fly:20,breath:{dice:3,cost:5}},
   /* summoned dragons at the Spell Reference Booklet numbers (creature table p. 8; Summon Small Dragon / Summon Dragon); up = ST a turn to keep them */
   bsdragon:{name:"Small Dragon",st:30,dx:13,iq:16,w:"claw",armor:"scalesS",size:4,fly:16,breath:{dice:2,cost:3},up:1,book:1},bdragon:{name:"Dragon",st:60,dx:14,iq:20,w:"claw2",armor:"scales5",size:7,fly:20,breath:{dice:3,cost:5},up:2,book:1}};   /* sdragon, dragon: test dragons (4 and 7 hexes) with placeholder stats; the real scenario numbers stay in the owner's local data */
+CRE.man={name:"Gladiator",man:true,st:10,dx:12,iq:8};   /* a computer fighter: stats and gear are made by makeOpponent when the fight starts */
 const MELEE=Object.keys(W).filter(k=>!W[k].miss&&!W[k].hid&&k!=="staff"&&k!=="mg");
 const MELEE_HEXES=[[0, 0, 0, 0], [-1, 1, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [-1, 2, 0, 0], [1, 1, 0, 0], [0, 2, 0, 0], [-2, 2, 1, 0], [-3, 2, 1, 0], [-3, 3, 1, 0], [-2, 3, 1, 0], [-4, 3, 1, 0], [-4, 4, 1, 0], [-3, 4, 1, 0], [2, -1, 2, 1], [2, 0, 2, 1], [3, -1, 2, 1], [3, 0, 2, 1], [-1, 3, 3, 0], [0, 3, 3, 0], [-2, 4, 3, 0], [-1, 4, 3, 0], [0, 4, 3, 0], [-2, 5, 3, 0], [-1, 5, 3, 0], [2, 1, 4, 0], [1, 2, 4, 0], [3, 1, 4, 0], [2, 2, 4, 0], [1, 3, 4, 0], [3, 2, 4, 0], [2, 3, 4, 0], [-5, 4, 5, 0], [-5, 5, 5, 0], [-6, 4, 5, 0], [-6, 5, 5, 0], [-6, 6, 5, 0], [-7, 5, 5, 0], [-7, 6, 5, 0], [-4, 5, 6, 0], [-3, 5, 6, 0], [-5, 6, 6, 0], [-3, 6, 6, 0], [-5, 7, 6, 0], [-4, 7, 6, 0], [-4, 6, 6, 0], [1, 4, 7, 0], [0, 5, 7, 0], [2, 4, 7, 0], [1, 5, 7, 0], [0, 6, 7, 0], [2, 5, 7, 0], [1, 6, 7, 0], [-2, 6, 8, 0], [-1, 6, 8, 0], [-3, 7, 8, 0], [-2, 7, 8, 0], [-1, 7, 8, 0], [-3, 8, 8, 0], [-2, 8, 8, 0], [-7, 7, 9, 0], [-6, 7, 9, 0], [-8, 8, 9, 0], [-7, 8, 9, 0], [-6, 8, 9, 0], [-8, 9, 9, 0], [-7, 9, 9, 0], [-8, 6, 10, 0], [-8, 7, 10, 0], [-9, 6, 10, 0], [-9, 7, 10, 0], [-9, 8, 10, 0], [-10, 7, 10, 0], [-10, 8, 10, 0], [-5, 8, 11, 0], [-4, 8, 11, 0], [-6, 9, 11, 0], [-5, 9, 11, 0], [-4, 9, 11, 0], [-6, 10, 11, 0], [-5, 10, 11, 0], [-9, 9, 12, 0], [-10, 9, 12, 0], [-10, 10, 12, 0], [-9, 10, 12, 0], [-11, 10, 12, 0], [-11, 11, 12, 0], [-10, 11, 12, 0], [-8, 10, 13, 0], [-7, 10, 13, 0], [-9, 11, 13, 0], [-8, 11, 13, 0], [-7, 11, 13, 0], [-9, 12, 13, 0], [-8, 12, 13, 0], [-11, 12, 14, 1], [-10, 12, 14, 1], [-11, 13, 14, 1], [-10, 13, 14, 1]];
 let HEXES=MELEE_HEXES; /* [q,r,megahex,isEnd] */
@@ -112,6 +113,7 @@ function bestGear(f,hands){   /* f has race/st/dx and a right-hand weapon; retur
   return best;
 }
 function makeOpponent(total){
+  const me=(G&&G.players&&G.players[0]&&G.players[0].p)||slot[0]||window.me;   /* the first human, to keep the match fair */
   const races=Object.keys(RACES).filter(k=>RACES[k].st+RACES[k].dx<=total&&k!=="orc").sort(()=>Math.random()-.5);
   const myMax=Math.max(6,...[me.right,me.left,me.slung,...me.dag].filter(k=>isW(k)).map(k=>W[k].d*6+W[k].m));
   const myStops=ARMOR[me.armor].stops+Math.max(0,...[me.left,me.slung].map(k=>SHIELDS[k]?SHIELDS[k].stops:0));
@@ -168,7 +170,7 @@ let CREK="none", CREN=1;                /* a side run by the computer: "none" or
 const mobOn=()=>CREK!=="none"&&!!CRE[CREK];
 const teamsOn=()=>NP>2&&MODE==="teams"&&!mobOn();
 const ffaOn=()=>NP>2&&!teamsOn()&&!mobOn();
-const PLURAL={"Wolf":"Wolves","Myrmidon":"Myrmidons","Bear":"Bears","Gargoyle":"Gargoyles","Giant":"Giants","Small Dragon":"Small Dragons","Dragon":"Dragons"};
+const PLURAL={"Gladiator":"Gladiators","Wolf":"Wolves","Myrmidon":"Myrmidons","Bear":"Bears","Gargoyle":"Gargoyles","Giant":"Giants","Small Dragon":"Small Dragons","Dragon":"Dragons"};
 const mobName=()=>mobOn()?(CREN>1?(PLURAL[CRE[CREK].name]||CRE[CREK].name+"s"):CRE[CREK].name):"";
 const creMax=()=>!mobOn()?1:CRE[CREK].size===7?1:CRE[CREK].size===4?2:3;   /* a Dragon is 7 hexes, a Small Dragon 4: they only fit one or two on the board */
 function applyMode(){ for(let i=0;i<MAXP;i++) team[i]=mobOn()?0:teamsOn()?tmAB[i]:i; }
@@ -199,14 +201,14 @@ for(const i of [0,1,2,3]){
   $("pg"+i).onclick=()=>{ try{ setP(i,fromBuilder(JSON.parse($("paste"+i).value)),"Loaded pasted fighter."); }catch(e){ $("msg"+i).textContent="That does not look like a builder fighter."; } };
   $("rg"+i).onclick=()=>{ const r=REC[$("rs"+i).value]; if(r&&r.src) setP(i,fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx,name:r.name})),"Loaded from your arena roster (its own record is not touched)."); };
 }
-const noteText=()=>mobOn()?`All ${NP} players fight together against ${CREN>1?CREN+" "+mobName():"a "+mobName()} run by the computer. The creatures come in from the north end, the players from the south. If you win, each of you gets 50 XP.`:NP===2?"Two players: one against the other.":teamsOn()?"Two teams fight each other: pick Team A or Team B for each player. Teammates start at the same end and can never hurt each other.":"Free for all: everyone fights for themselves and starts from their own entrance (bottom, top, west, east).";
+const noteText=()=>mobOn()&&NP===1?`You fight alone against ${CREN>1?CREN+" "+mobName():"a "+mobName()}, run by the computer. It comes in from the north end, you from the south. If you win you get 50 XP.`:mobOn()?`All ${NP} players fight together against ${CREN>1?CREN+" "+mobName():"a "+mobName()} run by the computer. The creatures come in from the north end, the players from the south. If you win, each of you gets 50 XP.`:NP===2?"Two players: one against the other.":teamsOn()?"Two teams fight each other: pick Team A or Team B for each player. Teammates start at the same end and can never hurt each other.":"Free for all: everyone fights for themselves and starts from their own entrance (bottom, top, west, east).";
 function refreshPlayers(){ for(let i=0;i<MAXP;i++){ const c=$("pcard"+i); if(c) c.style.display=i<NP?"":"none"; const r=$("tm"+i); if(r&&r.closest) r.closest(".tmrow").style.display=teamsOn()?"":"none"; }
   $("modeSel").style.display=NP>2&&!mobOn()?"":"none"; $("modeSel").value=MODE;
-  $("creSel").innerHTML=`<option value="none">No computer creatures</option>`+Object.keys(CRE).map(k=>`<option value="${k}">${CRE[k].name}</option>`).join(""); $("creSel").value=mobOn()?CREK:"none";
+  $("creSel").innerHTML=(NP===1?"":`<option value="none">No computer side</option>`)+["man",...Object.keys(CRE).filter(k=>k!=="man")].map(k=>`<option value="${k}">${k==="man"?"Gladiator (a computer fighter, like the arena's)":CRE[k].name}</option>`).join(""); $("creSel").value=mobOn()?CREK:"none";
   CREN=Math.max(1,Math.min(CREN,creMax())); $("creN").innerHTML=[...Array(creMax())].map((_,i)=>`<option value="${i+1}">${i+1}</option>`).join(""); $("creN").value=String(CREN); $("creN").style.display=mobOn()&&creMax()>1?"":"none";
   $("npNote").textContent=noteText(); }
 const resetSetup=()=>{ applyMode(); G=null; placeStep=0; starts.fill(null); $("setup").open=true; refreshPlayers(); showStats(); ui(); drawMap(); };
-$("npSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("npSel").value=String(NP); $("npNote").textContent="Finish the fight first (or leave it with Rematch)."; return; } NP=+$("npSel").value; resetSetup(); };
+$("npSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("npSel").value=String(NP); $("npNote").textContent="Finish the fight first (or leave it with Rematch)."; return; } NP=+$("npSel").value; if(NP===1&&!mobOn()){ CREK="man"; CREN=1; } resetSetup(); };
 $("creSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("creSel").value=mobOn()?CREK:"none"; $("npNote").textContent="Finish the fight first (or leave it with Rematch)."; return; } CREK=$("creSel").value; CREN=1; resetSetup(); };
 $("creN").onchange=()=>{ if(G&&G.phase!=="over"){ $("creN").value=String(CREN); return; } CREN=+$("creN").value; resetSetup(); };
 $("modeSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("modeSel").value=MODE; $("npNote").textContent="Finish the fight first (or leave it with Rematch)."; return; } MODE=$("modeSel").value; resetSetup(); };
@@ -446,7 +448,10 @@ function startHexes(){
 const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.slung,dag:[...p.dag],down:false,standUp:false,wound2:false,hits:0,hth:false,low:null,blur:false,stone:false,iron:false,slow:0,stop:0,minion:false,fake:null,conf:0,confN:0,shock:false,inv:false,sight:false,avert:null,fresh:false,gone:false,tgtSel:null,rev:false,revHit:false,rope:0,ropeN:0,fireT:false,fly:false,air:false,airN:0,spd:0,daz:0,shield:false,brkW:null,clum:0,clumN:0,aid:0,aidN:0,frozen:0,sleep:false,pn:[],cool:0,usedLast:false,dodging:false,
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
 /* a side run by the computer: creatures at book stats that enter from the north end. They are ordinary minions with no owner (side "mob"), so the creature rules, the dragon rules and the computer's moves and actions all apply as they do for summons. */
-function newMob(kind,h,n){ const C=CRE[kind], p=fromBuilder({name:C.name+(n>0?" "+(n+1):""),race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"});
+function newMob(kind,h,n){ const C=CRE[kind];
+  let p; if(C.man){ const f=makeOpponent(Math.max(16,Math.round(G.players.reduce((t,u)=>t+u.p.st+u.p.dx,0)/G.players.length)));   /* an even match: the same ST+DX as the average player, like the arena */
+    p=fromBuilder({name:f.name+(n>0?" "+ROM[Math.min(n+1,4)]:""),race:f.race,cls:"fighter",st:f.st,dx:f.dx,iq:f.iq,a:f.right,b:f.left,s1:f.slung,armor:f.armor,d1:f.dag[0]||"none"}); }
+  else p=fromBuilder({name:C.name+(n>0?" "+(n+1):""),race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"});
   const m=mk(h,p); m.minion=true; m.kind=kind; m.side="mob"; m.owner=null; m.fresh=false; if(kind==="gargoyle") m.natFly=true; if(C.up) m.up=C.up;
   if(C.size>1){ m.size=C.size; p.breath=C.breath; m.natFly=C.fly||false; } return m; }
 function spawnMobs(){ const north=zones()[1].hexes, hum=G.players, near=u=>[...hum].sort((a,b)=>hdist(u,a)-hdist(u,b))[0];
@@ -457,7 +462,7 @@ function spawnMobs(){ const north=zones()[1].hexes, hum=G.players, near=u=>[...h
     else { const h=free.find(x=>!allU().some(y=>y.hp>0&&same(y,x)))||free[0]; m=newMob(CREK,h,CREN>1?k:0); m.f=faceToward(m,near(m)); }
     G.units.push(m); G.mobs.push(m); } }
 function startFight(){
-  const pl=slot.slice(0,NP); if(pl.length<2||!pl.every(Boolean)||(!mobOn()&&new Set(team.slice(0,NP)).size<2)) return; const s=startHexes();
+  const pl=slot.slice(0,NP); if(pl.length<(mobOn()?1:2)||!pl.every(Boolean)||(!mobOn()&&new Set(team.slice(0,NP)).size<2)) return; const s=startHexes();
   G={turn:0,phase:"",log:[],order:[],idx:0,start:null,reach:null,eng:false,moved:0,floor:[],objs:[],exhib:true,settled:false,cur:null,mobs:[]};
   G.players=pl.map((p,i)=>{ const u=mk(s.pick[i],p); u.side=SIDEIDS[team[i]]; return u; }); G.me=G.players[0]; G.foe=G.players[1];
   G.units=[...G.players]; WALLS=new Set();
@@ -483,7 +488,7 @@ function nextTurn(){
 /* the winner of the initiative roll chooses first or last; if that is the computer's creatures they choose for themselves */
 function toChoose(){ G.phase="choose"; if(G.rolls[0].u==="mob"){ lg(`The ${mobName()} won the initiative roll.`); choose(Math.random()<.5); } }
 const CONT=["blur","stone","iron","shield","rev","fly","shock","inv","sight"], CONTN={blur:"Blur",stone:"Stone Flesh",iron:"Iron Flesh",shield:"Spell Shield",rev:"Reverse Missiles",fly:"Flight",shock:"Shock Shield",inv:"Invisibility",sight:"Mage Sight"};
-function nextRenew(){ if(!G.rq.length){ toChoose(); return; } G.rcur=G.rq.shift(); G.rlist=CONT.filter(k=>G.rcur[k]).map(k=>({k,on:G.rcur.hp>=3})).concat(allU().filter(m=>m.minion&&!m.fake&&m.hp>0&&ownerOf(m)===G.rcur).map(m=>({k:"minion",m,on:G.rcur.hp>=3}))).concat(avertsOf(G.rcur).map(m=>({k:"avert",m,on:G.rcur.hp>=3}))); G.cur=G.rcur; G.oth=other(G.rcur); G.phase="rcover"; }
+function nextRenew(){ if(!G.rq.length){ toChoose(); return; } G.rcur=G.rq.shift(); G.rlist=CONT.filter(k=>G.rcur[k]).map(k=>({k,on:G.rcur.hp>=3})).concat(allU().filter(m=>m.minion&&!m.fake&&m.hp>0&&ownerOf(m)===G.rcur).map(m=>({k:"minion",m,on:G.rcur.hp>=3}))).concat(avertsOf(G.rcur).map(m=>({k:"avert",m,on:G.rcur.hp>=3}))); G.cur=G.rcur; G.oth=other(G.rcur); G.phase=G.players.length===1?"renew":"rcover"; }
 const rname=r=>r.k==="minion"?r.m.p.name:r.k==="avert"?"Avert on "+r.m.p.name:CONTN[r.k];
 const avertsOf=u=>allU().filter(x=>x.avert===u&&x.hp>0&&!x.fake);
 function doRenew(){ const u=G.rcur; for(const r of G.rlist){ if(r.on&&u.hp>=(r.k==="minion"?upOf(r.m):1)){ u.hp-=(r.k==="minion"?upOf(r.m):1); if(r.k==="blur") lg(`${u.p.name} keeps Blur going.`); } else if(r.k==="minion"){ if(r.m.owner){ r.m.hp=0; endCheck(); } else releaseCtl(r.m,"its controller stopped paying"); } else if(r.k==="avert"){ r.m.avert=null; lg(`${u.p.name}'s Avert on ${r.m.p.name} ends.`); } else { u[r.k]=false; if(r.k==="fly"){ land(u); lg(`${u.p.name} lands.`); } if(r.k==="blur") lg(`${u.p.name}'s Blur ends.`); } }
@@ -930,7 +935,7 @@ function aiAct(u,o){
   return has("attack")||{t:"none"};
 }
 function beginActions(){ G.picks=[]; G.pq=G.players.filter(u=>u.hp>0&&!u.esc); G.pi=0; startPick(); }   /* each player still in picks in secret, one after the other */
-function startPick(){ G.cur=G.pq[G.pi]; G.cur.tgtSel=G.cur.tgtSel&&G.cur.tgtSel.hp>0?G.cur.tgtSel:null; G.oth=other(G.cur); G.phase="cover"; ui(); drawMap(); }
+function startPick(){ G.cur=G.pq[G.pi]; G.cur.tgtSel=G.cur.tgtSel&&G.cur.tgtSel.hp>0?G.cur.tgtSel:null; G.oth=other(G.cur); G.phase="cover"; if(G.players.length===1){ showPick(); return; } ui(); drawMap(); }   /* a lone player has nobody to hide from */
 function showPick(){
   const u=G.cur,o=other(u); G.oth=o; G.opts=options(u,o); G.phase="pick";
   G.note=(MWid(u)&&u.cool>0?`Your ${iname(MWid(u)).toLowerCase()} is still reloading (${u.cool} more turn${u.cool>1?"s":""}). `:"")+(!G.opts.some(x=>x.t==="attack")&&relOf(u,o)==="front"&&!u.engStart&&u.moved>MAu(u)/2?"You moved more than half your MA, so you cannot attack this turn. ":"")+(!G.opts.some(x=>x.t==="attack")&&relOf(u,o)!=="front"&&!u.hth&&!u.low&&!u.down&&(isW(u.right)||isW(u.left))?o.p.name+" is not in front of you, so you cannot attack it (click another enemy on the map, or move to face one). ":"")+(u.p.cls==="wizard"&&!G.opts.some(x=>x.t==="cast")&&!u.hth&&!u.sleep&&!u.down&&!(u.moved<=1||u.engStart)?"You moved more than 1 hex, so you cannot cast this turn unless you start engaged. ":"");
@@ -1077,7 +1082,7 @@ function ui(){
     b=`<button class="pri" id="bOk">End movement</button>`+(G.moved?`<button id="bUn">Undo move</button>`:""); }
   else if(G.phase==="cover"){ t=`<b>Actions are secret.</b> Pass the tablet to ${nm(cur)}. ${lookAway(cur)}`; b=`<button class="pri" id="bShow">${esc(cur.p.name)} is ready</button>`; }
   else if(G.phase==="pick"){
-    t=`${nm(cur)}: choose your action. ${duel2?esc(opp(cur).p.name):"The others"} must not look. `+esc(G.note||"")+nrNote(cur,G.oth)+(cur.stone||cur.iron||cur.shield||cur.rev||cur.shock||cur.sight?` <b>Your secret protection: ${[cur.iron?"Iron Flesh (stops 6)":cur.stone?"Stone Flesh (stops 4)":"",cur.shield?"Spell Shield (no spells can be cast on you, or by you on yourself)":"",cur.rev?"Reverse Missiles":"",cur.sight?"Mage Sight":"",cur.shock?"Shock Shield (hurts anything in your hex at the end of each turn)":""].filter(Boolean).join("; ")}.</b>`:"");
+    t=`${nm(cur)}: choose your action. ${G.players.length===1?"":(duel2?esc(opp(cur).p.name):"The others")+" must not look. "}`+esc(G.note||"")+nrNote(cur,G.oth)+(cur.stone||cur.iron||cur.shield||cur.rev||cur.shock||cur.sight?` <b>Your secret protection: ${[cur.iron?"Iron Flesh (stops 6)":cur.stone?"Stone Flesh (stops 4)":"",cur.shield?"Spell Shield (no spells can be cast on you, or by you on yourself)":"",cur.rev?"Reverse Missiles":"",cur.sight?"Mage Sight":"",cur.shock?"Shock Shield (hurts anything in your hex at the end of each turn)":""].filter(Boolean).join("; ")}.</b>`:"");
     b=G.opts.length?G.opts.map((o,i)=>`<button data-opt="${i}"${i===0&&o.t!=="none"?' class="pri"':""}>${esc(o.label)}</button>`).join(""):`<button class="pri" data-opt="-1">Continue</button>`; }
   else if(G.phase==="rcover"){ t=`<b>Secret spells.</b> Pass the tablet to ${nm(cur)}. ${lookAway(cur)}`; b=`<button class="pri" id="bRc">${esc(cur.p.name)} is ready</button>`; }
   else if(G.phase==="renew"){ t=`${nm(cur)}: renew your spells? Each costs 1 ST this turn (a summoned Dragon costs 2); spells you do not renew end now.`; b=G.rlist.map((r,i)=>`<button data-rn="${i}"${r.on?' class="pri"':""}>${r.on?"Keep ":"Drop "}${rname(r)} (${r.k==="minion"?upOf(r.m):1} ST)</button>`).join("")+`<button class="pri" id="bRn">Done</button>`; }

@@ -7,8 +7,8 @@ JS=r'''
  const out={games:0,over:0,errors:[],escapes:0,wiz:0,hits:0};
  const _da=doAttack; doAttack=function(a,d,...r){ out.hits++; if(a!==d&&sideOf(a)===sideOf(d)) out.errors.push("friendly fire: "+a.p.name+" attacked ally "+d.p.name); return _da.apply(this,[a,d,...r]); };
  const mkp=g=>{ const r=rnd(races), R=RACES[r], wz=Math.random()<.35; return fromBuilder(Object.assign({name:"P"+g+Math.random().toString(36).slice(2,4),race:r,cls:wz?"wizard":"fighter",st:R.st+Math.floor(Math.random()*7),dx:R.dx+Math.floor(Math.random()*7),iq:wz?15:R.iq,a:wz?"none":rnd(ws),b:Math.random()<.5?rnd(["small","large"]):"none",armor:rnd(ar),d1:"dagger"},wz?{spells:["Staff","Summon Wolf","Summon Bear","Fire","Blur","Stone Flesh","Giant Rope","Sleep","Image"]}:{})); };
- const layouts=[[3,null],[4,null],[3,[0,1,0]],[4,[0,1,0,1]],[4,[0,0,0,1]],[3,null,"sdragon",1],[2,null,"wolf",3],[3,null,"dragon",1],[4,null,"bear",2],[3,null,"sdragon",2],[2,null,"giant",1],[3,null,"gargoyle",3]];   /* free for all, or two teams: never a mix */
- for(let g=0;g<30;g++){
+ const layouts=[[3,null],[4,null],[3,[0,1,0]],[4,[0,1,0,1]],[4,[0,0,0,1]],[3,null,"sdragon",1],[2,null,"wolf",3],[3,null,"dragon",1],[4,null,"bear",2],[3,null,"sdragon",2],[2,null,"giant",1],[3,null,"gargoyle",3],[1,null,"man",1],[1,null,"man",2],[1,null,"man",3],[2,null,"man",2],[1,null,"wolf",2],[1,null,"bear",1],[1,null,"giant",1],[1,null,"sdragon",1],[1,null,"gargoyle",2]];   /* free for all, or two teams: never a mix */
+ for(let g=0;g<45;g++){
   try{
    const [n,tm,ck,cn]=rnd(layouts); CREK=ck||"none"; CREN=cn||1; G=null; NP=n; MODE=tm?"teams":"ffa"; for(let i=0;i<4;i++) tmAB[i]=tm?tm[i]:i%2; applyMode(); starts.fill(null);
    const names=new Set(); for(let i=0;i<4;i++){ slot[i]=i<n?mkp(i+1):null; if(slot[i]) names.add(slot[i].name); }
