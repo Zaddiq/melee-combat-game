@@ -39,6 +39,12 @@ with sync_playwright() as p:
     ok("L12 accepting it leaves the fight and sets one player (only one player on the map afterwards)", pg.evaluate("()=>NP===1&&!G&&document.querySelectorAll('#pcard1')[0].style.display==='none'") and pg.input_value("#npSel") == "1")
     pg.click("#bGo")
     ok("L13 and the next fight really has one player", pg.evaluate("()=>G&&G.players.length===1"))
+    # the setup survives a reload, and the boxes always match the game
+    pg.evaluate("()=>{ G=null; $('setup').open=true; ui(); }")
+    pg.select_option("#npSel", "1"); pg.select_option("#creSel", "bear"); pg.reload()
+    ok("L14 after a reload the boxes and the game agree (1 player, Bear) and the last setup came back", pg.input_value("#npSel") == "1" and pg.evaluate("()=>NP") == 1 and pg.input_value("#creSel") == "bear" and pg.evaluate("()=>CREK") == "bear")
+    pg.select_option("#npSel", "3")
+    ok("L15 changing the count later still works after the reload", pg.evaluate("()=>NP") == 3 and pg.input_value("#npSel") == "3")
     ok("L9 no script errors", not errs)
     if errs: print(errs)
     br.close()

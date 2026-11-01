@@ -33,7 +33,7 @@ svg{width:100%;height:auto;max-height:80vh}
  <details class="setup" id="setup" open><summary>The fighters</summary>
  <div class="card"><h2>Map</h2><div class="row"><select id="mapSel"><option value="melee">Melee map (two boards, 99 hexes)</option><option value="wizard">Wizard map (166 hexes, 21 megahexes)</option></select><span class="mut" id="mapNote"></span></div></div>
 
- <div class="card"><h2>Players</h2><div class="row"><select id="npSel"><option value="1">1 player (against the computer)</option><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><select id="modeSel"><option value="ffa">Free for all</option><option value="teams">Teams (two sides)</option></select><select id="creSel" title="A side run by the computer"></select><select id="creN" title="How many"></select></div><div class="mut" id="npNote"></div></div>
+ <div class="card"><h2>Players</h2><div class="row"><select id="npSel" autocomplete="off"><option value="1">1 player (against the computer)</option><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><select id="modeSel" autocomplete="off"><option value="ffa">Free for all</option><option value="teams">Teams (two sides)</option></select><select id="creSel" autocomplete="off" title="A side run by the computer"></select><select id="creN" autocomplete="off" title="How many"></select></div><div class="mut" id="npNote"></div></div>
  <div id="pcards"></div>
 </details>
  <div class="card" id="stats"><h2>Fighters</h2><div class="mut">Load the fighters to see their stats here.</div></div>
@@ -188,7 +188,7 @@ function loadBuilder(i){ let t=null; try{t=localStorage.getItem(KEY);}catch(e){}
   try{ setP(i,fromBuilder(JSON.parse(t)),"Loaded from the builder."); }catch(e){ $("msg"+i).textContent="Could not read the saved fighter."; } }
 const EXAMPLES=[{name:"Flavius (example)",race:"human",cls:"fighter",st:11,dx:12,iq:9,a:"broad",b:"small",armor:"leather",d1:"dagger"},{name:"Wulf (example)",race:"human",cls:"fighter",st:13,dx:11,iq:8,a:"battle",b:"none",armor:"none",d1:"dagger"},{name:"Brynn (example)",race:"elf",cls:"fighter",st:9,dx:15,iq:8,a:"rapier",b:"none",armor:"cloth",d1:"dagger"},{name:"Durgan (example)",race:"dwarf",cls:"fighter",st:14,dx:10,iq:8,a:"mace",b:"small",armor:"leather",d1:"dagger"}];
 const pcard=i=>`<div class="card" id="pcard${i}"><h2 class="${PCLS[i]}">Player ${i+1}</h2>
-  <div class="row tmrow"><label class="mut">Team <select id="tm${i}">${[0,1].map(t=>`<option value="${t}"${t===tmAB[i]?" selected":""}>Team ${t?"B":"A"}</option>`).join("")}</select></label></div>
+  <div class="row tmrow"><label class="mut">Team <select id="tm${i}" autocomplete="off">${[0,1].map(t=>`<option value="${t}"${t===tmAB[i]?" selected":""}>Team ${t?"B":"A"}</option>`).join("")}</select></label></div>
   <div class="row"><button class="pri" id="load${i}">Load from builder</button><button id="ex${i}">Use example</button><button id="bn${i}">Load bench ${i%2?"B":"A"}</button></div>
   <div class="row"><select id="rs${i}"></select><button id="rg${i}">Use this saved fighter</button></div>
   <details><summary class="mut">Or paste a fighter (copy it from the builder)</summary><textarea id="paste${i}" placeholder="paste JSON here"></textarea><div class="row"><button id="pg${i}">Use pasted fighter</button></div></details>
@@ -202,18 +202,23 @@ for(const i of [0,1,2,3]){
   $("rg"+i).onclick=()=>{ const r=REC[$("rs"+i).value]; if(r&&r.src) setP(i,fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx,name:r.name})),"Loaded from your arena roster (its own record is not touched)."); };
 }
 const noteText=()=>mobOn()&&NP===1?`You fight alone against ${CREN>1?CREN+" "+mobName():"a "+mobName()}, run by the computer. It comes in from the north end, you from the south. If you win you get 50 XP.`:mobOn()?`All ${NP} players fight together against ${CREN>1?CREN+" "+mobName():"a "+mobName()} run by the computer. The creatures come in from the north end, the players from the south. If you win, each of you gets 50 XP.`:NP===2?"Two players: one against the other.":teamsOn()?"Two teams fight each other: pick Team A or Team B for each player. Teammates start at the same end and can never hurt each other.":"Free for all: everyone fights for themselves and starts from their own entrance (bottom, top, west, east).";
-function refreshPlayers(){ for(let i=0;i<MAXP;i++){ const c=$("pcard"+i); if(c) c.style.display=i<NP?"":"none"; const r=$("tm"+i); if(r&&r.closest) r.closest(".tmrow").style.display=teamsOn()?"":"none"; }
+function refreshPlayers(){ $("npSel").value=String(NP); for(let i=0;i<MAXP;i++){ const t=$("tm"+i); if(t) t.value=String(tmAB[i]); }   /* the boxes show what the game really has, whatever the browser restored */
+  for(let i=0;i<MAXP;i++){ const c=$("pcard"+i); if(c) c.style.display=i<NP?"":"none"; const r=$("tm"+i); if(r&&r.closest) r.closest(".tmrow").style.display=teamsOn()?"":"none"; }
   $("modeSel").style.display=NP>2&&!mobOn()?"":"none"; $("modeSel").value=MODE;
   $("creSel").innerHTML=(NP===1?"":`<option value="none">No computer side</option>`)+["man",...Object.keys(CRE).filter(k=>k!=="man")].map(k=>`<option value="${k}">${k==="man"?"Gladiator (a computer fighter, like the arena's)":CRE[k].name}</option>`).join(""); $("creSel").value=mobOn()?CREK:"none";
   CREN=Math.max(1,Math.min(CREN,creMax())); $("creN").innerHTML=[...Array(creMax())].map((_,i)=>`<option value="${i+1}">${i+1}</option>`).join(""); $("creN").value=String(CREN); $("creN").style.display=mobOn()&&creMax()>1?"":"none";
   $("npNote").textContent=noteText(); }
-const resetSetup=()=>{ applyMode(); G=null; placeStep=0; starts.fill(null); $("setup").open=true; refreshPlayers(); showStats(); ui(); drawMap(); };
+const resetSetup=()=>{ try{ localStorage.setItem("colosseum-setup",JSON.stringify({NP,MODE,CREK,CREN})); }catch(e){} applyMode(); G=null; placeStep=0; starts.fill(null); $("setup").open=true; refreshPlayers(); showStats(); ui(); drawMap(); };
 const leaveOK=()=>!(G&&G.phase!=="over")||confirm("A fight is in progress. Leave it and change the setup?");   /* changing players, the computer side or teams during a fight starts the setup again, after asking */
 $("npSel").onchange=()=>{ if(!leaveOK()){ $("npSel").value=String(NP); return; } NP=+$("npSel").value; if(NP===1&&!mobOn()){ CREK="man"; CREN=1; } resetSetup(); };
 $("creSel").onchange=()=>{ if(!leaveOK()){ $("creSel").value=mobOn()?CREK:"none"; return; } CREK=$("creSel").value; CREN=1; resetSetup(); };
 $("creN").onchange=()=>{ if(!leaveOK()){ $("creN").value=String(CREN); return; } CREN=+$("creN").value; resetSetup(); };
 $("modeSel").onchange=()=>{ if(!leaveOK()){ $("modeSel").value=MODE; return; } MODE=$("modeSel").value; resetSetup(); };
 for(let i=0;i<MAXP;i++) $("tm"+i).onchange=()=>{ if(!leaveOK()){ $("tm"+i).value=String(tmAB[i]); return; } tmAB[i]=+$("tm"+i).value; resetSetup(); };
+/* the last setup used on this device (players, mode, computer side) comes back after a reload */
+const SKEY="colosseum-setup";
+try{ const o=JSON.parse(localStorage.getItem(SKEY)||"null"); if(o){ if([1,2,3,4].includes(o.NP)) NP=o.NP; if(o.MODE==="ffa"||o.MODE==="teams") MODE=o.MODE; if(o.CREK==="none"||CRE[o.CREK]) CREK=o.CREK; if(o.CREN>=1&&o.CREN<=3) CREN=o.CREN; } }catch(e){}
+if(NP===1&&!mobOn()) CREK="man";
 applyMode(); refreshPlayers();
 /* the solo arena's saved fighters can be borrowed; duel XP is written to the same record */
 const RKEY="melee-arena-v1";

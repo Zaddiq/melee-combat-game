@@ -377,3 +377,7 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 
 ## Colosseum: changing the setup in the middle of a fight (Nov 1, branch setup-change-midfight)
 - The Players, computer-side, count, mode and team boxes used to snap back silently while a fight was running (only a grey note), so a player who switched to "1 player" mid-fight kept getting the old 2-player setup. They now ask "A fight is in progress. Leave it and change the setup?"; Yes starts the setup again with the new choice, No keeps the fight. Tests L10 to L13 in `tests/colosseum_solo_test.py` (13).
+
+## Colosseum: setup boxes out of step with the game after a reload (Nov 1, branch setup-boxes-match-state)
+- Bug (owner's phone): after a reload the browser restored the Players box to the last choice ("1 player") but the game restarted at NP=2, so the next click (e.g. a creature) ran a 2-player setup while the box said 1. Fixed two ways: `refreshPlayers()` sets the Players and team boxes from the game's own state, and the setup selects carry `autocomplete="off"` so the browser does not restore them. The last setup (players, mode, computer side, count) is now remembered on the device (`colosseum-setup` in localStorage) and comes back after a reload; one player with no computer side becomes the Gladiator.
+- Tests L14, L15 in `tests/colosseum_solo_test.py` (15).
