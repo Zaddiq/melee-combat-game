@@ -34,13 +34,12 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
   <div class="err" id="err"></div>
 </div>
 <div class="card" id="inCard" style="display:none">
-  <div class="mut"><span class="dot" id="dot"></span><span id="conn">Connecting…</span></div>
+  <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="mut"><span class="dot" id="dot"></span><span id="conn">Connecting…</span> · table <b id="tcode"></b></div><button id="leave" style="margin-top:0;padding:8px 12px">Switch table</button></div>
   <div class="big" id="seat" style="margin-top:6px"></div>
   <div class="mut" id="seatNote"></div>
   <div id="play" style="margin-top:12px"></div>
-  <button id="leave">Leave the table</button>
 </div>
-<p class="mut">Table version 4. Keep this page open. When it is your turn to pick, your choices will show up here.</p>
+<p class="mut">Table version 5. Keep this page open. When it is your turn to pick, your choices will show up here.</p>
 </main>
 <script src="firebase-config.js"></script>
 <script src="net.js"></script>
@@ -113,10 +112,10 @@ function applyResult(c,v){
 }
 async function enter(c,name){
   $("err").textContent="";
-  try{ await Net.start(); await Net.joinRoom(c,name,fjFor(chosen())); }catch(e){ $("err").textContent=e.message; showIn(false); return; }
-  room=c; removed=false; closed=false; wr({room:c,name}); showIn(true); $("seat").textContent="Waiting for a seat…"; $("conn").textContent="Connecting…";
+  try{ await Net.start(); await Net.joinRoom(c,name,fjFor(chosen())); }catch(e){ $("err").textContent=e.message; showIn(false); if(/no table|closed/i.test(e.message)){ wr(null); $("code").value=""; } return; }
+  room=c; removed=false; closed=false; wr({room:c,name}); $("tcode").textContent=c; showIn(true); $("seat").textContent="Waiting for a seat…"; $("conn").textContent="Connecting…";
   offPub=Net.watchPub(c,(pub,e)=>{
-    if(!pub||!pub.open){ closed=true; $("play").innerHTML=""; }
+    if(!pub||!pub.open){ closed=true; $("play").innerHTML=""; wr(null); }
     if(removed&&!closed) return;
     if(e){ $("conn").textContent="Connection problem"; $("dot").className="dot"; return; }
     $("conn").textContent=pub?"Connected":"Table not found"; $("dot").className="dot"+(pub?" on":"");
@@ -128,7 +127,8 @@ async function enter(c,name){
   offMe=Net.watchMe(c,v=>{ if(v===null&&room&&!closed){ removed=true; $("play").innerHTML=""; $("dot").className="dot"; $("conn").textContent="Not at the table"; $("seat").textContent="You were removed from the table."; $("seatNote").textContent="Leave and join again if that was a mistake."; } else if(v&&v.on===false) Net.setOn(c,true).catch(()=>{}); });
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&room) Net.setOn(room,true).catch(()=>{}); });
 }
-function leave(){ const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); if(offRes) offRes(); offPub=offMe=offPriv=offRes=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); }
+function leave(){ const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); if(offRes) offRes(); offPub=offMe=offPriv=offRes=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); $("code").value=""; $("err").textContent=""; $("code").focus(); }
+$("code").onfocus=()=>{ try{ $("code").select(); }catch(e){} };
 $("go").onclick=()=>{ const c=Net.clean($("code").value); let n=$("nm").value.trim(); if(!n&&chosen()!=="none"){ try{ const f=JSON.parse(fjFor(chosen())); n=String(f.name).slice(0,20); }catch(e){} } if(c.length<3){ $("err").textContent="Type the table name shown on the tablet."; return; } if(!n){ $("err").textContent="Type your name (or choose a character)."; return; } enter(c,n); };
 $("leave").onclick=leave;
 fillChars();

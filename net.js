@@ -35,7 +35,8 @@ function firebaseBackend(cfg){
     remove:p=>ref(p).remove(),
     on(p,cb){ const r=ref(p), h=r.on("value",s=>cb(s.val()),e=>cb(undefined,e)); return ()=>r.off("value",h); },
     async create(p,v){ const res=await ref(p).transaction(cur=>cur===null?v:undefined); return !!res.committed; },   /* write only if empty */
-    onDisc:(p,v)=>ref(p).onDisconnect().set(v)
+    onDisc:(p,v)=>ref(p).onDisconnect().set(v),
+    cancelDisc:p=>ref(p).onDisconnect().cancel()
   };
 }
 
@@ -59,7 +60,8 @@ function memBackend(){
     async remove(p){ await this.set(p,null); },
     on(p,cb){ const s={ps:parts(p),cb,last:undefined}; subs.add(s); setTimeout(()=>{ const v=clone(getIn(load(),s.ps)); s.last=JSON.stringify(v); cb(v); },0); return ()=>subs.delete(s); },
     async create(p,v){ const t=load(); if(getIn(t,parts(p))!=null) return false; setIn(t,parts(p),clone(v)); save(t); fire(); return true; },
-    onDisc(p,v){ disc.push({ps:parts(p),v:clone(v)}); }
+    onDisc(p,v){ disc.push({ps:parts(p),v:clone(v)}); },
+    cancelDisc(p){ const k=parts(p).join("/"); for(let i=disc.length-1;i>=0;i--) if(disc[i].ps.join("/")===k) disc.splice(i,1); }
   };
 }
 
@@ -106,7 +108,7 @@ const Net={
   },
   setFighter(c,fj){ return this.b.set("rooms/"+c+"/join/"+this.uid+"/fj",fj||null); },   /* the character this phone brings (a JSON string, see phone.html) */
   setOn(c,on){ return this.b.set("rooms/"+c+"/join/"+this.uid+"/on",!!on); },
-  leaveRoom(c){ return this.b.remove("rooms/"+c+"/join/"+this.uid); },
+  async leaveRoom(c){ try{ await this.b.cancelDisc("rooms/"+c+"/join/"+this.uid+"/on"); }catch(e){} return this.b.remove("rooms/"+c+"/join/"+this.uid); },
   watchMe(c,cb){ return this.b.on("rooms/"+c+"/join/"+this.uid,cb); },
   /* host <-> one phone: the host writes priv/UID (what that player may see), the phone writes cmd/UID (what they chose) */
   sendPriv(c,uid,obj){ return this.b.set("rooms/"+c+"/priv/"+uid,obj); },

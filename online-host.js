@@ -20,10 +20,10 @@ function render(){
   const e=err?`<div style="color:var(--foe);margin:6px 0">${esc(err)}</div>`:"";
   if(!code){
     const old=saved();
-    body.innerHTML=`<div class="mut">Table version 4 (phone characters)</div><div>Let players join from their own phones. Choose a table name your group will remember (like STEVE) and use the same one every time, or leave it empty for a random code.</div>${e}<div class="row"><input id="onName" maxlength="12" placeholder="Table name, 3 to 12 letters or digits" value="${esc(old)}" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);text-transform:uppercase;min-width:230px"><button class="pri" id="onOpen">Open the table</button></div>`;
+    body.innerHTML=`<div class="mut">Table version 5 (phone characters)</div><div>Let players join from their own phones. Choose a table name your group will remember (like STEVE) and use the same one every time, or leave it empty for a random code.</div>${e}<div class="row"><input id="onName" maxlength="12" placeholder="Table name, 3 to 12 letters or digits" value="${esc(old)}" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);text-transform:uppercase;min-width:230px"><button class="pri" id="onOpen">Open the table</button></div>`;
     $("onOpen").onclick=()=>open($("onName").value); $("onName").onkeydown=ev=>{ if(ev.key==="Enter") $("onOpen").click(); }; return; }
   const ids=Object.keys(joins).sort((a,b)=>(joins[a].t||0)-(joins[b].t||0));
-  body.innerHTML=`<div class="mut">Table version 4 (phone characters)</div><div>Table name: <b style="font-size:28px;letter-spacing:3px">${esc(code)}</b></div>
+  body.innerHTML=`<div class="mut">Table version 5 (phone characters)</div><div>Table name: <b style="font-size:28px;letter-spacing:3px">${esc(code)}</b></div>
    <div class="mut">On each phone open <b>${esc(url())}</b> and type the table name${Net.kind==="mem"?" (test mode)":""}.${locked?` <b style="color:var(--foe)">The table is locked: no new phones can join.</b>`:""}</div>${e}
    <div id="onList" style="margin-top:8px">${ids.length?ids.map(u=>`<div class="row" data-u="${esc(u)}"><span title="${joins[u].on?"connected":"not connected"}" style="color:${joins[u].on?"var(--me)":"var(--mut)"}">●</span> <b>${esc(joins[u].name)}</b>
      <select data-seat="${esc(u)}"><option value="-1">watching only</option>${[...Array(NP)].map((_,i)=>`<option value="${i}"${seat[u]===i?" selected":""}>${esc(pname(i))}</option>`).join("")}</select>
@@ -34,8 +34,9 @@ function render(){
   $("onLock").onclick=()=>{ locked=!locked; render(); sync(); };
   $("onClose").onclick=close;
 }
-function watch(){ offJoins=Net.watchJoins(code,v=>{ joins=v||{}; autoSeat(); render(); sync(); loadFromPhones(); ui(); }); offCmds=Net.watchCmds(code,onCmds); }
-async function open(name){ err=""; try{ await Net.start(); code=await Net.openRoom(name); try{ localStorage.setItem(KEYR,code); }catch(x){} seat={}; joins={}; applied={}; locked=false; try{ const pb=await Net.b.get("rooms/"+code+"/pub"); locked=!!(pb&&pb.locked); }catch(x){} watch(); render(); sync(); }catch(x){ code=null; fail(x); } }
+function watch(){ offJoins=Net.watchJoins(code,v=>{ joins={}; for(const u of Object.keys(v||{})) if(v[u]&&typeof v[u].name==="string") joins[u]=v[u];   /* an entry without a name is a leftover, not a player */
+     autoSeat(); render(); sync(); loadFromPhones(); ui(); }); offCmds=Net.watchCmds(code,onCmds); }
+async function open(name){ err=""; try{ await Net.start(); const prev=saved(); code=await Net.openRoom(name); if(prev&&prev!==code) Net.closeRoom(prev).catch(()=>{});   /* the previous table of this tablet is closed (only its own host can: the rules refuse anyone else) */ try{ localStorage.setItem(KEYR,code); }catch(x){} seat={}; joins={}; applied={}; locked=false; try{ const pb=await Net.b.get("rooms/"+code+"/pub"); locked=!!(pb&&pb.locked); }catch(x){} watch(); render(); sync(); }catch(x){ code=null; fail(x); } }
 async function close(){ const c=code; if(offJoins) offJoins(); offJoins=null; if(offCmds) offCmds(); offCmds=null; code=null; joins={}; seat={}; locked=false; try{ await Net.closeRoom(c); }catch(x){ err=x.message; } render(); }
 setInterval(()=>{ if(code) sync(); },5*60*1000);   /* keeps the table from looking abandoned */
 /* the player count and the loaded fighters can change on the page, so keep the phones' view in step */

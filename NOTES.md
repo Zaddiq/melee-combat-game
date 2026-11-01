@@ -345,3 +345,9 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Rules: join/$uid now allows only name, on, t, fj; new `res` node (host writes, the phone reads its own). `database.rules.json` must be pasted again in the console.
 - Tests: `tests/online_chars_test.py` (14). Test mode keeps each phone tab's roster in sessionStorage.
 - Not done: building a character on the phone from nothing without the builder page (the builder page is linked), computer-run seats.
+
+## Colosseum online table: switching tables (Nov 1, branch online-switch-table)
+- Phone: "Switch table" button at the top of the table card (with the table name); it leaves and clears the code box. A table that is closed or missing is forgotten (saved room cleared), so the next visit starts at the join screen. Selecting the code box selects its text.
+- Tablet: opening a table closes this tablet's previous one (the name saved from last time), so old tables do not pile up; only its own host can (rules). 
+- Bug fixed: a phone that left a table still had a registered "mark me offline on disconnect" write that recreated a nameless entry; `leaveRoom` now cancels it and the tablet ignores entries without a name.
+- Version label now 5. Tests: `tests/online_switch_test.py` (9).
