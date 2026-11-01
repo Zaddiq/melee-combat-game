@@ -1059,8 +1059,8 @@ function endTurn(){ applyShock(); if(G.phase!=="over") nextTurn(); }
 function ui(){
   const c=$("ctl"); if(!c)return;
   if(!G){ const pl=slot.slice(0,NP);
-    if(pl.every(Boolean)){ const pn=pl[placeStep], last=placeStep===NP-1, tmOK=new Set(team.slice(0,NP)).size>1;
-      c.innerHTML=`<div><b class="${PCLS[placeStep]}">${esc(pn.name)}</b> (Player ${placeStep+1}): tap one of your four outlined hexes on the map to choose where to start. The open hex is your current choice.</div><div style="margin-top:6px">${tmOK?(last?`<button class="pri" id="bGo">Done: start the duel</button> `:`<button class="pri" id="bNext">Done: pass to Player ${placeStep+2}</button> `):`<span class="mut">Everyone is on one team: put at least two teams in play. </span>`}${placeStep?`<button id="bPrev">Back to Player ${placeStep}</button>`:""}</div><div class="mut" style="margin-top:6px">XP is awarded when the duel ends; nobody dies for good.</div>`;
+    if(pl.every(Boolean)){ const pn=pl[placeStep], last=placeStep===NP-1, tmOK=mobOn()||new Set(team.slice(0,NP)).size>1;
+      c.innerHTML=`<div><b class="${PCLS[placeStep]}">${esc(pn.name)}</b> (Player ${placeStep+1}): tap one of your four outlined hexes on the map to choose where to start. The open hex is your current choice.</div><div style="margin-top:6px">${tmOK?(last?`<button class="pri" id="bGo">Done: start the duel</button> `:`<button class="pri" id="bNext">Done: pass to Player ${placeStep+2}</button> `):`<span class="mut">Everyone is on one team: put at least two teams in play. </span>`}${placeStep?`<button id="bPrev">Back to Player ${placeStep}</button>`:""}</div><div class="mut" style="margin-top:6px">Everyone starts facing the nearest enemy. You can turn during your own move: click one of the small circles beside your counter. XP is awarded when the duel ends; nobody dies for good.</div>`;
       if($("bNext")) $("bNext").onclick=()=>{ placeStep++; ui(); drawMap(); }; if($("bPrev")) $("bPrev").onclick=()=>{ placeStep--; ui(); drawMap(); };
       if($("bGo")) $("bGo").onclick=startFight; } else c.innerHTML=NP===2?"Load both fighters first (the boxes below).":"Load all "+NP+" fighters first (the boxes below)."; if(window.Online) Online.hook(c); return; }
   const A=G.me,B=G.foe,cur=G.cur; let t="",b="";
@@ -1164,7 +1164,8 @@ function drawMap(){
       const arr=st.zones[st.zi[placeStep]].hexes;
       const pk=arr.map(h=>st.pick.some((x,i)=>i!==placeStep&&x===h)?"":`<polygon data-k="${key(h.q,h.r)}" points="${poly(h)}" fill="${h===st.pick[placeStep]?"none":cv(placeStep)}" fill-opacity=".18" stroke="${cv(placeStep)}" stroke-width=".1" style="cursor:pointer"/>`).join("");
       const toks=st.pick.map((h,i)=>({...h,f:0,i}));
-      for(const t of toks){ const L=toks.filter(o=>team[o.i]!==team[t.i]).sort((a,b)=>hdist(t,a)-hdist(t,b)); t.f=L.length?faceToward(t,L[0]):0; }
+      const nz=mobOn()?zones()[1].hexes:null, nc=nz?{q:Math.round(nz.reduce((a,h)=>a+h.q,0)/nz.length),r:Math.round(nz.reduce((a,h)=>a+h.r,0)/nz.length)}:null;   /* the creatures come in at the north end */
+      for(const t of toks){ if(nc){ t.f=faceToward(t,nc); continue; } const L=toks.filter(o=>team[o.i]!==team[t.i]).sort((a,b)=>hdist(t,a)-hdist(t,b)); t.f=L.length?faceToward(t,L[0]):0; }
       layer=pk+toks.map(t=>tokn(t,cv(t.i),slot[t.i])).join(""); }
     else layer=[...P.filter(h=>h.e),...(ffaOn()?zones().slice(2,NP).flatMap(z=>z.hexes):[])].map(h=>`<text x="${h.p[0]}" y="${h.p[1]+.3}" text-anchor="middle" font-size=".9" fill="var(--foe)" opacity=".7">★</text>`).join("");
   } else {
