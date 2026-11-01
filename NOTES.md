@@ -374,3 +374,6 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - A lone player has nobody to hide from: no "pass the tablet" cover screens, no "must not look" line (also for the spell-renew cover).
 - `makeOpponent` no longer depends on the `me` global (uses the first player's fighter), so tests/fuzzers that fill slots directly work.
 - Tests: `tests/colosseum_solo_test.py` (9) through the real buttons; `tests/fuzz/colosseumfz.py` now includes solo layouts (45 games per run; a couple of stalemates are normal).
+
+## Colosseum: changing the setup in the middle of a fight (Nov 1, branch setup-change-midfight)
+- The Players, computer-side, count, mode and team boxes used to snap back silently while a fight was running (only a grey note), so a player who switched to "1 player" mid-fight kept getting the old 2-player setup. They now ask "A fight is in progress. Leave it and change the setup?"; Yes starts the setup again with the new choice, No keeps the fight. Tests L10 to L13 in `tests/colosseum_solo_test.py` (13).

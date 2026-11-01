@@ -208,11 +208,12 @@ function refreshPlayers(){ for(let i=0;i<MAXP;i++){ const c=$("pcard"+i); if(c) 
   CREN=Math.max(1,Math.min(CREN,creMax())); $("creN").innerHTML=[...Array(creMax())].map((_,i)=>`<option value="${i+1}">${i+1}</option>`).join(""); $("creN").value=String(CREN); $("creN").style.display=mobOn()&&creMax()>1?"":"none";
   $("npNote").textContent=noteText(); }
 const resetSetup=()=>{ applyMode(); G=null; placeStep=0; starts.fill(null); $("setup").open=true; refreshPlayers(); showStats(); ui(); drawMap(); };
-$("npSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("npSel").value=String(NP); $("npNote").textContent="Finish the fight first (or leave it with Rematch)."; return; } NP=+$("npSel").value; if(NP===1&&!mobOn()){ CREK="man"; CREN=1; } resetSetup(); };
-$("creSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("creSel").value=mobOn()?CREK:"none"; $("npNote").textContent="Finish the fight first (or leave it with Rematch)."; return; } CREK=$("creSel").value; CREN=1; resetSetup(); };
-$("creN").onchange=()=>{ if(G&&G.phase!=="over"){ $("creN").value=String(CREN); return; } CREN=+$("creN").value; resetSetup(); };
-$("modeSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("modeSel").value=MODE; $("npNote").textContent="Finish the fight first (or leave it with Rematch)."; return; } MODE=$("modeSel").value; resetSetup(); };
-for(let i=0;i<MAXP;i++) $("tm"+i).onchange=()=>{ if(G&&G.phase!=="over"){ $("tm"+i).value=String(tmAB[i]); return; } tmAB[i]=+$("tm"+i).value; resetSetup(); };
+const leaveOK=()=>!(G&&G.phase!=="over")||confirm("A fight is in progress. Leave it and change the setup?");   /* changing players, the computer side or teams during a fight starts the setup again, after asking */
+$("npSel").onchange=()=>{ if(!leaveOK()){ $("npSel").value=String(NP); return; } NP=+$("npSel").value; if(NP===1&&!mobOn()){ CREK="man"; CREN=1; } resetSetup(); };
+$("creSel").onchange=()=>{ if(!leaveOK()){ $("creSel").value=mobOn()?CREK:"none"; return; } CREK=$("creSel").value; CREN=1; resetSetup(); };
+$("creN").onchange=()=>{ if(!leaveOK()){ $("creN").value=String(CREN); return; } CREN=+$("creN").value; resetSetup(); };
+$("modeSel").onchange=()=>{ if(!leaveOK()){ $("modeSel").value=MODE; return; } MODE=$("modeSel").value; resetSetup(); };
+for(let i=0;i<MAXP;i++) $("tm"+i).onchange=()=>{ if(!leaveOK()){ $("tm"+i).value=String(tmAB[i]); return; } tmAB[i]=+$("tm"+i).value; resetSetup(); };
 applyMode(); refreshPlayers();
 /* the solo arena's saved fighters can be borrowed; duel XP is written to the same record */
 const RKEY="melee-arena-v1";
