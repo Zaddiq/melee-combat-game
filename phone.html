@@ -8,7 +8,7 @@ main{max-width:520px;margin:0 auto;padding:16px}
 h1{font-size:24px;margin:0 0 8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
 label{display:block;margin:10px 0 4px;color:var(--mut);font-size:15px}
-input{font:inherit;width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+select,input{font:inherit;width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
 input#code{font-size:26px;letter-spacing:4px;text-transform:uppercase;text-align:center}
 button{font:inherit;padding:12px 18px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;margin-top:12px}
 button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
@@ -21,9 +21,15 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
 </style></head><body><main>
 <h1>Colosseum</h1>
 <p style="margin:0 0 10px"><a href="index.html" style="color:var(--acc)">← Menu</a></p>
+<div class="card" id="chrCard">
+  <label for="chr" style="margin-top:0">Your character</label><select id="chr"></select>
+  <div class="mut" id="chrNote" style="margin-top:6px"></div>
+  <div class="mut" id="xp" style="margin-top:6px"></div>
+  <div class="mut" style="margin-top:6px"><a href="builder.html" style="color:var(--acc)">Build or change a character</a> (whatever is open in the builder is offered here) · <a href="wizard-arena.html" style="color:var(--acc)">Arena</a></div>
+</div>
 <div class="card" id="joinCard">
   <label for="code">Table name</label><input id="code" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false">
-  <label for="nm">Your name</label><input id="nm" maxlength="20" autocomplete="nickname">
+  <label for="nm">Your name <span class="mut">(empty: your character's name)</span></label><input id="nm" maxlength="20" autocomplete="nickname">
   <button class="pri" id="go">Join the table</button>
   <div class="err" id="err"></div>
 </div>
@@ -34,7 +40,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
   <div id="play" style="margin-top:12px"></div>
   <button id="leave">Leave the table</button>
 </div>
-<p class="mut">Table version 3. Keep this page open. When it is your turn to pick, your choices will show up here.</p>
+<p class="mut">Table version 4. Keep this page open. When it is your turn to pick, your choices will show up here.</p>
 </main>
 <script src="firebase-config.js"></script>
 <script src="net.js"></script>
@@ -45,7 +51,7 @@ const KEY="colosseum-phone";
 const ST=Net.wanted()==="mem"?sessionStorage:localStorage;   /* the test fake shares localStorage between tabs, so each tab keeps its own memory */
 const rd=()=>{ try{ return JSON.parse(ST.getItem(KEY)||"null"); }catch(e){ return null; } };
 const wr=v=>{ try{ if(v) ST.setItem(KEY,JSON.stringify(v)); else ST.removeItem(KEY); }catch(e){} };
-let room=null, offPub=null, offMe=null, offPriv=null, removed=false, closed=false, lastRing=null, ringT=null, sentSeq=null;
+let room=null, offPub=null, offMe=null, offPriv=null, offRes=null, removed=false, closed=false, lastRing=null, ringT=null, sentSeq=null;
 const q=new URLSearchParams(location.search), saved=rd();
 $("code").value=Net.clean(q.get("room")||(saved&&saved.room)||"");
 $("nm").value=(saved&&saved.name)||"";
@@ -73,9 +79,41 @@ function showPlay(p){
   if(ringUp&&navigator.vibrate) try{ navigator.vibrate([300,150,300]); }catch(e){}
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---- my character: the arena's roster (and the builder's open character) on this phone ---- */
+const RKEY="melee-arena-v1", BKEY="wizard-builder-v1", CKEY="colosseum-phone-char", XKEY="colosseum-phone-lastres";
+const recs=()=>{ try{ return JSON.parse(ST.getItem(RKEY)||"{}")||{}; }catch(e){ return {}; } };
+const builderChar=()=>{ try{ const o=JSON.parse(ST.getItem(BKEY)||"null"); return o&&typeof o==="object"&&o.name?o:null; }catch(e){ return null; } };
+const rk=n=>String(n||"").trim().toLowerCase();
+function charOptions(){ const out=[["none","No character (the host chooses one for me)"]], R=recs(), b=builderChar();
+  if(b) out.push(["builder","From the builder: "+b.name+(R[rk(b.name)]?" ("+R[rk(b.name)].ep+" EP)":" (new)")]);
+  for(const k of Object.keys(R)) if(R[k]&&R[k].src&&!R[k].dead) out.push(["r:"+k,R[k].name+" · ST "+R[k].st+" DX "+R[k].dx+" · "+R[k].ep+"/100 EP"]);
+  return out; }
+function fjFor(id){
+  let o,rec=null, R=recs();
+  if(id==="builder"){ const b=builderChar(); if(!b) return ""; o={name:b.name,st:b.st,dx:b.dx,src:b}; const r=R[rk(b.name)]; if(r){ o.st=r.st; o.dx=r.dx; rec=r; } }
+  else if(String(id).startsWith("r:")){ const r=R[id.slice(2)]; if(!r||!r.src) return ""; o={name:r.name,st:r.st,dx:r.dx,src:r.src}; rec=r; }
+  else return "";
+  if(rec){ rec=Object.assign({},rec); delete rec.src; } o.rec=rec;
+  const j=JSON.stringify(o); return j.length>6000?"":j;
+}
+function chosen(){ return $("chr").value; }
+function fillChars(keep){
+  const opts=charOptions(); let want=keep||(()=>{ try{ return ST.getItem(CKEY); }catch(e){ return null; } })();
+  if(!want||!opts.some(o=>o[0]===want)) want=opts.some(o=>o[0]==="builder")?"builder":"none";
+  $("chr").innerHTML=opts.map(o=>`<option value="${esc(o[0])}">${esc(o[1])}</option>`).join(""); $("chr").value=want;
+  $("chrNote").textContent=want==="none"?"You will play whatever fighter the host loads for your seat.":"This character comes to the table with you. Experience it earns is saved here on this phone.";
+}
+$("chr").onchange=()=>{ try{ ST.setItem(CKEY,chosen()); }catch(e){} fillChars(chosen()); if(room) Net.setFighter(room,fjFor(chosen())).catch(e=>{ $("err").textContent=e.message; }); };
+function applyResult(c,v){
+  if(!v||!v.rec||!v.key) return; const id=c+":"+v.id; let last=null; try{ last=ST.getItem(XKEY); }catch(e){} if(last===id) return;
+  const R=recs(); R[v.key]=v.rec; try{ ST.setItem(RKEY,JSON.stringify(R)); ST.setItem(XKEY,id); }catch(e){ return; }
+  const r=v.rec; $("xp").textContent=r.name+": "+r.ep+"/100 EP saved to your roster"+(r.pend>0?" · an attribute point is waiting (spend it in the arena)":"")+".";
+  fillChars(chosen()); if(room) Net.setFighter(room,fjFor(chosen())).catch(()=>{});
+}
 async function enter(c,name){
   $("err").textContent="";
-  try{ await Net.start(); await Net.joinRoom(c,name); }catch(e){ $("err").textContent=e.message; showIn(false); return; }
+  try{ await Net.start(); await Net.joinRoom(c,name,fjFor(chosen())); }catch(e){ $("err").textContent=e.message; showIn(false); return; }
   room=c; removed=false; closed=false; wr({room:c,name}); showIn(true); $("seat").textContent="Waiting for a seat…"; $("conn").textContent="Connecting…";
   offPub=Net.watchPub(c,(pub,e)=>{
     if(!pub||!pub.open){ closed=true; $("play").innerHTML=""; }
@@ -85,12 +123,14 @@ async function enter(c,name){
     const [a,b]=seatText(pub); $("seat").textContent=a; $("seatNote").textContent=b;
   });
   lastRing=null; sentSeq=null;
+  offRes=Net.watchRes(c,v=>applyResult(c,v));
   offPriv=Net.watchPriv(c,v=>{ if(!removed&&!closed) showPlay(v); });
   offMe=Net.watchMe(c,v=>{ if(v===null&&room&&!closed){ removed=true; $("play").innerHTML=""; $("dot").className="dot"; $("conn").textContent="Not at the table"; $("seat").textContent="You were removed from the table."; $("seatNote").textContent="Leave and join again if that was a mistake."; } else if(v&&v.on===false) Net.setOn(c,true).catch(()=>{}); });
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&room) Net.setOn(room,true).catch(()=>{}); });
 }
-function leave(){ const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); offPub=offMe=offPriv=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); }
-$("go").onclick=()=>{ const c=Net.clean($("code").value), n=$("nm").value.trim(); if(c.length<3){ $("err").textContent="Type the table name shown on the tablet."; return; } if(!n){ $("err").textContent="Type your name."; return; } enter(c,n); };
+function leave(){ const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); if(offRes) offRes(); offPub=offMe=offPriv=offRes=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); }
+$("go").onclick=()=>{ const c=Net.clean($("code").value); let n=$("nm").value.trim(); if(!n&&chosen()!=="none"){ try{ const f=JSON.parse(fjFor(chosen())); n=String(f.name).slice(0,20); }catch(e){} } if(c.length<3){ $("err").textContent="Type the table name shown on the tablet."; return; } if(!n){ $("err").textContent="Type your name (or choose a character)."; return; } enter(c,n); };
 $("leave").onclick=leave;
+fillChars();
 if(saved&&saved.room&&saved.room===$("code").value&&saved.name) enter(saved.room,saved.name);   /* coming back after the phone slept */
 </script></body></html>

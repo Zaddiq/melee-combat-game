@@ -84,7 +84,7 @@ const Net={
     const pub=await this.b.get("rooms/"+want+"/pub");
     if(!pub||!pub.t||Date.now()-pub.t>this.STALE){   /* an abandoned table: take it over and clear what was left in it */
       await this.b.set("rooms/"+want+"/host",this.uid);
-      for(const k of ["join","priv","cmd"]) await this.b.remove("rooms/"+want+"/"+k);
+      for(const k of ["join","priv","cmd","res"]) await this.b.remove("rooms/"+want+"/"+k);
       await this.b.set("rooms/"+want+"/pub",{open:true,t:Date.now()});
       return want;
     }
@@ -92,17 +92,19 @@ const Net={
   },
   publish(c,pub){ return this.b.set("rooms/"+c+"/pub",pub); },
   watchJoins(c,cb){ return this.b.on("rooms/"+c+"/join",cb); },
-  async closeRoom(c){ await this.b.remove("rooms/"+c+"/pub"); await this.b.remove("rooms/"+c+"/join"); await this.b.remove("rooms/"+c+"/priv"); await this.b.remove("rooms/"+c+"/cmd"); await this.b.remove("rooms/"+c+"/host"); },
+  async closeRoom(c){ await this.b.remove("rooms/"+c+"/pub"); await this.b.remove("rooms/"+c+"/join"); await this.b.remove("rooms/"+c+"/priv"); await this.b.remove("rooms/"+c+"/cmd"); await this.b.remove("rooms/"+c+"/res"); await this.b.remove("rooms/"+c+"/host"); },
   kick(c,uid){ return this.b.remove("rooms/"+c+"/join/"+uid); },
   /* phone side */
-  async joinRoom(c,name){
+  async joinRoom(c,name,fj){
     const host=await this.b.get("rooms/"+c+"/host"); if(!host) throw new Error("There is no table with the code "+c+".");
     const pub=await this.b.get("rooms/"+c+"/pub"); if(!pub||!pub.open) throw new Error("That table is closed.");
     if(pub.locked&&!(await this.b.get("rooms/"+c+"/join/"+this.uid))) throw new Error("The table "+c+" is locked: no new phones can join. Ask the host to unlock it.");
-    await this.b.set("rooms/"+c+"/join/"+this.uid,{name:String(name).slice(0,20),on:true,t:Date.now()});
+    const me={name:String(name).slice(0,20),on:true,t:Date.now()}; if(fj) me.fj=fj;
+    await this.b.set("rooms/"+c+"/join/"+this.uid,me);
     this.b.onDisc("rooms/"+c+"/join/"+this.uid+"/on",false);
     return host;
   },
+  setFighter(c,fj){ return this.b.set("rooms/"+c+"/join/"+this.uid+"/fj",fj||null); },   /* the character this phone brings (a JSON string, see phone.html) */
   setOn(c,on){ return this.b.set("rooms/"+c+"/join/"+this.uid+"/on",!!on); },
   leaveRoom(c){ return this.b.remove("rooms/"+c+"/join/"+this.uid); },
   watchMe(c,cb){ return this.b.on("rooms/"+c+"/join/"+this.uid,cb); },
@@ -111,6 +113,9 @@ const Net={
   watchCmds(c,cb){ return this.b.on("rooms/"+c+"/cmd",cb); },
   watchPriv(c,cb){ return this.b.on("rooms/"+c+"/priv/"+this.uid,cb); },
   sendCmd(c,obj){ return this.b.set("rooms/"+c+"/cmd/"+this.uid,obj); },
+  /* host -> one phone: experience results to be saved in that phone's own roster */
+  sendRes(c,uid,obj){ return this.b.set("rooms/"+c+"/res/"+uid,obj); },
+  watchRes(c,cb){ return this.b.on("rooms/"+c+"/res/"+this.uid,cb); },
   watchPub(c,cb){ return this.b.on("rooms/"+c+"/pub",cb); }
 };
 window.Net=Net;

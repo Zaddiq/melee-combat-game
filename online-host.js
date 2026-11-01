@@ -20,10 +20,10 @@ function render(){
   const e=err?`<div style="color:var(--foe);margin:6px 0">${esc(err)}</div>`:"";
   if(!code){
     const old=saved();
-    body.innerHTML=`<div class="mut">Table version 3 (table names)</div><div>Let players join from their own phones. Choose a table name your group will remember (like STEVE) and use the same one every time, or leave it empty for a random code.</div>${e}<div class="row"><input id="onName" maxlength="12" placeholder="Table name, 3 to 12 letters or digits" value="${esc(old)}" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);text-transform:uppercase;min-width:230px"><button class="pri" id="onOpen">Open the table</button></div>`;
+    body.innerHTML=`<div class="mut">Table version 4 (phone characters)</div><div>Let players join from their own phones. Choose a table name your group will remember (like STEVE) and use the same one every time, or leave it empty for a random code.</div>${e}<div class="row"><input id="onName" maxlength="12" placeholder="Table name, 3 to 12 letters or digits" value="${esc(old)}" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);text-transform:uppercase;min-width:230px"><button class="pri" id="onOpen">Open the table</button></div>`;
     $("onOpen").onclick=()=>open($("onName").value); $("onName").onkeydown=ev=>{ if(ev.key==="Enter") $("onOpen").click(); }; return; }
   const ids=Object.keys(joins).sort((a,b)=>(joins[a].t||0)-(joins[b].t||0));
-  body.innerHTML=`<div class="mut">Table version 3 (table names)</div><div>Table name: <b style="font-size:28px;letter-spacing:3px">${esc(code)}</b></div>
+  body.innerHTML=`<div class="mut">Table version 4 (phone characters)</div><div>Table name: <b style="font-size:28px;letter-spacing:3px">${esc(code)}</b></div>
    <div class="mut">On each phone open <b>${esc(url())}</b> and type the table name${Net.kind==="mem"?" (test mode)":""}.${locked?` <b style="color:var(--foe)">The table is locked: no new phones can join.</b>`:""}</div>${e}
    <div id="onList" style="margin-top:8px">${ids.length?ids.map(u=>`<div class="row" data-u="${esc(u)}"><span title="${joins[u].on?"connected":"not connected"}" style="color:${joins[u].on?"var(--me)":"var(--mut)"}">●</span> <b>${esc(joins[u].name)}</b>
      <select data-seat="${esc(u)}"><option value="-1">watching only</option>${[...Array(NP)].map((_,i)=>`<option value="${i}"${seat[u]===i?" selected":""}>${esc(pname(i))}</option>`).join("")}</select>
@@ -34,12 +34,36 @@ function render(){
   $("onLock").onclick=()=>{ locked=!locked; render(); sync(); };
   $("onClose").onclick=close;
 }
-function watch(){ offJoins=Net.watchJoins(code,v=>{ joins=v||{}; autoSeat(); render(); sync(); ui(); }); offCmds=Net.watchCmds(code,onCmds); }
-async function open(name){ err=""; try{ await Net.start(); code=await Net.openRoom(name); try{ localStorage.setItem(KEYR,code); }catch(x){} seat={}; joins={}; locked=false; try{ const pb=await Net.b.get("rooms/"+code+"/pub"); locked=!!(pb&&pb.locked); }catch(x){} watch(); render(); sync(); }catch(x){ code=null; fail(x); } }
+function watch(){ offJoins=Net.watchJoins(code,v=>{ joins=v||{}; autoSeat(); render(); sync(); loadFromPhones(); ui(); }); offCmds=Net.watchCmds(code,onCmds); }
+async function open(name){ err=""; try{ await Net.start(); code=await Net.openRoom(name); try{ localStorage.setItem(KEYR,code); }catch(x){} seat={}; joins={}; applied={}; locked=false; try{ const pb=await Net.b.get("rooms/"+code+"/pub"); locked=!!(pb&&pb.locked); }catch(x){} watch(); render(); sync(); }catch(x){ code=null; fail(x); } }
 async function close(){ const c=code; if(offJoins) offJoins(); offJoins=null; if(offCmds) offCmds(); offCmds=null; code=null; joins={}; seat={}; locked=false; try{ await Net.closeRoom(c); }catch(x){ err=x.message; } render(); }
 setInterval(()=>{ if(code) sync(); },5*60*1000);   /* keeps the table from looking abandoned */
 /* the player count and the loaded fighters can change on the page, so keep the phones' view in step */
-setInterval(()=>{ const s=code?NP+"|"+slot.slice(0,NP).map(f=>f?f.name:"").join(",")+"|"+JSON.stringify(seat):""; if(s!==sig){ sig=s; if(code){ autoSeat(); render(); sync(); } } },600);
+setInterval(()=>{ const s=code?NP+"|"+slot.slice(0,NP).map(f=>f?f.name:"").join(",")+"|"+JSON.stringify(seat):""; if(s!==sig){ sig=s; if(code){ autoSeat(); render(); sync(); } } if(code) loadFromPhones(); },600);
+
+
+/* ---- characters from the phones (item 2) ----
+   A phone may bring a character (join/UID/fj = JSON {name,st,dx,src,rec}: its builder data and its own roster record).
+   When that phone is seated and no duel is on screen, the character is loaded into the seat. Experience for it is worked out here and
+   sent back (res/UID) to be saved in the phone's own roster, so the character keeps growing in the arena between table sessions. */
+let applied={};   /* phone uid -> "seat|fj" already loaded, so a hand-loaded fighter is not overwritten every tick */
+function fromPhone(u,fj,i){
+  try{ const o=JSON.parse(fj); if(!o||!o.src||typeof o.src!=="object") return null;
+    const f=fromBuilder(Object.assign({},o.src,{st:o.st,dx:o.dx,name:String(o.name||o.src.name||"Unnamed").slice(0,40)}));
+    const nm=String(o.name||o.src.name||"Unnamed").slice(0,40);
+    f.phone={uid:u,fj,name:nm,key:nm.trim().toLowerCase(),src:o.src,rec:o.rec||null}; return f; }catch(e){ return null; }
+}
+function loadFromPhones(){
+  if(G) return;   /* never while a duel (or its result screen) is showing; Rematch clears it and the next tick loads */
+  let changed=false;
+  for(const u of Object.keys(applied)) if(!(joins[u]&&seat[u]>=0)) delete applied[u];   /* a phone that left its seat will load again if it comes back */
+  for(let i=0;i<NP;i++){ const u=uidOfPlayer(i), f0=slot[i];
+    if(!u||!joins[u].fj){ if(f0&&f0.phone){ slot[i]=null; me=slot[0]; foe=slot[1]; $("msg"+i).textContent=""; showSlot(i); changed=true; } continue; }   /* no phone, or it brings nobody: drop what it had brought */
+    const tag=i+"|"+joins[u].fj; if(applied[u]===tag) continue;   /* already loaded (or the host replaced it by hand: leave that) */
+    applied[u]=tag; const f=fromPhone(u,joins[u].fj,i); if(!f) continue;
+    setP(i,f,"Brought by "+(joins[u].name||"a phone")+"."); changed=true; }
+  if(changed){ ui(); drawMap(); }
+}
 
 /* ---- secret picks on the phones (step 2) ----
    While a player who has a phone is choosing, the tablet does not show their options. The panel's own buttons are collected,
@@ -55,6 +79,7 @@ function waitText(){ if(!G) return "Waiting for the duel to start."; if(G.phase=
 function sendWaits(except){ for(const u of Object.keys(seat)) if(u!==except&&joins[u]){ delete pending[u]; sendTo(u,{mode:"wait",text:waitText(),turn:G?G.turn:0,ring:Online.ring}); } }
 function onCmds(v){ v=v||{}; for(const u of Object.keys(v)){ const m=v[u], pd=pending[u]; if(!m||!pd||m.seq!==pd.seq||done[u]===m.seq) continue; done[u]=m.seq; const f=m.k==="t"?pd.tacts[m.i]:pd.acts[m.i]; if(typeof f==="function") f(); } }
 const Online=window.Online={ override:null, ring:0,
+  result(f){ if(!code||!f.phone) return; Net.sendRes(code,f.phone.uid,{id:Date.now(),key:f.phone.key,rec:Object.assign({},f.phone.rec,{src:f.phone.src})}).catch(fail); },
   hook(c,t){
     if(!code) return;
     const cur=G&&G.cur;

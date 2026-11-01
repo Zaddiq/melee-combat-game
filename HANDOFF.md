@@ -69,3 +69,5 @@ Owner has only one phone, so test with several browser tabs or windows.
 4. Phone map: move, facing, advance/retreat, far-hex spells.
 5. All phones pick at the same time.
 6. Computer-run seats: a seat set to Computer (a roster fighter or random opponent via makeOpponent) on a team, mixed with human seats, plus creatures. Note: computer creatures vs all humans already exists (Colosseum creature picker, 3 players vs a Dragon works on one device); new here is computer-run FIGHTERS and mixed sides.
+
+- Nov 1 later: items 1 (table names, lock, takeover) and 2 (phone rosters: character from the phone, XP saved back to the phone) are built and merged; see NOTES.md. The owner must re-paste database.rules.json in the Firebase console after each change to it (items 1 and 2 both changed it). Next in the plan: 3 bell/wake lock/mid-fight rejoin, 4 phone map, 5 simultaneous picks, 6 computer-run seats.

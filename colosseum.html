@@ -177,7 +177,7 @@ function epLine(f){ const r=loadRec()[rkey(f)]; return `<div class="mut" style="
 function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot.slice(0,NP).some(Boolean)?`<div class="two">${slot.slice(0,NP).map((f,i)=>f?`<div>${card(f,PCLS[i])}${epLine(f)}</div>`:"").join("")}</div>`:`<div class="mut">Load the fighters to see their stats here.</div>`); }
 function setP(i,f,msg){
   if(G&&G.phase!=="over"&&!confirm("Leave the duel in progress?")) return; G=null;
-  placeStep=0; f.rname=f.name; { const r0=loadRec()[rkey(f)]; if(r0){ f.st=r0.st; f.dx=r0.dx; } } slot[i]=f; const taken=n=>slot.some((o,j)=>j!==i&&o&&o.name.trim().toLowerCase()===n.trim().toLowerCase()); if(taken(f.name)){ const base=f.name; let k=2; while(k<4&&taken(base+" "+ROM[k])) k++; f.name=base+" "+ROM[k]; }
+  placeStep=0; f.rname=f.name; if(!f.phone){ const r0=loadRec()[rkey(f)]; if(r0){ f.st=r0.st; f.dx=r0.dx; } } slot[i]=f; const taken=n=>slot.some((o,j)=>j!==i&&o&&o.name.trim().toLowerCase()===n.trim().toLowerCase()); if(taken(f.name)){ const base=f.name; let k=2; while(k<4&&taken(base+" "+ROM[k])) k++; f.name=base+" "+ROM[k]; }
   me=slot[0]; foe=slot[1]; $("msg"+i).textContent=msg||""; slot.forEach((_,j)=>showSlot(j)); $("setup").open=true; ui(); drawMap();
 }
 function loadBuilder(i){ let t=null; try{t=localStorage.getItem(KEY);}catch(e){}
@@ -216,12 +216,18 @@ const RKEY="melee-arena-v1";
 const loadRec=()=>{ try{ return JSON.parse(localStorage.getItem(RKEY)||"{}")||{}; }catch(e){ return {}; } };
 let REC=loadRec();
 const rkey=f=>(f.rname||f.name).trim().toLowerCase();
-function awardXp(f,x){   /* friendly duel: XP only, never a death or a win/loss mark */
-  const R=loadRec(), k=rkey(f); let r=R[k];
-  if(!r) r={name:f.rname||f.name,st:f.st,dx:f.dx,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false,src:f.src||null};
+function applyXp(r,x){
   r.ep=Math.max(0,r.ep+x);
   while(r.ep>=100&&r.pend===0&&r.pts<8&&!r.retired){ r.ep-=100; if(r.banked){ r.pend=2; r.must=true; r.banked=false; } else { r.pend=1; r.must=false; } }
   if(r.pts>=8||r.retired) r.ep=Math.min(r.ep,99);
+}
+function awardXp(f,x){   /* friendly duel: XP only, never a death or a win/loss mark */
+  if(f.phone){   /* a character that came from a phone keeps its record on that phone: update the copy it sent and send it back */
+    const r=Object.assign({name:f.phone.name,st:f.st,dx:f.dx,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false},f.phone.rec||{});
+    applyXp(r,x); f.phone.rec=r; if(window.Online) Online.result(f); return r; }
+  const R=loadRec(), k=rkey(f); let r=R[k];
+  if(!r) r={name:f.rname||f.name,st:f.st,dx:f.dx,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false,src:f.src||null};
+  applyXp(r,x);
   R[k]=r; try{ localStorage.setItem(RKEY,JSON.stringify(R)); }catch(e){} REC=R; return r;
 }
 for(const i of [0,1,2,3]){ const ks=Object.keys(REC).filter(k=>REC[k]&&REC[k].src&&!REC[k].dead);
