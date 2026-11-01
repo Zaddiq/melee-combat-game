@@ -26,8 +26,9 @@ with sync_playwright() as p:
     ok("T6 and every wolf faces its nearest player", pg.evaluate("()=>G.mobs.every(m=>{ const h=G.players.slice().sort((a,b)=>hdist(m,a)-hdist(m,b))[0]; return inFront(m,h); })"))
     ok("T7 the movement phase offers the facing circles", pg.evaluate("()=>{ let g=0; while(g++<20&&G.phase!=='move'){ if(G.phase==='choose') choose(true); else break; } return G.phase==='move'; }") and (pg.evaluate("()=>drawMap()") or True) and pg.locator("[data-face]").count() >= 6)
     pg.screenshot(path="/tmp/claude-0/move1.png")
-    f0 = pg.evaluate("()=>G.cur.f"); pg.locator("[data-face]").nth(2).click(force=True)
-    ok("T8 clicking a facing circle turns the figure", pg.evaluate("()=>G.cur.f") == 2 and f0 != 2 or pg.evaluate("()=>G.cur.f") == 2)
+    f0 = pg.evaluate("()=>G.cur.f"); want = (f0 + 2) % 6
+    pg.locator(f'[data-face="{want}"]').first.click(force=True)
+    ok("T8 clicking a facing circle turns the figure to that direction", pg.evaluate("()=>G.cur.f") == want and want != f0)
     ok("T9 no script errors", not errs)
     if errs: print(errs)
     br.close()

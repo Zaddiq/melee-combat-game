@@ -358,3 +358,7 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Phone: rings its own player's pitch and buzzes when a new pick arrives or Ring again is pressed; "Sound: on/off" button; keeps its screen awake after joining (a message says if the browser cannot). Rejoin: a phone that sleeps or reloads in the middle of its pick gets its choices back (the host's last message for it is still in the database); a reconnect rings again.
 - Not testable here: the actual sound, vibration and screen lock. The tests (`tests/online_bell_test.py`, 13) check the calls, with the wake lock faked and a wrapper counting rings that really started.
 - Version label 6. No rules change.
+
+## Colosseum: Start button and starting facing with computer creatures (Nov 1, branch mob-start-fix)
+- Bug: with a creature side chosen, all players are on one team, so the setup's "at least two teams" check hid the Start button (the tests started fights by code, so they missed it). Fixed: `tmOK=mobOn()||...`. The pre-fight preview also faced counters by team (default direction with a creature side); it now faces the creatures' end. The actual start already faced each figure at its nearest enemy. The setup text now says facing is changed during your own move (the small circles beside your counter).
+- Test: `tests/colosseum_start_test.py` (9) clicks through the real buttons for 2 players against 3 wolves.
