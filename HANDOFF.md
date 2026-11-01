@@ -61,3 +61,11 @@ Owner has only one phone, so test with several browser tabs or windows.
 ## Oct 31, later: online table step 1 (branch colosseum-online-rooms)
 - Owner chose Firebase (project colosseum-48705, Spark plan, Realtime Database in us-central1, Anonymous sign-in on). Rules file `database.rules.json` must be pasted into the console Rules tab by the owner (until then the live site cannot join). Design and files: see NOTES.md "Colosseum online table, step 1". Tests: `python3 tests/online_test.py` (14).
 - Next: step 2, secret picks from phones (host sends option labels, phone sends the index back). Owner wants remote players too, so Firebase rather than PeerJS. Full resume of a fight if the tablet closes is NOT planned (rejoin only).
+
+## Nov 1: online table, owner tested steps 1 and 2 live (worked) and gave suggestions. Plan, one feature at a time:
+1. Lobby polish: host chooses the table code (e.g. STEVE, 3 to 12 letters/digits, any case), remembered on the tablet and offered again next time; a "Lock the table" toggle (no new phones) plus Remove and "change the code" for interlopers; a "Join with phone" link on index.html and in colosseum.html. Rules need a way to take over a stale code (tablet storage cleared) e.g. host write allowed when pub.t is older than a day.
+2. Rosters and phone-built characters: each browser keeps a roster (same store as the arena's records); the phone picks its default character (from the builder or its roster) and sends it with the join; the host seats it automatically (sanitised through fromBuilder, size-limited). XP/stat changes after a duel go back to the phone's own roster (decision to confirm with owner).
+3. Bell per player on the tablet (distinct tone), Android buzz, wake lock, rejoin mid-fight.
+4. Phone map: move, facing, advance/retreat, far-hex spells.
+5. All phones pick at the same time.
+6. Computer-run seats: a seat set to Computer (a roster fighter or random opponent via makeOpponent) on a team, mixed with human seats, plus creatures. Note: computer creatures vs all humans already exists (Colosseum creature picker, 3 players vs a Dragon works on one device); new here is computer-run FIGHTERS and mixed sides.
