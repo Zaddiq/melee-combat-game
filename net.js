@@ -69,9 +69,27 @@ const Net={
   wanted(){ return /[?&]net=mem\b/.test(location.search)?"mem":"firebase"; },
   async start(){ if(this.b) return this.uid; const k=this.wanted(); const b=k==="mem"?memBackend():firebaseBackend(window.FIREBASE_CONFIG); await b.init(); this.b=b; this.uid=b.uid; this.kind=k; return this.uid; },
   code(){ let s=""; for(let i=0;i<5;i++) s+=ALPHA[Math.floor(Math.random()*ALPHA.length)]; return s; },
-  clean(c){ return String(c||"").toUpperCase().replace(/[^A-Z0-9]/g,"").replace(/[IO]/g,m=>m==="I"?"1":"0").slice(0,5); },   /* forgiving about typed codes */
+  clean(c){ return String(c||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12); },   /* a table name: 3 to 12 letters and digits, any case */
+  STALE:24*3600*1000,   /* a table nobody has touched for a day can be taken over by another tablet */
   /* host side */
-  async openRoom(){ for(let i=0;i<8;i++){ const c=this.code(); if(await this.b.create("rooms/"+c+"/host",this.uid)){ await this.b.set("rooms/"+c+"/pub",{open:true,t:Date.now()}); return c; } } throw new Error("Could not make a room code, try again."); },
+  /* open (or reopen) a table. name = "" gives a random code; a chosen name like STEVE is reused every time.
+     Reopening your own table keeps the phones in it; a name held by another tablet is refused unless that table has been idle for a day. */
+  async openRoom(name){
+    const want=this.clean(name);
+    if(!want){ for(let i=0;i<8;i++){ const c=this.code(); if(await this.b.create("rooms/"+c+"/host",this.uid)){ await this.b.set("rooms/"+c+"/pub",{open:true,t:Date.now()}); return c; } } throw new Error("Could not make a table code, try again."); }
+    if(want.length<3) throw new Error("A table name needs 3 to 12 letters or digits.");
+    if(await this.b.create("rooms/"+want+"/host",this.uid)){ await this.b.set("rooms/"+want+"/pub",{open:true,t:Date.now()}); return want; }
+    const h=await this.b.get("rooms/"+want+"/host");
+    if(h===this.uid) return want;
+    const pub=await this.b.get("rooms/"+want+"/pub");
+    if(!pub||!pub.t||Date.now()-pub.t>this.STALE){   /* an abandoned table: take it over and clear what was left in it */
+      await this.b.set("rooms/"+want+"/host",this.uid);
+      for(const k of ["join","priv","cmd"]) await this.b.remove("rooms/"+want+"/"+k);
+      await this.b.set("rooms/"+want+"/pub",{open:true,t:Date.now()});
+      return want;
+    }
+    throw new Error("The name "+want+" is in use by another tablet. Pick a different table name.");
+  },
   publish(c,pub){ return this.b.set("rooms/"+c+"/pub",pub); },
   watchJoins(c,cb){ return this.b.on("rooms/"+c+"/join",cb); },
   async closeRoom(c){ await this.b.remove("rooms/"+c+"/pub"); await this.b.remove("rooms/"+c+"/join"); await this.b.remove("rooms/"+c+"/priv"); await this.b.remove("rooms/"+c+"/cmd"); await this.b.remove("rooms/"+c+"/host"); },
@@ -80,6 +98,7 @@ const Net={
   async joinRoom(c,name){
     const host=await this.b.get("rooms/"+c+"/host"); if(!host) throw new Error("There is no table with the code "+c+".");
     const pub=await this.b.get("rooms/"+c+"/pub"); if(!pub||!pub.open) throw new Error("That table is closed.");
+    if(pub.locked&&!(await this.b.get("rooms/"+c+"/join/"+this.uid))) throw new Error("The table "+c+" is locked: no new phones can join. Ask the host to unlock it.");
     await this.b.set("rooms/"+c+"/join/"+this.uid,{name:String(name).slice(0,20),on:true,t:Date.now()});
     this.b.onDisc("rooms/"+c+"/join/"+this.uid+"/on",false);
     return host;

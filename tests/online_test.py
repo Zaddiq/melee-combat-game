@@ -28,7 +28,7 @@ with sync_playwright() as p:
     host.click("#online summary"); host.click("#onOpen")
     host.wait_for_selector("#onBody b")
     code = host.inner_text("#onBody b")
-    ok("O1 the tablet opens a table with a 5-character code", len(code) == 5 and code.isalnum())
+    ok("O1 an empty table name gives a random 5-character code", len(code) == 5 and code.isalnum())
 
     a = mk("phone.html?net=mem&room=" + code)
     a.fill("#nm", "Bo"); a.click("#go")
@@ -77,7 +77,7 @@ with sync_playwright() as p:
 
     # the tablet reloads and reopens the same table; phones stay joined
     host.reload()
-    host.click("#online summary"); host.click("#onRe")
+    host.click("#online summary"); host.click("#onOpen")
     host.wait_for_selector("#onBody b")
     ok("O11 after a tablet reload the same table can be reopened with the same code", host.inner_text("#onBody b") == code)
     host.wait_for_function("document.querySelectorAll('#onList b').length>=2")
@@ -87,6 +87,39 @@ with sync_playwright() as p:
     host.click("#onClose")
     a.wait_for_function("document.getElementById('seat').textContent.includes('closed')||document.getElementById('conn').textContent.includes('not found')")
     ok("O13 closing the table tells the phones", True)
+
+    # ---- table names (item 1)
+    host.reload(); host.click("#online summary")
+    ok("N1 the tablet offers the table name it used last time", host.input_value("#onName") == code)
+    host.fill("#onName", "steve"); host.click("#onOpen"); host.wait_for_selector("#onBody b")
+    ok("N2 a chosen name (any case) becomes the table name", host.inner_text("#onBody b") == "STEVE")
+    d = mk("phone.html?net=mem"); d.fill("#code", "Steve"); d.fill("#nm", "Ed"); d.click("#go")
+    d.wait_for_function("document.getElementById('seat').textContent.startsWith('You are')")
+    ok("N3 a phone joins STEVE by typing it in any case", "Player 1" in d.inner_text("#seat"))
+    # a second tablet cannot take a name that is in use
+    t2 = mk("colosseum.html?net=mem"); t2.click("#online summary"); t2.fill("#onName", "STEVE"); t2.click("#onOpen")
+    t2.wait_for_function("document.getElementById('onBody').textContent.includes('in use')")
+    ok("N4 another tablet is refused a name that is already in use", True)
+    t2.fill("#onName", "ab"); t2.click("#onOpen")
+    t2.wait_for_function("document.getElementById('onBody').textContent.includes('3 to 12')")
+    ok("N5 a name shorter than 3 characters is refused", True)
+    # lock
+    host.click("#onLock")
+    e = mk("phone.html?net=mem"); e.fill("#code", "STEVE"); e.fill("#nm", "Fay"); e.click("#go")
+    e.wait_for_function("document.getElementById('err').textContent.length>0")
+    ok("N6 a locked table refuses a new phone with a clear message", "locked" in e.inner_text("#err").lower())
+    d.reload(); d.wait_for_function("document.getElementById('seat').textContent.startsWith('You are')")
+    ok("N7 a phone that was already in can still rejoin a locked table", "Player 1" in d.inner_text("#seat"))
+    host.click("#onLock"); e.click("#go")
+    e.wait_for_function("document.getElementById('seat').textContent.startsWith('You are')")
+    ok("N8 after unlocking, the new phone can join", True)
+    # a table nobody has touched for a day can be taken over
+    host.evaluate("()=>Net.b.set('rooms/STEVE/pub/t', Date.now()-3*24*3600*1000)")
+    t2.fill("#onName", "STEVE"); t2.click("#onOpen"); t2.wait_for_selector("#onBody b")
+    ok("N9 an abandoned table (a day idle) can be taken over by another tablet, with its old phones cleared", t2.inner_text("#onBody b") == "STEVE" and t2.locator("#onList b").count() == 0)
+    # closing keeps the name for next time
+    t2.click("#onClose"); t2.wait_for_selector("#onName")
+    ok("N10 closing the table brings back the name box with the same name", t2.input_value("#onName") == "STEVE")
     ok("O14 no script errors on any page", not errs)
     if errs: print(errs)
     br.close()

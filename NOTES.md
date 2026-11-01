@@ -328,3 +328,11 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Phone shows: the question text, big option buttons, a Target row when there are 2+ enemies (same as clicking an enemy on the map), the spell list, renew toggles, and for disengage/retreat-type hex choices of a one-hex figure a list of directions (ahead and left, behind...). Choices that need far hexes (Teleport, creation spells with a hex) show "needs the map": the table can press "Play X's pick on the tablet instead" (also the fallback when a phone dies). "Ring again" re-sends with a counter; the phone shows a banner and buzzes if it can (real sound is step 3).
 - Not done: moving, facing, advance/retreat choices from a phone (still on the tablet; the truly remote player needs the phone map), picking in parallel (picks are still one player at a time), bell sound, wake lock, phone-built characters.
 - Tests: `tests/online_picks_test.py` (15, fake backend). Real Firebase path not tested by me except what the owner tries live.
+
+## Colosseum online table, item 1: table names (Nov 1, branch online-table-name)
+- The host types a table name (3 to 12 letters or digits, any case, e.g. STEVE) or leaves it empty for a random 5-character code. The tablet remembers the last name and offers it again; phones remember the table they joined. Closing the table (also how you "change the code") clears the phones and brings the name box back.
+- Lock the table: `pub.locked`; phones already in can rejoin, new ones are refused (client message and the rules). Remove still works for one phone.
+- A name held by another tablet is refused; a table whose `pub.t` is older than a day (the tablet republishes every 5 minutes while open) can be taken over, clearing its old phones. This is for a tablet whose browser data was cleared.
+- Rules fixed: the host could not clear `join`, `priv` or `cmd` as a whole, so "Close the table" would have failed on real Firebase (the test fake does not enforce rules). `database.rules.json` must be pasted again in the console after this change.
+- Links: "Join a table with your phone" card on index.html, "Join with a phone" link in colosseum.html's header line, "Menu" link on phone.html.
+- Tests: `tests/online_test.py` now 24 (N1 to N10 cover names, in-use, lock, takeover). Real Firebase and rules still untested by me.

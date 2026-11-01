@@ -9,7 +9,7 @@ h1{font-size:24px;margin:0 0 8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
 label{display:block;margin:10px 0 4px;color:var(--mut);font-size:15px}
 input{font:inherit;width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
-input#code{font-size:30px;letter-spacing:6px;text-transform:uppercase;text-align:center}
+input#code{font-size:26px;letter-spacing:4px;text-transform:uppercase;text-align:center}
 button{font:inherit;padding:12px 18px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;margin-top:12px}
 button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
 .mut{color:var(--mut);font-size:15px}.err{color:var(--bad);margin-top:10px}
@@ -20,8 +20,9 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
 .dot{display:inline-block;width:10px;height:10px;border-radius:5px;background:var(--mut);margin-right:6px}.dot.on{background:var(--ok)}
 </style></head><body><main>
 <h1>Colosseum</h1>
+<p style="margin:0 0 10px"><a href="index.html" style="color:var(--acc)">← Menu</a></p>
 <div class="card" id="joinCard">
-  <label for="code">Table code</label><input id="code" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false">
+  <label for="code">Table name</label><input id="code" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false">
   <label for="nm">Your name</label><input id="nm" maxlength="20" autocomplete="nickname">
   <button class="pri" id="go">Join the table</button>
   <div class="err" id="err"></div>
@@ -33,7 +34,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
   <div id="play" style="margin-top:12px"></div>
   <button id="leave">Leave the table</button>
 </div>
-<p class="mut">Table version 2 (secret picks). Keep this page open. When it is your turn to pick, your choices will show up here.</p>
+<p class="mut">Table version 3. Keep this page open. When it is your turn to pick, your choices will show up here.</p>
 </main>
 <script src="firebase-config.js"></script>
 <script src="net.js"></script>
@@ -89,7 +90,7 @@ async function enter(c,name){
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&room) Net.setOn(room,true).catch(()=>{}); });
 }
 function leave(){ const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); offPub=offMe=offPriv=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); }
-$("go").onclick=()=>{ const c=Net.clean($("code").value), n=$("nm").value.trim(); if(c.length<5){ $("err").textContent="Type the 5-letter code from the tablet."; return; } if(!n){ $("err").textContent="Type your name."; return; } enter(c,n); };
+$("go").onclick=()=>{ const c=Net.clean($("code").value), n=$("nm").value.trim(); if(c.length<3){ $("err").textContent="Type the table name shown on the tablet."; return; } if(!n){ $("err").textContent="Type your name."; return; } enter(c,n); };
 $("leave").onclick=leave;
 if(saved&&saved.room&&saved.room===$("code").value&&saved.name) enter(saved.room,saved.name);   /* coming back after the phone slept */
 </script></body></html>

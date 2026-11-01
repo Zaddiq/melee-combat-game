@@ -6,7 +6,7 @@
       "$code": {
         "host": {
           ".read": "auth != null",
-          ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && (newData.val() === auth.uid || !newData.exists())"
+          ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || (data.val() === auth.uid && (newData.val() === auth.uid || !newData.exists())) || (data.exists() && newData.val() === auth.uid && (!root.child('rooms').child($code).child('pub').exists() || root.child('rooms').child($code).child('pub').child('t').val() < now - 86400000)))"
         },
         "pub": {
           ".read": "auth != null",
@@ -14,21 +14,23 @@
         },
         "join": {
           ".read": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid",
+          ".write": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid",
           "$uid": {
             ".read": "auth != null && auth.uid === $uid",
-            ".write": "auth != null && root.child('rooms').child($code).child('host').exists() && (auth.uid === $uid || root.child('rooms').child($code).child('host').val() === auth.uid)",
+            ".write": "auth != null && root.child('rooms').child($code).child('host').exists() && auth.uid === $uid && (data.exists() || root.child('rooms').child($code).child('pub').child('locked').val() !== true)",
             ".validate": "!newData.exists() || (newData.child('name').isString() && newData.child('name').val().length <= 20)"
           }
         },
         "priv": {
           ".read": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid",
+          ".write": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid",
           "$uid": {
-            ".read": "auth != null && auth.uid === $uid",
-            ".write": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid"
+            ".read": "auth != null && auth.uid === $uid"
           }
         },
         "cmd": {
           ".read": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid",
+          ".write": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid",
           "$uid": {
             ".read": "auth != null && auth.uid === $uid",
             ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('host').exists()"
