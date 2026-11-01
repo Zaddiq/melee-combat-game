@@ -351,3 +351,10 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Tablet: opening a table closes this tablet's previous one (the name saved from last time), so old tables do not pile up; only its own host can (rules). 
 - Bug fixed: a phone that left a table still had a registered "mark me offline on disconnect" write that recreated a nameless entry; `leaveRoom` now cancels it and the tablet ignores entries without a name.
 - Version label now 5. Tests: `tests/online_switch_test.py` (9).
+
+## Colosseum online table, item 3: bell, buzz, wake lock, rejoin (Nov 1, branch online-bell)
+- `bell.js` (shared): `Bell.ring(i)` plays a two-strike bell (sine plus inharmonic overtones, Web Audio) at a pitch per player (C5, E5, G5, B5 for players 1 to 4); `Bell.buzz()` vibrates on Android (iPhones cannot vibrate from a web page); `Bell.awake(on)` holds the screen wake lock and takes it again when the page becomes visible. Browsers start sound only after a tap, so `Bell.unlock()` is called from Open the table, Join, Sound and Test buttons (and any pointerdown).
+- Tablet (online-host.js): rings the player's pitch once when that player's pick (or spell renewal) starts on a phone (key = turn|pick index|phone), not on redraws; "Ring again" rings it again and makes the phone show a banner and ring/buzz; card has Bell on/off, a Test bell per phone, and keeps the tablet screen awake while a table is open.
+- Phone: rings its own player's pitch and buzzes when a new pick arrives or Ring again is pressed; "Sound: on/off" button; keeps its screen awake after joining (a message says if the browser cannot). Rejoin: a phone that sleeps or reloads in the middle of its pick gets its choices back (the host's last message for it is still in the database); a reconnect rings again.
+- Not testable here: the actual sound, vibration and screen lock. The tests (`tests/online_bell_test.py`, 13) check the calls, with the wake lock faked and a wrapper counting rings that really started.
+- Version label 6. No rules change.

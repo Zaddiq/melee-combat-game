@@ -37,12 +37,14 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
   <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="mut"><span class="dot" id="dot"></span><span id="conn">Connecting…</span> · table <b id="tcode"></b></div><button id="leave" style="margin-top:0;padding:8px 12px">Switch table</button></div>
   <div class="big" id="seat" style="margin-top:6px"></div>
   <div class="mut" id="seatNote"></div>
+  <div class="row" style="display:flex;gap:8px;align-items:center;margin-top:6px"><button id="snd" style="margin-top:0;padding:8px 12px">Sound: on</button><span class="mut" id="awk"></span></div>
   <div id="play" style="margin-top:12px"></div>
 </div>
-<p class="mut">Table version 5. Keep this page open. When it is your turn to pick, your choices will show up here.</p>
+<p class="mut">Table version 6. Keep this page open. When it is your turn to pick, your choices will show up here.</p>
 </main>
 <script src="firebase-config.js"></script>
 <script src="net.js"></script>
+<script src="bell.js"></script>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
@@ -50,7 +52,7 @@ const KEY="colosseum-phone";
 const ST=Net.wanted()==="mem"?sessionStorage:localStorage;   /* the test fake shares localStorage between tabs, so each tab keeps its own memory */
 const rd=()=>{ try{ return JSON.parse(ST.getItem(KEY)||"null"); }catch(e){ return null; } };
 const wr=v=>{ try{ if(v) ST.setItem(KEY,JSON.stringify(v)); else ST.removeItem(KEY); }catch(e){} };
-let room=null, offPub=null, offMe=null, offPriv=null, offRes=null, removed=false, closed=false, lastRing=null, ringT=null, sentSeq=null;
+let myP=0, lastKey=null, room=null, offPub=null, offMe=null, offPriv=null, offRes=null, removed=false, closed=false, lastRing=null, ringT=null, sentSeq=null;
 const q=new URLSearchParams(location.search), saved=rd();
 $("code").value=Net.clean(q.get("room")||(saved&&saved.room)||"");
 $("nm").value=(saved&&saved.name)||"";
@@ -66,7 +68,8 @@ function seatText(pub){
 function showPlay(p){
   const el=$("play"); if(!p){ el.innerHTML=""; return; }
   const ringUp=lastRing!==null&&(p.ring||0)>lastRing; lastRing=p.ring||0;
-  if(p.mode==="wait"){ el.innerHTML=`<div class="mut">${esc(p.text||"")}</div>`; return; }
+  if(p.mode==="wait"){ lastKey=null; el.innerHTML=`<div class="mut">${esc(p.text||"")}</div>`; return; }
+  const fresh=p.key&&p.key!==lastKey; if(fresh) lastKey=p.key;
   const sent=sentSeq===p.seq;
   el.innerHTML=(ringUp?`<div class="ring">The table is waiting for you.</div>`:"")+`<div style="margin-top:6px">${esc(p.text||"")}</div>`
     +((p.tg||[]).length?`<div class="tgs mut">Target:<br>${p.tg.map((x,i)=>`<button class="tg${x.on?" on":""}" data-t="${i}"${sent?" disabled":""}>${esc(x.l)}</button>`).join("")}</div>`:"")
@@ -75,7 +78,7 @@ function showPlay(p){
   const send=(k,i)=>{ sentSeq=p.seq; Net.sendCmd(room,{seq:p.seq,k,i,t:Date.now()}).catch(e=>{ sentSeq=null; $("err").textContent=e.message; }); showPlay(p); };
   el.querySelectorAll("[data-b]").forEach(e=>e.onclick=()=>send("b",+e.dataset.b));
   el.querySelectorAll("[data-t]").forEach(e=>e.onclick=()=>send("t",+e.dataset.t));
-  if(ringUp&&navigator.vibrate) try{ navigator.vibrate([300,150,300]); }catch(e){}
+  if(fresh||ringUp){ Bell.ring(myP); Bell.buzz(); }
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -113,12 +116,14 @@ function applyResult(c,v){
 async function enter(c,name){
   $("err").textContent="";
   try{ await Net.start(); await Net.joinRoom(c,name,fjFor(chosen())); }catch(e){ $("err").textContent=e.message; showIn(false); if(/no table|closed/i.test(e.message)){ wr(null); $("code").value=""; } return; }
+  Bell.unlock(); keepAwake(true); showSnd();
   room=c; removed=false; closed=false; wr({room:c,name}); $("tcode").textContent=c; showIn(true); $("seat").textContent="Waiting for a seat…"; $("conn").textContent="Connecting…";
   offPub=Net.watchPub(c,(pub,e)=>{
     if(!pub||!pub.open){ closed=true; $("play").innerHTML=""; wr(null); }
     if(removed&&!closed) return;
     if(e){ $("conn").textContent="Connection problem"; $("dot").className="dot"; return; }
     $("conn").textContent=pub?"Connected":"Table not found"; $("dot").className="dot"+(pub?" on":"");
+    { const m=pub&&pub.seats&&pub.seats[Net.uid]; if(m&&m.p>=0) myP=m.p; }
     const [a,b]=seatText(pub); $("seat").textContent=a; $("seatNote").textContent=b;
   });
   lastRing=null; sentSeq=null;
@@ -127,10 +132,13 @@ async function enter(c,name){
   offMe=Net.watchMe(c,v=>{ if(v===null&&room&&!closed){ removed=true; $("play").innerHTML=""; $("dot").className="dot"; $("conn").textContent="Not at the table"; $("seat").textContent="You were removed from the table."; $("seatNote").textContent="Leave and join again if that was a mistake."; } else if(v&&v.on===false) Net.setOn(c,true).catch(()=>{}); });
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&room) Net.setOn(room,true).catch(()=>{}); });
 }
-function leave(){ const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); if(offRes) offRes(); offPub=offMe=offPriv=offRes=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); $("code").value=""; $("err").textContent=""; $("code").focus(); }
+function showSnd(){ $("snd").textContent="Sound: "+(Bell.on?"on":"off"); }
+$("snd").onclick=()=>{ Bell.setOn(!Bell.on); Bell.unlock(); if(Bell.on) Bell.ring(myP); showSnd(); };
+async function keepAwake(on){ const v=await Bell.awake(on); $("awk").textContent=on?(v?"Screen stays on.":"Turn off auto-lock so you do not miss your turn."):""; }
+function leave(){ keepAwake(false); const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); if(offRes) offRes(); offPub=offMe=offPriv=offRes=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); $("code").value=""; $("err").textContent=""; $("code").focus(); }
 $("code").onfocus=()=>{ try{ $("code").select(); }catch(e){} };
 $("go").onclick=()=>{ const c=Net.clean($("code").value); let n=$("nm").value.trim(); if(!n&&chosen()!=="none"){ try{ const f=JSON.parse(fjFor(chosen())); n=String(f.name).slice(0,20); }catch(e){} } if(c.length<3){ $("err").textContent="Type the table name shown on the tablet."; return; } if(!n){ $("err").textContent="Type your name (or choose a character)."; return; } enter(c,n); };
 $("leave").onclick=leave;
-fillChars();
+fillChars(); Bell.init(ST,"bell-on-phone"); showSnd();
 if(saved&&saved.room&&saved.room===$("code").value&&saved.name) enter(saved.room,saved.name);   /* coming back after the phone slept */
 </script></body></html>
