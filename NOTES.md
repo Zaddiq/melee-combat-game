@@ -414,3 +414,6 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 
 ## Builder: gear help under a menu (Nov 2, branch builder-gear-help-menu)
 - The two long paragraphs under the weapon boxes (hands, slings, sheaths) are now in a closed "How the hands, slings and sheaths work" menu, so the page is shorter on a phone. The gear section is redrawn when you change a choice, so an opened menu closes again.
+
+## Licence (Nov 2, branch licence)
+- Added LICENSE (all rights reserved, copyright holder "Zaddiq", Steve Jackson Games IP excluded), README.md, and a copyright line in the index footer. The repo is still public (owner chose to keep it public for now). If the owner goes private/other host later, see the options discussed Nov 2: private repo + Cloudflare Pages/Netlify, an obfuscated publish build, server-side rules only if it takes off. Owner should confirm the holder name and year in LICENSE.
