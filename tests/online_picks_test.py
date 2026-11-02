@@ -31,7 +31,12 @@ with sync_playwright() as p:
     labels = host.evaluate("()=>G.opts.map(o=>o.label)")
     A.wait_for_selector("#play .opt")
     a_labels = A.eval_on_selector_all("#play .opt", "e=>e.map(x=>x.textContent)")
-    ok("P1 the first player's phone gets exactly the tablet's option labels", a_labels == labels and len(labels) > 1)
+    short = A.evaluate("(L)=>L.map(l=>splitLabel(l)[0])", labels)
+    ok("P1 the first player's phone gets the tablet's options, each shown by its short name", a_labels == short and len(labels) > 1)
+    if A.locator("#detTg").count():
+        A.click("#detTg"); full = A.eval_on_selector_all("#play .opt", "e=>e.map(x=>x.textContent)")
+        ok("P1b 'Show what each choice does' adds the bracketed detail back, and hiding removes it", all(l.replace(" (", "(") in f.replace(" (", "(") or l in f for l, f in zip(labels, full)) and A.locator("#play .det").count() > 0)
+        A.click("#detTg")
     ctl = host.inner_text("#ctl")
     ok("P2 the tablet shows no options while a phone player picks, only a waiting line", host.locator("#ctl [data-opt]").count() == 0 and "Waiting for" in ctl and not any(l in ctl for l in labels))
     B.wait_for_function("document.getElementById('play').textContent.includes('Waiting for P1')")

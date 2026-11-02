@@ -17,7 +17,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
 .opt{display:block;width:100%;text-align:left;margin-top:10px;padding:14px 16px;font-size:18px}.opt.pri{background:var(--acc);color:#fff;border-color:var(--acc)}.opt[disabled]{opacity:.5}
 .tgs{margin-top:12px}.tg{display:inline-block;width:auto;margin:6px 6px 0 0;padding:8px 12px;font-size:16px}.tg.on{border:2px solid var(--acc);font-weight:700}
 .ring{background:#ffe9a8;color:#3a2a00;border-radius:10px;padding:10px 12px;margin-top:12px;font-weight:700}
-#pmap{display:block;width:100%;max-height:68vh;margin-top:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;touch-action:manipulation}.mrow{display:flex;gap:8px;flex-wrap:wrap}.mrow button{flex:1 1 auto;margin-top:8px;padding:12px 10px}
+#pmap{display:block;width:100%;max-height:68vh;margin-top:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;touch-action:manipulation}.det{display:block;font-size:13px;opacity:.85;margin-top:4px;font-weight:400}.mrow{display:flex;gap:8px;flex-wrap:wrap}.mrow button{flex:1 1 auto;margin-top:8px;padding:12px 10px}
 .dot{display:inline-block;width:10px;height:10px;border-radius:5px;background:var(--mut);margin-right:6px}.dot.on{background:var(--ok)}
 </style></head><body><main>
 <h1>Colosseum</h1>
@@ -39,7 +39,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
 <div class="card" id="inCard" style="display:none">
   <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="mut"><span class="dot" id="dot"></span><span id="conn">Connecting…</span> · table <b id="tcode"></b></div><button id="leave" style="margin-top:0;padding:8px 12px">Switch table</button></div>
   <div class="big" id="seat" style="margin-top:6px"></div>
-  <div class="mut" id="seatNote"></div>
+  <div class="mut" id="seatNote" style="display:none"></div>
   <div class="row" style="display:flex;gap:8px;align-items:center;margin-top:6px"><button id="snd" style="margin-top:0;padding:8px 12px">Sound: on</button><span class="mut" id="awk"></span></div>
   <div id="play" style="margin-top:12px"></div>
 </div>
@@ -70,6 +70,9 @@ function seatText(pub){
   return ["You are Player "+(me.p+1)+(me.fighter?" – "+me.fighter:""),"Your choices will appear here on your turn to pick."];
 }
 
+let showDet=(()=>{ try{ return ST.getItem("colosseum-phone-details")==="1"; }catch(e){ return false; } })();
+/* a long option ("Dodge (move up to half your MA; ...)") shows its short name; the bracket is the detail, shown only when asked for */
+function splitLabel(l){ l=String(l); const i=l.indexOf(" ("); if(i<1) return [l,""]; const d=l.slice(i+1); return d.length>18?[l.slice(0,i),d]:[l,""]; }
 let zoomAll=false, selHex="", selSeq=null, lastP=null;
 function showPlay(p){
   const el=$("play"); if(!p){ el.innerHTML=""; lastP=null; return; }
@@ -83,7 +86,8 @@ function showPlay(p){
   const mapFirst=!wait&&(sc&&(sc.hl||sc.fc));
   const mapHtml=sc?`<div class="mut" style="margin-top:8px;font-size:14px">${esc(sc.info||"")}</div><svg id="pmap" viewBox="0 0 10 10"></svg><div class="mrow"><button id="zoom" style="display:none"></button>${sc.fc&&!wait?`<button id="tl"${sent?" disabled":""}>↺ Turn left</button><button id="tr"${sent?" disabled":""}>↻ Turn right</button>`:""}</div>`:"";
   const confirmHtml=!wait&&selHex&&sc&&sc.hk&&sc.hk!=="go"?`<button class="opt pri" id="cfm"${sent?" disabled":""}>${sc.hk==="ret"?"Push them back to the hex I marked":"Go to the hex I marked"}</button>`:"";
-  const btnHtml=!wait?(p.btns||[]).map((b,i)=>`<button class="opt${b.p?" pri":""}" data-b="${i}"${sent?" disabled":""}>${esc(b.l)}</button>`).join(""):"";
+  const sp=(p.btns||[]).map(b=>splitLabel(b.l)), anyDet=sp.some(x=>x[1]);
+  const btnHtml=!wait?(p.btns||[]).map((b,i)=>`<button class="opt${b.p?" pri":""}" data-b="${i}"${sent?" disabled":""}>${esc(sp[i][0])}${showDet&&sp[i][1]?`<span class="det">${esc(sp[i][1])}</span>`:""}</button>`).join("")+(anyDet?`<button id="detTg" class="mut" style="margin-top:8px;padding:8px 12px;font-size:14px">${showDet?"Hide the details":"Show what each choice does"}</button>`:""):"";
   const tgHtml=!wait&&(p.tg||[]).length?`<div class="tgs mut">Target:<br>${p.tg.map((x,i)=>`<button class="tg${x.on?" on":""}" data-t="${i}"${sent?" disabled":""}>${esc(x.l)}</button>`).join("")}</div>`:"";
   el.innerHTML=(ringUp?`<div class="ring">The table is waiting for you.</div>`:"")+(mapFirst?(()=>{ const t=String(p.text||""), i=t.indexOf(". "); return i<0||i>90?`<div style="margin-top:6px">${esc(t)}</div>`:`<div style="margin-top:6px"><b>${esc(t.slice(0,i+1))}</b></div><details class="mut" style="margin-top:4px"><summary>Reminder</summary>${esc(t.slice(i+2))}</details>`; })():`<div style="margin-top:6px">${esc(p.text||"")}</div>`)
     +(mapFirst?mapHtml+confirmHtml+btnHtml+tgHtml:tgHtml+btnHtml+mapHtml)
@@ -91,6 +95,7 @@ function showPlay(p){
   const send=(k,i)=>{ if(wait||sentSeq===p.seq) return; sentSeq=p.seq; Net.sendCmd(room,{seq:p.seq,k,i,t:Date.now()}).catch(e=>{ sentSeq=null; $("err").textContent=e.message; }); showPlay(p); };
   el.querySelectorAll("[data-b]").forEach(e=>e.onclick=()=>{ const b=p.btns[+e.dataset.b]; if(b&&b.cf&&!confirm(b.cf)) return; send("b",+e.dataset.b); });
   el.querySelectorAll("[data-t]").forEach(e=>e.onclick=()=>send("t",+e.dataset.t));
+  const dt=$("detTg"); if(dt) dt.onclick=()=>{ showDet=!showDet; try{ ST.setItem("colosseum-phone-details",showDet?"1":"0"); }catch(e){} showPlay(p); };
   if(sc){
     const draw=()=>PhoneMap.render($("pmap"),sc,{all:zoomAll,sel:selHex,
       onHex:(k,kind)=>{ if(sent) return; if(kind==="go"){ send("h",k); return; } if(selHex===k){ send("h",k); return; } selHex=k; showPlay(p); },
@@ -165,12 +170,12 @@ async function enter(c,name){
     if(e){ $("conn").textContent="Connection problem"; $("dot").className="dot"; return; }
     $("conn").textContent=pub?"Connected":"Table not found"; $("dot").className="dot"+(pub?" on":"");
     { const m=pub&&pub.seats&&pub.seats[Net.uid]; if(m&&m.p>=0) myP=m.p; }
-    const [a,b]=seatText(pub); $("seat").textContent=a; $("seatNote").textContent=b;
+    const [a,b]=seatText(pub); $("seat").textContent=a; $("seatNote").textContent=b; $("seatNote").style.display=/^Your choices/.test(b)?"none":"";
   });
   lastRing=null; sentSeq=null;
   offRes=Net.watchRes(c,v=>applyResult(c,v));
   offPriv=Net.watchPriv(c,v=>{ if(!removed&&!closed) showPlay(v); });
-  offMe=Net.watchMe(c,v=>{ if(v===null&&room&&!closed){ removed=true; $("play").innerHTML=""; $("dot").className="dot"; $("conn").textContent="Not at the table"; $("seat").textContent="You were removed from the table."; $("seatNote").textContent="Leave and join again if that was a mistake."; } else if(v&&v.on===false) Net.setOn(c,true).catch(()=>{}); });
+  offMe=Net.watchMe(c,v=>{ if(v===null&&room&&!closed){ removed=true; $("play").innerHTML=""; $("dot").className="dot"; $("conn").textContent="Not at the table"; $("seat").textContent="You were removed from the table."; $("seatNote").textContent="Leave and join again if that was a mistake."; $("seatNote").style.display=""; } else if(v&&v.on===false) Net.setOn(c,true).catch(()=>{}); });
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&room) Net.setOn(room,true).catch(()=>{}); });
 }
 function showSnd(){ $("snd").textContent="Sound: "+(Bell.on?"on":"off"); }
