@@ -394,3 +394,9 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 ## Colosseum: wording for 1 to 4 players, bigger facing controls (Nov 1, branch colosseum-wording-facing)
 - Intro, map caption and menu card now say one to four players (and mention phones). On the tablet's map the facing circles are larger (visible r .27, tap r .5), and the move panel has Turn left / Turn right buttons like the phone's.
 
+## Megahex Sleep (Nov 2, branch megahex-sleep; Spell Reference Booklet)
+- IQ 16, 8 ST, a thrown spell. Two ways to cast it, both listed in the spell menu: "on the enemy" (any one creature of basic ST 50 or less, in front or adjacent, DX −1 per hex like other thrown spells; it then works exactly like Sleep) and "on a megahex": you pick a centre hex on the map (like Slippery Floor; DX needed is your casting number minus the hexes to the centre); every real figure with basic ST under 20 in that hex or next to it falls asleep, friends and your own creatures included, never the wizard; images and illusions are skipped; a Spell Shield protects its figure; sleepers wake when hit, as before. The centre is offered only if someone would be affected. Cast-costs 8 ST and a miss costs 1 as usual.
+- In wizard-arena.html (Unlimited Arena), duel.html and colosseum.html (same code in all three: `mslpHit`, `creaHexes(...,"mslp")`, `c.on==="mh"`). The pick of the centre travels with `G.destX.on`, so phones use the phone map for it.
+- Computer wizards do not cast it (not in their spell lists). Not done: Megahex Avert (needs a shared upkeep: one ST a turn for the whole group, today's Avert upkeep is per victim), the 3-/4-/7-Hex Fire, Shadow and Wall.
+- Tests: `tests/megahex_sleep_test.py` (9, arena), `tests/megahex_sleep_multi_test.py` (3, colosseum and duel).
+

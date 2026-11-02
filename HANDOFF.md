@@ -100,3 +100,5 @@ Owner has only one phone, so test with several browser tabs or windows.
 - Waiting on the owner: try it on a real phone (tap sizes, zoom, how it feels with the tablet map next to it); the bell now also rings for moves.
 - Next in the owner's order: 2. "Fight a friend online" (host device also plays a seat; skip cover screens when every other player is remote), then the items listed in the Nov 1 late pick-up section.
 
+## Nov 2: Megahex Sleep built (branch megahex-sleep, merged). Spell Reference Booklet PDF was attached this session (booklet text: pdftotext works). Remaining spells: Megahex Avert (IQ 15, 3 ST + 1 a turn for the whole megahex; needs one shared upkeep), 3-/4-/7-Hex Fire, Shadow, Wall (3-Hex IQ 12 cost 2 each; 7-Hex Fire 4, 7-Hex Wall 6; 4-hex versions: check the booklet). Owner's earlier note: owner had been holding the multi-hex work until flying over figures was settled; it is.
+
