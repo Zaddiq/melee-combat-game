@@ -417,3 +417,11 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 
 ## Licence (Nov 2, branch licence)
 - Added LICENSE (all rights reserved, copyright holder "Zaddiq", Steve Jackson Games IP excluded), README.md, and a copyright line in the index footer. The repo is still public (owner chose to keep it public for now). If the owner goes private/other host later, see the options discussed Nov 2: private repo + Cloudflare Pages/Netlify, an obfuscated publish build, server-side rules only if it takes off. Owner should confirm the holder name and year in LICENSE.
+
+## Colosseum online table: everyone picks at the same time (Nov 2, branch simultaneous-picks)
+- At the start of a turn's secret picks (`beginActions`), every player with a seated phone gets their own pick session (online-host.js `sess`, `sessView`): action, spell, far-hex map step (tap, then confirm) with Back, the target buttons, and a "Your pick is in ... Change my pick" step. All phones answer at once. The tablet's own players (no phone) go first, one after another with the cover screen, as before (`Online.begin` reorders `G.pq`: tablet players first).
+- Nothing is handed to the game until every phone session is done (so a phone can still change its pick): then `Online.ready(u)` (called at the top of `startPick`) returns each stored act and the game takes them in order and resolves the turn. The engine's own pick code is unchanged except `beginActions`, `startPick` and the new `pickNote(u,o,opts)` (the "why can't I attack" sentence, shared with the sessions).
+- Tablet panel while phones are picking: "Everyone with a phone is picking at the same time. Waiting for: A, B" plus Ring again (only players still to pick) and a "Play X on the tablet instead" button per waiting phone (drops that phone's session; X then picks on the tablet when the game reaches them). Bell: every phone player's own pitch rings on the tablet at the start, 0.7 s apart; each phone rings its own.
+- Not simultaneous: the move (still in initiative order, public) and the spell-renewal step. The old tablet-driven phone pick code in the hook (pick/spells/dest branches) still exists for the case where a session is not active.
+- Tests: online_picks_test (20, rewritten), online_bell_test (13, rewritten), online_map_test (M14 to M16 now use a session). Real Firebase not tested by me.
+

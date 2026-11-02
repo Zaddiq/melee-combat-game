@@ -32,32 +32,30 @@ with sync_playwright() as p:
     A = phone("Bo"); B = phone("Cy")
     ok("B2 each phone asks to keep its screen awake once it joins", A.evaluate("()=>window.__wl")>=1 and B.evaluate("()=>window.__wl")>=1)
 
-    host.evaluate(BEGIN, 2); host.evaluate(TOPICK); host.wait_for_function("G.phase==='pick'")
-    A.wait_for_selector("#play .opt")
-    host.evaluate("()=>{ ui(); ui(); ui(); }")
-    # since the phone map, each phone-run step rings too (choosing who moves first, each move); what matters here is the pick
+    NONE = lambda pg: max(pg.evaluate("()=>lastP.btns.findIndex(b=>/nothing/i.test(b.l))"), 0)
+    host.evaluate(BEGIN, 2); host.evaluate(TOPICK); host.wait_for_function("G.phase==='cover'&&Object.keys(__online.state().sess).length===2")
+    A.wait_for_selector("#play .opt"); B.wait_for_selector("#play .opt")
+    host.wait_for_timeout(1200); host.evaluate("()=>{ ui(); ui(); ui(); }")
     RH=lambda: host.evaluate("()=>window.__rings"); RA=lambda: A.evaluate("()=>window.__rings"); RB=lambda: B.evaluate("()=>window.__rings")
     h0=len(RH())
-    ok("B3 the tablet rings player 1's bell when player 1's pick starts, and redraws add nothing", RH()[-1:]==[0] and h0>=1 and len(RH())==h0)
-    ok("B4 player 1's phone rings its own pitch; player 2's phone only ever rings player 2's pitch", RA()[-1:]==[0] and set(RA())<={0,1} and all(x==1 for x in RB()))
-
-    A.click('#play .opt[data-b="0"]'); host.wait_for_function("G.pi===1"); B.wait_for_selector("#play .opt")
-    b0=len(RB())
-    ok("B5 when player 2's pick starts, the tablet and player 2's phone ring player 2's pitch", RH()[-1:]==[1] and len(RH())==h0+1 and RB()[-1:]==[1] and b0>=1)
-
-    host.click("#bRing"); B.wait_for_function(f"window.__rings.length>={b0+1}")
-    ok("B6 'Ring again' rings the tablet and the waiting phone again", RH()[-2:]==[1,1] and len(RH())==h0+2 and RB()[-2:]==[1,1])
+    ok("B3 when the picks begin the tablet rings every phone player's own pitch (player 1, then player 2, one after the other), and redraws add nothing", RH()[-2:]==[0,1] and len(RH())==h0)
+    ok("B4 each phone rings its own pitch (player 1's phone C5-ish 0, player 2's phone 1) and never the other's", RA()[-1:]==[0] and set(RA())<={0,1} and RB()[-1:]==[1] and set(RB())<={0,1})
+    b0=len(RB()); host.click("#bRing"); B.wait_for_function(f"window.__rings.length>={b0+1}")
+    ok("B6 'Ring again' rings the tablet for everyone still picking and the waiting phones again", RH()[-2:]==[0,1] and len(RH())==h0+2 and RB()[-1:]==[1])
+    A.click(f'#play .opt[data-b="{NONE(A)}"]'); A.wait_for_function("document.getElementById('play').textContent.includes('Your pick is in')")
+    host.click("#bRing"); host.wait_for_timeout(300)
+    ok("B5 once a phone has picked, 'Ring again' rings only the players who have not", RH()[-1:]==[1] and len(RH())==h0+3)
 
     # a phone that went to sleep and comes back in the middle of its pick
     B.reload()
     B.wait_for_selector("#play .opt")
     ok("B7 a phone that reloads in the middle of its pick gets its choices back", B.locator("#play .opt").count()>1 and "Player 2" in B.inner_text("#seat"))
-    B.click('#play .opt[data-b="0"]'); host.wait_for_function("G.turn===2")
-    ok("B8 and its pick still counts: the turn resolves", host.evaluate("()=>G.turn")==2)
+    B.click(f'#play .opt[data-b="{NONE(B)}"]'); host.wait_for_function("G.turn===2")
+    ok("B8 and its pick still counts: both picks go in and the turn resolves", host.evaluate("()=>G.turn")==2)
 
     # sound off on the tablet: no more rings there
     n0 = host.evaluate("()=>window.__rings.length")
-    host.click("#onBell"); host.evaluate(TOPICK); host.wait_for_function("G.phase==='pick'"); host.wait_for_timeout(400)
+    host.click("#onBell"); host.evaluate(TOPICK); host.wait_for_function("G.phase==='cover'&&Object.keys(__online.state().sess).length===2"); host.wait_for_timeout(1000)
     n = host.evaluate("()=>window.__rings.length")
     ok("B9 with the tablet bell off, nothing rings on the tablet", host.evaluate("()=>!Bell.on") and n==n0)
     host.click("#onBell")

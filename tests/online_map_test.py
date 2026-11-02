@@ -81,19 +81,20 @@ with sync_playwright() as p:
     host.evaluate("()=>{ Online.override=null; ui(); }")
     WT.wait_for_function("lastP&&lastP.mode==='map'")
     WT.click("#play .opt.pri")   # End movement -> pick phase
-    host.wait_for_function("G.phase==='pick'")
-    # ---- far hex choices (Teleport style) with select-then-confirm ----
-    who = host.evaluate("()=>G.players.indexOf(G.cur)"); PK = A if who == 0 else B
-    host.evaluate("()=>{ const U=G.cur,V=G.oth; G.destT='cast'; G.destX={sp:'Teleport'}; G.phase='dest'; G.dopts=new Map(P.filter(h=>!same(h,U)&&!same(h,V)).slice(0,40).map(h=>[key(h.q,h.r),h])); ui(); drawMap(); }")
-    PK.wait_for_function("lastP&&lastP.mode==='map'&&lastP.sc.hk==='dest'")
-    ok("M14 a far-hex choice shows the hexes on the phone instead of 'needs the map'", len(sc(PK)["hl"]) == 40 and "needs the map" not in PK.inner_text("#play"))
-    h = sc(PK)["hl"][5]; kk = f"{h[0]},{h[1]}"
-    PK.locator(f'#pmap [data-h="{kk}"]').dispatch_event("click")
-    PK.wait_for_selector("#cfm")
-    ok("M15 the first tap only marks the hex and asks to confirm", host.evaluate("()=>G.phase") == "dest")
-    PK.click("#cfm")
-    host.wait_for_function("()=>G.phase!=='dest'")
-    ok("M16 confirming sends the pick (the pick queue moves on)", host.evaluate("()=>G.picks.some(p=>p&&p.t==='cast'&&p.sp==='Teleport'&&p.dest&&p.dest.q===%d&&p.dest.r===%d)" % (h[0], h[1])))
+    host.wait_for_function("G.phase==='cover'&&Object.keys(__online.state().sess).length===2")
+    # ---- a far-hex choice inside a phone's own pick session (select first, then confirm) ----
+    host.evaluate("()=>{ const a=G.players[0], b=G.players[1], n=nbr(a,0)||nbr(a,1)||nbr(a,2); b.q=n.q; b.r=n.r; a.f=faceToward(a,b); b.f=faceToward(b,a); Online.redo(); }")
+    A.wait_for_function("lastP&&lastP.btns&&lastP.btns.some(b=>/disengage|retreat|away/i.test(b.l))")
+    A.click('#play .opt[data-b="%d"]' % A.evaluate("()=>lastP.btns.findIndex(b=>/disengage|retreat|away/i.test(b.l))"))
+    A.wait_for_function("lastP&&lastP.mode==='map'&&lastP.sc.hk==='dest'")
+    ok("M14 a hex choice in a pick shows the hexes on the phone map, not 'needs the map'", len(sc(A)["hl"]) >= 1 and "needs the map" not in A.inner_text("#play"))
+    h = sc(A)["hl"][0]; kk = f"{h[0]},{h[1]}"
+    A.locator(f'#pmap [data-h="{kk}"]').dispatch_event("click")
+    A.wait_for_selector("#cfm")
+    ok("M15 the first tap only marks the hex and asks to confirm", host.evaluate("()=>Object.values(__online.state().sess).every(s=>s.step!=='done'||!s.act)"))
+    A.click("#cfm")
+    A.wait_for_function("document.getElementById('play').textContent.includes('Your pick is in')")
+    ok("M16 confirming stores the pick for the game (handed over when every phone is in)", host.evaluate("()=>Object.values(__online.state().sess).some(s=>s.act&&s.act.t==='disengage'&&s.act.dest&&s.act.dest.q===%d&&s.act.dest.r===%d)" % (h[0], h[1])))
     # ---- retreat and advance ----
     host.evaluate("()=>{ G.phase='retreat'; G.rdec=G.players[0]; G.rd=G.players[1]; G.cur=G.players[0]; const o=freeNeighbors(G.players[1]); G.ropts=new Map(o.map(h=>[key(h.q,h.r),h])); G.rfrom={q:G.rd.q,r:G.rd.r}; ui(); drawMap(); }")
     A.wait_for_function("lastP&&lastP.sc&&lastP.sc.hk==='ret'")

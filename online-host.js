@@ -98,20 +98,92 @@ function scene(who,hl,hk,fc){
   return sc;
 }
 let seq={}, lastJ={}, done={}, pending={};
+/* ---- everyone picks at once (item 5) ----
+   When the picks of a turn begin, every player who has a phone gets their own pick session (the same steps as the tablet panel:
+   action, spell, far hex, with Back) and answers at the same time as the others. The tablet's own players (no phone) go first, one after
+   another with the cover screen, as before. When every phone has answered, the stored picks are handed to the game one by one (Online.ready).
+   A phone can change its pick until the last one is in. "Play X on the tablet instead" drops that phone's session. */
+let sess={}, tabletTake=new Set();
+const activeSess=u=>{ const x=sess[u]; return x&&!x.dead&&G&&x.turn===G.turn?x:null; };
+const allIn=()=>Object.keys(sess).every(k=>{ const x=activeSess(k); return !x||x.step==="done"; });
+const waitingNames=()=>Object.keys(sess).map(k=>activeSess(k)).filter(x=>x&&x.step!=="done").map(x=>x.u.p.name);
+function sessOpts(S){ const o=other(S.u); S.oth=o; S.opts=options(S.u,o); S.note=pickNote(S.u,o,S.opts); }
+function sessView(uid){
+  const S=sess[uid], u=S.u, acts=[], btns=[], tacts=[], tg=[], hacts={}; let mode="pick", text="", hl=null, hk="";
+  const add=(l,p,f)=>{ acts.push(f); btns.push({l,p}); };
+  if(S.step==="pick"){
+    text=`${u.p.name}: choose your action. ${S.note||""}`;
+    S.opts.forEach((x,i)=>add(x.label,i===0&&x.t!=="none",()=>sessChoose(uid,i)));
+    if(!S.opts.length) add("Continue",true,()=>sessFinish(uid,{t:"none"}));
+    const E=enemiesOf(u); if(E.length>1) for(const e of E){ tg.push({l:e.p.name,on:e===S.oth}); tacts.push(()=>{ u.tgtSel=e; sessOpts(S); sessPush(uid); }); }
+  } else if(S.step==="spells"){
+    text=`${u.p.name}: choose a spell. A thrown spell that misses costs 1 ST, a missile spell costs everything you put into it, and a roll of 17 or 18 costs the full price.`;
+    S.sopts.forEach((x,i)=>add(x.label,false,()=>sessSpell(uid,i)));
+    add("Back",false,()=>{ S.step="pick"; sessPush(uid); });
+  } else if(S.step==="dest"){
+    mode="map"; text=`${u.p.name}: tap the highlighted hex you want to move or teleport into, then confirm.`; hl=[...S.dopts.values()]; hk="dest";
+    for(const h of hl) hacts[key(h.q,h.r)]=()=>sessFinish(uid,Object.assign({t:S.destT||"disengage",dest:S.dopts.get(key(h.q,h.r))},S.destX||{}));
+    add("Back",false,()=>{ S.step="pick"; S.destX=null; sessPush(uid); });
+  } else {
+    const w=waitingNames(); text=w.length?`Your pick is in. Waiting for ${w.join(", ")}. You can still change it.`:"Everyone has picked.";
+    add("Change my pick",false,()=>{ S.step="pick"; S.act=null; sessOpts(S); sessPush(uid); });
+  }
+  return {mode,text,btns,tg,hl,hk,acts,tacts,hacts};
+}
+function sessPush(uid){
+  const S=activeSess(uid); if(!S) return; const v=sessView(uid);
+  const sq=sendTo(uid,{mode:v.mode,text:v.text,btns:v.btns,tg:v.tg,turn:G.turn,ph:"pick",pi:0,key:"s"+G.turn+"|"+uid,ring:Online.ring,who:S.u.p.name,sc:scene({u:S.u},v.hl,v.hk,false)});
+  pending[uid]={seq:sq,acts:v.acts,tacts:v.tacts,hacts:v.hacts,facts:{}};
+}
+const sessPushAll=()=>Object.keys(sess).forEach(sessPush);
+function sessChoose(uid,i){
+  const S=sess[uid], u=S.u, x=S.opts[i]||{t:"none"};
+  if(x.t==="cast"){ S.sopts=castList(u,S.oth); S.step="spells"; }
+  else if(x.t==="disengage"||x.t==="hesc"){ const hs=freeNeighbors(u); if(!hs.length) S.note="There is no free hex to move into. "; else { S.destT=x.t; S.destX=null; S.dopts=new Map(hs.map(h=>[key(h.q,h.r),h])); S.step="dest"; } }
+  else return sessFinish(uid,x);
+  sessPush(uid);
+}
+function sessSpell(uid,i){
+  const S=sess[uid], u=S.u, o=S.oth, x=S.sopts[i]; if(!x) return;
+  if(x.hexsel){ S.destT="cast"; S.destX={sp:x.sp,form:x.form,on:x.on}; S.dopts=new Map(creaHexes(u,o,x.hexsel,x.sp,x.form).map(h=>[key(h.q,h.r),h])); S.step="dest"; sessPush(uid); return; }
+  if(x.tele){ S.destT="cast"; S.destX={sp:"Teleport"}; S.dopts=new Map(P.filter(h=>!same(h,u)&&!same(h,o)&&Math.max(1,mhDist(u,h))<=u.hp).map(h=>[key(h.q,h.r),h])); S.step="dest"; sessPush(uid); return; }
+  sessFinish(uid,{t:"cast",sp:x.sp,n:x.n,on:x.on,objId:x.objId,form:x.form});
+}
+function sessFinish(uid,act){ const S=sess[uid]; if(!S) return; S.act=act; S.step="done"; sessPushAll(); sessCheck(); if(G&&G.pq&&G.phase==="cover"&&activeSess(uid)) ui(); }   /* the tablet's waiting line names who is still to pick */
+/* when the last phone is in and the game is waiting at one of them, let the game take the stored picks */
+function sessCheck(){ if(!G||!G.pq||!["cover","pick"].includes(G.phase)) return; const cur=G.pq[G.pi]; if(cur&&Online.ready(cur)) startPick(); }
+function sessKill(uid){ const x=sess[uid]; if(x){ x.dead=true; delete lastJ[uid]; delete pending[uid]; } }
+
 const uidOfPlayer=p=>Object.keys(seat).find(u=>seat[u]===p&&joins[u]);
 function sendTo(u,payload){ const j=JSON.stringify(payload); if(lastJ[u]===j) return seq[u]; lastJ[u]=j; seq[u]=(seq[u]||Date.now())+1; Net.sendPriv(code,u,Object.assign({seq:seq[u]},payload)).catch(fail); return seq[u]; }
 function waitText(){ if(!G) return "Waiting for the fight to start."; if(G.phase==="over") return (G.winner?(G.winners&&G.winners.length>1?G.winners:[G.winner]).map(u=>u.p.name).join(" and ")+" won the fight.":"The fight is over.")+" Watch the tablet."; if(SECRET.includes(G.phase)&&G.cur) return "Waiting for "+G.cur.p.name+" to pick."; if(G.phase==="move"&&G.cur) return G.cur.p.name+" is moving. Watch the tablet."; return "The table is playing. Watch the tablet."; }
-function sendWaits(except){ for(const u of Object.keys(Online.lastKey)) if(u!==except&&!(G&&PHONE.includes(G.phase))) delete Online.lastKey[u]; for(const u of Object.keys(seat)) if(u!==except&&joins[u]){ delete pending[u]; sendTo(u,{mode:"wait",text:waitText(),turn:G?G.turn:0,ring:Online.ring,sc:scene(null)}); } }
+function sendWaits(except){ for(const u of Object.keys(Online.lastKey)) if(u!==except&&!(G&&PHONE.includes(G.phase))) delete Online.lastKey[u]; for(const u of Object.keys(seat)) if(u!==except&&joins[u]&&!activeSess(u)){ delete pending[u]; sendTo(u,{mode:"wait",text:waitText(),turn:G?G.turn:0,ring:Online.ring,sc:scene(null)}); } }
 function onCmds(v){ v=v||{}; for(const u of Object.keys(v)){ const m=v[u], pd=pending[u]; if(!m||!pd||m.seq!==pd.seq||done[u]===m.seq) continue; done[u]=m.seq; const f=({b:pd.acts,t:pd.tacts,h:pd.hacts,f:pd.facts}[m.k]||{})[m.i]; lastJ[u]=null; if(typeof f==="function") f(); } }
 const Online=window.Online={ override:null, ring:0, lastKey:{},
+  begin(pq){ sess={}; tabletTake=new Set(); if(!code||!G||!G.players) return null;
+    const ph=pq.filter(u=>u.hp>0&&uidOfPlayer(G.players.indexOf(u))); if(!ph.length) return null;
+    for(const u of ph){ const uid=uidOfPlayer(G.players.indexOf(u)); u.tgtSel=u.tgtSel&&u.tgtSel.hp>0?u.tgtSel:null; sess[uid]={u,turn:G.turn,step:"pick",dead:false}; sessOpts(sess[uid]); }
+    const t0=G.turn; setTimeout(()=>{ if(G&&G.turn===t0&&sess) sessPushAll(); },0);
+    ph.forEach((u,k)=>setTimeout(()=>{ if(G&&G.turn===t0) Bell.ring(G.players.indexOf(u)); },k*700));   /* every phone's own pitch, one after the other so each can be heard */
+    return pq.filter(u=>!ph.includes(u)).concat(ph); },
+  redo(){ for(const k of Object.keys(sess)){ const x=activeSess(k); if(x&&x.step==='pick') sessOpts(x); } sessPushAll(); },   /* recompute every open pick session (used by tests after moving figures by hand) */
+  ready(u){ if(!code||!G||!u) return null; const i=G.players.indexOf(u), uid=i>=0&&uidOfPlayer(i), S=uid&&activeSess(uid); if(!S||S.step!=="done"||!allIn()) return null; return S.act; },
   result(f){ if(!code||!f.phone) return; Net.sendRes(code,f.phone.uid,{id:Date.now(),key:f.phone.key,rec:Object.assign({},f.phone.rec,{src:f.phone.src})}).catch(fail); },
   hook(c,t){
     if(!code) return;
+    if((!G||!G.pq||!G.players||!["cover","pick","spells","dest"].includes(G.phase))&&Object.keys(sess).length){ sess={}; tabletTake=new Set(); }   /* the turn's picks are over */
     const cur=actor();
     if(Online.override&&(!G||Online.override!==cur||!PHONE.includes(G.phase))) Online.override=null;
     const who=G&&PHONE.includes(G.phase)&&cur&&G.players.includes(cur)?uidOfPlayer(G.players.indexOf(cur)):null;
-    if(!who||Online.override===cur){ sendWaits(null); return; }
+    if(!who||Online.override===cur||tabletTake.has(cur)){ sendWaits(null); return; }
     const secret=SECRET.includes(G.phase);
+    if(secret&&activeSess(who)){   /* this phone is picking in its own session, at the same time as the others: the tablet only waits */
+      const w=Object.keys(sess).map(k=>({k,s:activeSess(k)})).filter(x=>x.s&&x.s.step!=="done"), ch=c.children;
+      if(ch[1]) ch[1].innerHTML=w.length?`Everyone with a phone is picking at the same time. Waiting for: ${w.map(x=>`<b class="${pcCls(x.s.u)}">${esc(x.s.u.p.name)}</b>${joins[x.k]&&joins[x.k].on?"":" (not connected)"}`).join(", ")}.`:"All the phones have picked.";
+      if(ch[3]) ch[3].innerHTML=`<button id="bRing">Ring again</button> `+w.map(x=>`<button data-take="${esc(x.k)}">Play ${esc(x.s.u.p.name)} on the tablet instead</button>`).join(" ");
+      const rg=$("bRing"); if(rg) rg.onclick=()=>{ Online.ring++; Object.keys(sess).map(activeSess).filter(x=>x&&x.step!=="done").forEach(x=>Bell.ring(G.players.indexOf(x.u))); sessPushAll(); };
+      c.querySelectorAll("[data-take]").forEach(b=>b.onclick=()=>{ const k=b.dataset.take, x=sess[k]; if(!x) return; sessKill(k); tabletTake.add(x.u); sessCheck(); ui(); drawMap(); });
+      sendWaits(null); return; }
     if(G.phase==="cover"||G.phase==="rcover"){ const b=c.querySelector("#bShow,#bRc"); if(b){ b.click(); return; } }   /* a phone needs no "pass the tablet" screen */
     const pidx=G.players.indexOf(cur), rkey=secret?(G.phase==="renew"?"r":"p")+G.turn+"|"+(G.pi||0)+"|"+who:G.phase+G.turn+"|"+(G.idx||0)+"|"+(G.pi||0)+"|"+who;
     const acts=[], btns=[], tacts=[], tg=[], hacts={}, facts={}; let mode="pick", hl=null, hk="", fc=false;
@@ -155,5 +227,5 @@ const Online=window.Online={ override:null, ring:0, lastKey:{},
   }
 };
 render();
-window.__online={state:()=>({code,joins,seat,pending,locked})};
+window.__online={state:()=>({code,joins,seat,pending,locked,sess})};
 })();

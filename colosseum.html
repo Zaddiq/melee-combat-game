@@ -959,13 +959,19 @@ function aiAct(u,o){
   if(has("dual")&&adjDXu(u,"mg",o)>=10) return has("dual");
   return has("attack")||{t:"none"};
 }
-function beginActions(){ G.picks=[]; G.pq=G.players.filter(u=>u.hp>0&&!u.esc); G.pi=0; startPick(); }   /* each player still in picks in secret, one after the other */
-function startPick(){ G.cur=G.pq[G.pi]; G.cur.tgtSel=G.cur.tgtSel&&G.cur.tgtSel.hp>0?G.cur.tgtSel:null; G.oth=other(G.cur); G.phase="cover"; if(G.players.length===1){ showPick(); return; } ui(); drawMap(); }   /* a lone player has nobody to hide from */
+function beginActions(){ G.picks=[]; G.pq=G.players.filter(u=>u.hp>0&&!u.esc); if(window.Online&&Online.begin) G.pq=Online.begin(G.pq)||G.pq; G.pi=0; startPick(); }   /* Online.begin: players on phones pick all at once, the tablet's players first */   /* each player still in picks in secret, one after the other */
+function startPick(){ { const rd=window.Online&&Online.ready&&Online.ready(G.pq[G.pi]); if(rd){ G.cur=G.pq[G.pi]; takePick(rd); return; } }   /* a phone player whose pick is already in */
+  G.cur=G.pq[G.pi]; G.cur.tgtSel=G.cur.tgtSel&&G.cur.tgtSel.hp>0?G.cur.tgtSel:null; G.oth=other(G.cur); G.phase="cover"; if(G.players.length===1){ showPick(); return; } ui(); drawMap(); }   /* a lone player has nobody to hide from */
+/* the sentence under "choose your action" that explains what is missing from the list (shared with the phones' own pick sessions) */
+function pickNote(u,o,opts){
+  let n=(MWid(u)&&u.cool>0?`Your ${iname(MWid(u)).toLowerCase()} is still reloading (${u.cool} more turn${u.cool>1?"s":""}). `:"")+(!opts.some(x=>x.t==="attack")&&relOf(u,o)==="front"&&!u.engStart&&u.moved>MAu(u)/2?"You moved more than half your MA, so you cannot attack this turn. ":"")+(!opts.some(x=>x.t==="attack")&&relOf(u,o)!=="front"&&!u.hth&&!u.low&&!u.down&&(isW(u.right)||isW(u.left))?o.p.name+" is not in front of you, so you cannot attack it (click another enemy on the map, or move to face one). ":"")+(u.p.cls==="wizard"&&!opts.some(x=>x.t==="cast")&&!u.hth&&!u.sleep&&!u.down&&!(u.moved<=1||u.engStart)?"You moved more than 1 hex, so you cannot cast this turn unless you start engaged. ":"");
+  if(enemiesOf(u).length>1) n=`Target: ${o.p.name} (click another enemy on the map to change it). `+n;
+  if(u.rvl) n="Reveal Magic showed you: "+u.rvl+" "+n;
+  return n;
+}
 function showPick(){
   const u=G.cur,o=other(u); G.oth=o; G.opts=options(u,o); G.phase="pick";
-  G.note=(MWid(u)&&u.cool>0?`Your ${iname(MWid(u)).toLowerCase()} is still reloading (${u.cool} more turn${u.cool>1?"s":""}). `:"")+(!G.opts.some(x=>x.t==="attack")&&relOf(u,o)==="front"&&!u.engStart&&u.moved>MAu(u)/2?"You moved more than half your MA, so you cannot attack this turn. ":"")+(!G.opts.some(x=>x.t==="attack")&&relOf(u,o)!=="front"&&!u.hth&&!u.low&&!u.down&&(isW(u.right)||isW(u.left))?o.p.name+" is not in front of you, so you cannot attack it (click another enemy on the map, or move to face one). ":"")+(u.p.cls==="wizard"&&!G.opts.some(x=>x.t==="cast")&&!u.hth&&!u.sleep&&!u.down&&!(u.moved<=1||u.engStart)?"You moved more than 1 hex, so you cannot cast this turn unless you start engaged. ":"");
-  if(enemiesOf(u).length>1) G.note=`Target: ${o.p.name} (click another enemy on the map to change it). `+G.note;
-  if(u.rvl) G.note="Reveal Magic showed you: "+u.rvl+" "+G.note;
+  G.note=pickNote(u,o,G.opts);
   ui(); drawMap();
 }
 function takePick(act){ G.picks[G.pi]=act; G.pi++; if(G.pi>=G.pq.length) resolveTurn(G.picks); else startPick(); }
