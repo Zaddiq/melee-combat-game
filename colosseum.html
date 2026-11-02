@@ -41,6 +41,7 @@ svg{width:100%;height:auto;max-height:80vh}
 <div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">The starred (pink) hexes are the entrances. One or two players start at the bottom (and the top). With 3 or 4 players in free for all, each also gets a west or east entrance; in Teams mode Team A starts at the bottom and Team B at the top. With computer creatures, all the players start at the bottom and the creatures come in from the top. Before the fight, each player taps one of the four outlined hexes of their own entrance to start there.</div></div></div>
 </main>
 <script src="rules.js"></script>
+<script src="roster.js"></script>
 <script src="maps.js"></script>
 <script src="firebase-config.js"></script>
 <script src="net.js"></script>
@@ -176,8 +177,17 @@ const creMax=()=>!mobOn()?1:CRE[CREK].size===7?1:CRE[CREK].size===4?2:3;   /* a 
 function applyMode(){ for(let i=0;i<MAXP;i++) team[i]=mobOn()?0:teamsOn()?tmAB[i]:i; }
 const starts=[null,null,null,null];    /* each player's chosen start hex (a key) */
 function showSlot(i){ $("pf"+i).innerHTML=slot[i]?card(slot[i],PCLS[i]):""; showStats(); }
-function epLine(f){ const r=loadRec()[rkey(f)]; return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/100 EP${r&&r.pend>0?" · attribute point waiting (spend it in the solo arena)":""}</div>`; }
-function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot.slice(0,NP).some(Boolean)?`<div class="two">${slot.slice(0,NP).map((f,i)=>f?`<div>${card(f,PCLS[i])}${epLine(f)}</div>`:"").join("")}</div>`:`<div class="mut">Load the fighters to see their stats here.</div>`); }
+function epLine(f,i){
+  if(f.phone){ const r=f.phone.rec; return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/100 EP${r&&r.pend>0?" · attribute point waiting (spend it on that phone)":""}</div>`; }
+  const r=loadRec()[rkey(f)], o=Roster.options(r);
+  return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/100 EP${r&&r.pend>0?" · <b>attribute point to spend</b>"+(r.must?" (you hold a banked point too, so you must spend both)":""):""}</div>`
+    +(o.length?`<div class="row">${o.map(k=>`<button data-spend="${i}:${k}">${k==="bank"?"Bank it for later":"+1 "+k.toUpperCase()}</button>`).join("")}</div>`:"");
+}
+function spendPoint(i,k){ const f=slot[i]; if(!f||f.phone) return; const R=loadRec(), key=rkey(f), r=R[key]; if(!r||!Roster.spend(r,k)) return;
+  try{ localStorage.setItem(RKEY,JSON.stringify(R)); }catch(e){} REC=R; Roster.syncBuilder(localStorage,KEY,r);
+  if(k!=="bank"){ f[k]=r[k]; if(k==="st") f.hp=f.st; }   /* the loaded fighter has the new number for the next fight */
+  $("msg"+i).textContent=k==="bank"?"Point banked.":"+1 "+k.toUpperCase()+" for "+f.name+"."; showSlot(i); }
+function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot.slice(0,NP).some(Boolean)?`<div class="two">${slot.slice(0,NP).map((f,i)=>f?`<div>${card(f,PCLS[i])}${epLine(f,i)}</div>`:"").join("")}</div>`:`<div class="mut">Load the fighters to see their stats here.</div>`); el.querySelectorAll("[data-spend]").forEach(b=>b.onclick=()=>{ const [i,k]=b.dataset.spend.split(":"); spendPoint(+i,k); }); }
 function setP(i,f,msg){
   if(G&&G.phase!=="over"&&!confirm("Leave the fight in progress?")) return; G=null;
   placeStep=0; f.rname=f.name; if(!f.phone){ const r0=loadRec()[rkey(f)]; if(r0){ f.st=r0.st; f.dx=r0.dx; } } slot[i]=f; const taken=n=>slot.some((o,j)=>j!==i&&o&&o.name.trim().toLowerCase()===n.trim().toLowerCase()); if(taken(f.name)){ const base=f.name; let k=2; while(k<4&&taken(base+" "+ROM[k])) k++; f.name=base+" "+ROM[k]; }
@@ -237,7 +247,7 @@ function awardXp(f,x){   /* friendly duel: XP only, never a death or a win/loss 
   const R=loadRec(), k=rkey(f); let r=R[k];
   if(!r) r={name:f.rname||f.name,st:f.st,dx:f.dx,iq:f.iq,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false,src:f.src||null};
   applyXp(r,x);
-  R[k]=r; try{ localStorage.setItem(RKEY,JSON.stringify(R)); }catch(e){} REC=R; return r;
+  R[k]=r; try{ localStorage.setItem(RKEY,JSON.stringify(R)); }catch(e){} REC=R; Roster.syncBuilder(localStorage,KEY,r); return r;   /* the builder shows the new EP at once if it holds this character */
 }
 for(const i of [0,1,2,3]){ const ks=Object.keys(REC).filter(k=>REC[k]&&REC[k].src&&!REC[k].dead);
   $("rs"+i).innerHTML=ks.length?ks.map(k=>`<option value="${esc(k)}">${esc(REC[k].name)} (ST ${REC[k].st} / DX ${REC[k].dx})</option>`).join(""):`<option value="">No saved arena fighters</option>`; }
@@ -374,7 +384,7 @@ function settle(){
   if(G.settled) return; G.settled=true;
   if(G.mobs.length){   /* a fight against the computer's creatures: each human on the winning side gets 50 XP, nobody else gets any */
     const win=new Set(G.winners||[]);
-    G.xp=G.players.map(u=>{ if(!win.has(u)) return `${u.p.name}: no experience${u.esc?" (left the fight)":""}.`; const r=awardXp(u.p,50); return `${u.p.name}: +50 XP (now ${r.ep}/100)${r.pend>0?", attribute point earned":""}`; });
+    G.xp=G.players.map(u=>{ if(!win.has(u)) return `${u.p.name}: no experience${u.esc?" (left the fight)":""}.`; const r=awardXp(u.p,50); return `${u.p.name}: +50 XP (now ${r.ep}/100)${r.pend>0?", attribute point earned (spend it in the Fighters box below)":""}`; });
     lg(win.size?`The ${mobName()} ${CREN>1?"are":"is"} beaten: every player on the winning side gets 50 XP.`:"No experience this time."); G.xp.forEach(x=>lg(x)); showStats(); return; }
   const PL=G.players, sums=PL.map(u=>u.p.st+u.p.dx), win=new Set(G.winners||[]);
   const bonus=u=>{ const i=PL.indexOf(u); return PL.some((v,j)=>sideOf(v)!==sideOf(u)&&sums[j]-sums[i]>=3)?10:0; };   /* +10 if some opponent is 3 or more points stronger */

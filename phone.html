@@ -26,6 +26,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
   <label for="chr" style="margin-top:0">Your character</label><select id="chr"></select>
   <div class="mut" id="chrNote" style="margin-top:6px"></div>
   <div class="mut" id="xp" style="margin-top:6px"></div>
+  <div id="spendRow" style="display:none;margin-top:8px"></div>
   <div id="sendRow" style="display:none;margin-top:8px"><button id="toBuilder" style="margin-top:0">Send to builder (with XP)</button><div class="mut" id="sendMsg" style="margin-top:6px"></div></div>
   <div class="mut" style="margin-top:6px"><a href="builder.html" style="color:var(--acc)">Build or change a character</a> (whatever is open in the builder is offered here) · <a href="wizard-arena.html" style="color:var(--acc)">Arena</a></div>
 </div>
@@ -48,6 +49,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
 <script src="net.js"></script>
 <script src="bell.js"></script>
 <script src="phone-map.js"></script>
+<script src="roster.js"></script>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
@@ -123,7 +125,7 @@ function fillChars(keep){
   const opts=charOptions(); let want=keep||(()=>{ try{ return ST.getItem(CKEY); }catch(e){ return null; } })();
   if(!want||!opts.some(o=>o[0]===want)) want=opts.some(o=>o[0]==="builder")?"builder":"none";
   $("chr").innerHTML=opts.map(o=>`<option value="${esc(o[0])}">${esc(o[1])}</option>`).join(""); $("chr").value=want;
-  showSend();
+  showSend(); showSpend();
   $("chrNote").textContent=want==="none"?"You will play whatever fighter the host loads for your seat.":"This character comes to the table with you. Experience it earns is saved here on this phone.";
 }
 $("chr").onchange=()=>{ try{ ST.setItem(CKEY,chosen()); }catch(e){} fillChars(chosen()); if(room) Net.setFighter(room,fjFor(chosen())).catch(e=>{ $("err").textContent=e.message; }); };
@@ -131,6 +133,16 @@ $("chr").onchange=()=>{ try{ ST.setItem(CKEY,chosen()); }catch(e){} fillChars(ch
 /* send the character, with the experience and points it has earned, to the builder on this phone (the builder reads it when it opens) */
 function curRec(){ const id=chosen(), R=recs(); if(id==="builder"){ const b=builderChar(); return b?(R[rk(b.name)]||null):null; } return String(id).startsWith("r:")?(R[id.slice(2)]||null):null; }
 const updatedSrc=r=>Object.assign({},r.src||{},{name:r.name,st:r.st,dx:r.dx,iq:r.iq!=null?r.iq:(r.src&&r.src.iq),total:r.total0+r.pts,ep:r.ep,arenaWins:r.wins,arenaRetired:!!r.retired});
+function curKey(){ const id=chosen(); if(id==="builder"){ const b=builderChar(); return b?rk(b.name):null; } return String(id).startsWith("r:")?id.slice(2):null; }
+function showSpend(){
+  const el=$("spendRow"), R=recs(), k=curKey(), rec=k?R[k]:null, o=Roster.options(rec);
+  if(!o.length){ el.style.display="none"; el.innerHTML=""; return; }
+  el.style.display=""; el.innerHTML=`<b>${esc(rec.name)} has an attribute point to spend</b>${rec.must?" (a banked point too: spend both)":""}<div class="mrow">${o.map(x=>`<button data-sp="${x}">${x==="bank"?"Bank it for later":"+1 "+x.toUpperCase()}</button>`).join("")}</div>`;
+  el.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{ const R2=recs(), r2=R2[k]; if(!r2||!Roster.spend(r2,b.dataset.sp)) return;
+    try{ ST.setItem(RKEY,JSON.stringify(R2)); }catch(e){} Roster.syncBuilder(ST,BKEY,r2);
+    $("xp").textContent=r2.name+": "+(b.dataset.sp==="bank"?"point banked.":"+1 "+b.dataset.sp.toUpperCase()+" (now ST "+r2.st+" DX "+r2.dx+(r2.iq!=null?" IQ "+r2.iq:"")+").");
+    fillChars(chosen()); if(room) Net.setFighter(room,fjFor(chosen())).catch(()=>{}); });
+}
 function showSend(){ const r=curRec(); $("sendRow").style.display=r&&r.src?"":"none"; if(!r) $("sendMsg").textContent=""; }
 $("toBuilder").onclick=()=>{ const r=curRec(); if(!r||!r.src) return; const b=builderChar();
   if(!confirm(b&&b.name&&rk(b.name)!==rk(r.name)?'The builder currently holds "'+b.name+'". Replace it with '+r.name+'?':"Send "+r.name+" to the builder?")) return;
@@ -138,7 +150,8 @@ $("toBuilder").onclick=()=>{ const r=curRec(); if(!r||!r.src) return; const b=bu
 function applyResult(c,v){
   if(!v||!v.rec||!v.key) return; const id=c+":"+v.id; let last=null; try{ last=ST.getItem(XKEY); }catch(e){} if(last===id) return;
   const R=recs(); R[v.key]=v.rec; try{ ST.setItem(RKEY,JSON.stringify(R)); ST.setItem(XKEY,id); }catch(e){ return; }
-  const r=v.rec; $("xp").textContent=r.name+": "+r.ep+"/100 EP saved to your roster"+(r.pend>0?" · an attribute point is waiting (spend it in the arena or the builder)":"")+".";
+  const r=v.rec; Roster.syncBuilder(ST,BKEY,Object.assign({},r,{src:r.src||(R[v.key]&&R[v.key].src)}));   /* the builder on this phone shows the new EP and stats if it holds this character */
+  $("xp").textContent=r.name+": "+r.ep+"/100 EP saved to your roster"+(r.pend>0?" · an attribute point is waiting (spend it below)":"")+".";
   fillChars(chosen()); if(room) Net.setFighter(room,fjFor(chosen())).catch(()=>{});
 }
 async function enter(c,name){

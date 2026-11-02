@@ -400,3 +400,11 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Computer wizards do not cast it (not in their spell lists). Not done: Megahex Avert (needs a shared upkeep: one ST a turn for the whole group, today's Avert upkeep is per victim), the 3-/4-/7-Hex Fire, Shadow and Wall.
 - Tests: `tests/megahex_sleep_test.py` (9, arena), `tests/megahex_sleep_multi_test.py` (3, colosseum and duel).
 
+## Spending earned points in the Colosseum, and the builder following along (Nov 2, branch spend-point-sync-builder)
+- Owner's report (playing only on the phone): a point earned at the table had no place to be spent, and the builder did not show the EP earned. Before this, points could only be spent in the solo arena and the builder only changed through the manual "Send to builder (with XP)" button.
+- New shared `roster.js` (`Roster.options/spend/syncBuilder`; the rules are the arena's `spend()`: +1 ST, +1 DX, +1 IQ for wizards, or Bank it when only one point is waiting and not a champion).
+- Phone: a "has an attribute point to spend" box with those buttons under the character box; spending updates the phone's roster record, sends the new numbers to the table, and keeps the builder in step. When experience arrives from the table, the builder on that phone is updated at once if it holds the same character (matched by name; only ST, DX, IQ, total, EP and arena wins change, gear and spells stay). A builder holding a different character is never touched.
+- Tablet (a fighter loaded from the tablet's own builder or roster): the Fighters box shows the same buttons; awarded XP also updates the tablet's builder if it holds that character. Fighters that came from a phone show "spend it on that phone".
+- Not done: a 16-win champion retiring by spending (the arena's Hall of Fame entry is not made from the Colosseum).
+- Tests: `tests/spend_tablet_test.py` (6), `online_chars_test` now 21.
+
