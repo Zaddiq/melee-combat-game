@@ -94,3 +94,9 @@ Owner has only one phone, so test with several browser tabs or windows.
 7. Older items: the stomp (needs the owner's scenario creature table), the encounter page, 3-/4-/7-Hex Fire, Shadow, Wall, Megahex Avert/Sleep.
 
 **Owner preferences:** one feature at a time; they test it themselves on their phone/tablet/laptop (one phone, so Claude tests with several browser tabs); Claude branches, tests, merges to main and pushes (push the branch too, then `git fetch origin <branch>:refs/remotes/origin/<branch>` to quiet the stop hook; do not run the stop-hook script by hand). When the owner is told to hard-refresh, a stale cached page was often the cause of odd reports: the version label on the cards is how to check. If a change touches `database.rules.json`, give the owner the full JSON in the reply (they paste it into the Firebase console Rules tab and Publish; the Rules Playground "simulated read denied" at `/` is normal).
+
+## Nov 1, late: phone map built (branch phone-map, see NOTES.md "item 4")
+- Phones show the live board and can do the move, facing, far-hex choices, retreat and advance themselves; the host side is `Online.hook` in online-host.js, the drawing is `phone-map.js`. Table version 8. No rules change (nothing to re-paste in Firebase). Tests: `online_map_test.py` 21; all other suites pass.
+- Waiting on the owner: try it on a real phone (tap sizes, zoom, how it feels with the tablet map next to it); the bell now also rings for moves.
+- Next in the owner's order: 2. "Fight a friend online" (host device also plays a seat; skip cover screens when every other player is remote), then the items listed in the Nov 1 late pick-up section.
+

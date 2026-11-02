@@ -35,14 +35,18 @@ with sync_playwright() as p:
     host.evaluate(BEGIN, 2); host.evaluate(TOPICK); host.wait_for_function("G.phase==='pick'")
     A.wait_for_selector("#play .opt")
     host.evaluate("()=>{ ui(); ui(); ui(); }")
-    ok("B3 the tablet rings player 1's bell once when player 1's pick starts (not on every redraw)", host.evaluate("()=>window.__rings")==[0])
-    ok("B4 player 1's phone rings its own bell (player 1's pitch), player 2's phone stays quiet", A.evaluate("()=>window.__rings")==[0] and B.evaluate("()=>window.__rings")==[])
+    # since the phone map, each phone-run step rings too (choosing who moves first, each move); what matters here is the pick
+    RH=lambda: host.evaluate("()=>window.__rings"); RA=lambda: A.evaluate("()=>window.__rings"); RB=lambda: B.evaluate("()=>window.__rings")
+    h0=len(RH())
+    ok("B3 the tablet rings player 1's bell when player 1's pick starts, and redraws add nothing", RH()[-1:]==[0] and h0>=1 and len(RH())==h0)
+    ok("B4 player 1's phone rings its own pitch; player 2's phone only ever rings player 2's pitch", RA()[-1:]==[0] and set(RA())<={0,1} and all(x==1 for x in RB()))
 
     A.click('#play .opt[data-b="0"]'); host.wait_for_function("G.pi===1"); B.wait_for_selector("#play .opt")
-    ok("B5 when player 2's pick starts, the tablet and player 2's phone ring player 2's pitch", host.evaluate("()=>window.__rings")==[0,1] and B.evaluate("()=>window.__rings")==[1])
+    b0=len(RB())
+    ok("B5 when player 2's pick starts, the tablet and player 2's phone ring player 2's pitch", RH()[-1:]==[1] and len(RH())==h0+1 and RB()[-1:]==[1] and b0>=1)
 
-    host.click("#bRing"); B.wait_for_function("window.__rings.length>=2")
-    ok("B6 'Ring again' rings the tablet and the waiting phone again", host.evaluate("()=>window.__rings")==[0,1,1] and B.evaluate("()=>window.__rings")==[1,1])
+    host.click("#bRing"); B.wait_for_function(f"window.__rings.length>={b0+1}")
+    ok("B6 'Ring again' rings the tablet and the waiting phone again", RH()[-2:]==[1,1] and len(RH())==h0+2 and RB()[-2:]==[1,1])
 
     # a phone that went to sleep and comes back in the middle of its pick
     B.reload()
@@ -52,9 +56,10 @@ with sync_playwright() as p:
     ok("B8 and its pick still counts: the turn resolves", host.evaluate("()=>G.turn")==2)
 
     # sound off on the tablet: no more rings there
+    n0 = host.evaluate("()=>window.__rings.length")
     host.click("#onBell"); host.evaluate(TOPICK); host.wait_for_function("G.phase==='pick'"); host.wait_for_timeout(400)
     n = host.evaluate("()=>window.__rings.length")
-    ok("B9 with the tablet bell off, nothing rings on the tablet", host.evaluate("()=>!Bell.on") and n==3)
+    ok("B9 with the tablet bell off, nothing rings on the tablet", host.evaluate("()=>!Bell.on") and n==n0)
     host.click("#onBell")
     ok("B10 the bell can be turned on again", host.evaluate("()=>Bell.on"))
     A.click("#snd")

@@ -21,10 +21,10 @@ function render(){
   const e=err?`<div style="color:var(--foe);margin:6px 0">${esc(err)}</div>`:"";
   if(!code){
     const old=saved();
-    body.innerHTML=`<div class="mut">Table version 7 (bell)</div><div>Let players join from their own phones. Choose a table name your group will remember (like STEVE) and use the same one every time, or leave it empty for a random code.</div>${e}<div class="row"><input id="onName" maxlength="12" placeholder="Table name, 3 to 12 letters or digits" value="${esc(old)}" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);text-transform:uppercase;min-width:230px"><button class="pri" id="onOpen">Open the table</button></div>`;
+    body.innerHTML=`<div class="mut">Table version 8 (phone map)</div><div>Let players join from their own phones. Choose a table name your group will remember (like STEVE) and use the same one every time, or leave it empty for a random code.</div>${e}<div class="row"><input id="onName" maxlength="12" placeholder="Table name, 3 to 12 letters or digits" value="${esc(old)}" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);text-transform:uppercase;min-width:230px"><button class="pri" id="onOpen">Open the table</button></div>`;
     $("onOpen").onclick=()=>open($("onName").value); $("onName").onkeydown=ev=>{ if(ev.key==="Enter") $("onOpen").click(); }; return; }
   const ids=Object.keys(joins).sort((a,b)=>(joins[a].t||0)-(joins[b].t||0));
-  body.innerHTML=`<div class="mut">Table version 7 (bell)</div><div>Table name: <b style="font-size:28px;letter-spacing:3px">${esc(code)}</b></div>
+  body.innerHTML=`<div class="mut">Table version 8 (phone map)</div><div>Table name: <b style="font-size:28px;letter-spacing:3px">${esc(code)}</b></div>
    <div class="mut">On each phone open <b>${esc(url())}</b> and type the table name${Net.kind==="mem"?" (test mode)":""}.${locked?` <b style="color:var(--foe)">The table is locked: no new phones can join.</b>`:""}</div>${e}
    <div id="onList" style="margin-top:8px">${ids.length?ids.map(u=>`<div class="row" data-u="${esc(u)}"><span title="${joins[u].on?"connected":"not connected"}" style="color:${joins[u].on?"var(--me)":"var(--mut)"}">●</span> <b>${esc(joins[u].name)}</b>
      <select data-seat="${esc(u)}"><option value="-1">watching only</option>${[...Array(NP)].map((_,i)=>`<option value="${i}"${seat[u]===i?" selected":""}>${esc(pname(i))}</option>`).join("")}</select>
@@ -77,42 +77,80 @@ function loadFromPhones(){
 const SECRET=["cover","pick","spells","dest","rcover","renew"];
 const plain=h=>{ const d=document.createElement("div"); d.innerHTML=h; return d.textContent.replace(/\s+/g," ").trim(); };
 const REL=["straight ahead","ahead and left","behind and left","straight behind","behind and right","ahead and right"];
+/* ---- the phone map (item 4) ----
+   Every message to a seated phone carries a small picture of the board (sc): hexes, figures, created objects, plus, when this phone has a
+   choice on the map, the hexes it may tap (hl, kind hk) and the six facing circles (fc). A tap comes back as cmd {k:"h",i:"q,r"} or {k:"f",i:d}.
+   The host carries out the tap with the same few lines the tablet's own map uses (see drawMap in colosseum.html). */
+const PUB=["choose","move","retreat","advance"], PHONE=SECRET.concat(PUB);   /* PUB: public steps that one player decides */
+const actor=()=>!G?null:G.phase==="choose"?G.players[G.chooser]:(G.phase==="retreat"||G.phase==="advance")?G.rdec:G.cur;
+function scene(who,hl,hk,fc){
+  if(!G||!G.players) return null;
+  const names=G.players.map(u=>u.p.name), cur=G.cur;
+  const lab=u=>{ const n=(u.p.name||"?").trim(), a=n.charAt(0).toUpperCase(); const clash=names.includes(u.p.name)&&names.some(m=>m!==u.p.name&&m.trim().charAt(0).toUpperCase()===a); return clash&&n.length>1?a+n.charAt(1).toLowerCase():a; };
+  const side=new Set(); try{ if(ffaOn()) zones().slice(2,NP).forEach(z=>z.hexes.forEach(h=>side.add(key(h.q,h.r)))); }catch(e){}
+  const mine=who&&who.u;
+  const objs=(G.objs||[]).filter(o=>o.t!=="slick"||o.g.shown||(mine&&mine===cur&&slickVis(o))).map(o=>[o.q,o.r,o.t==="fire"?"f":o.t==="wall"?"w":o.t==="shadow"?"s":o.t==="slick"?"l":"x"]);
+  const us=allU().filter(u=>u.hp>0||!u.minion).map(u=>({c:cells(u).map(x=>[x.q,x.r]),f:u.f,k:pcI(u),L:lab(u),z:u.size>1?u.size:1,d:u.hp<=0?2:(u.down||u.low==="prone")?1:0,v:u.inv?1:0,s:mine&&u===mine?1:0}));
+  const info=allU().filter(u=>u.hp>0||!u.minion).map(u=>u.p.name+" ST "+Math.max(u.hp,0)+"/"+u.p.st+(u.down?" down":"")+(u.sleep?" asleep":"")+(u.air?" flying":"")+(u.inv?" invisible":"")).join(" · ");
+  const sc={bd:P.map(h=>(h.e||side.has(key(h.q,h.r)))?[h.q,h.r,1]:[h.q,h.r]),ob:objs,u:us,info};
+  if(hl&&hl.length){ sc.hl=hl.map(h=>[h.q,h.r,h.c||0]); sc.hk=hk; }
+  if(fc&&mine) sc.fc={q:mine.q,r:mine.r,f:mine.f};
+  return sc;
+}
 let seq={}, lastJ={}, done={}, pending={};
 const uidOfPlayer=p=>Object.keys(seat).find(u=>seat[u]===p&&joins[u]);
 function sendTo(u,payload){ const j=JSON.stringify(payload); if(lastJ[u]===j) return seq[u]; lastJ[u]=j; seq[u]=(seq[u]||Date.now())+1; Net.sendPriv(code,u,Object.assign({seq:seq[u]},payload)).catch(fail); return seq[u]; }
 function waitText(){ if(!G) return "Waiting for the fight to start."; if(G.phase==="over") return (G.winner?(G.winners&&G.winners.length>1?G.winners:[G.winner]).map(u=>u.p.name).join(" and ")+" won the fight.":"The fight is over.")+" Watch the tablet."; if(SECRET.includes(G.phase)&&G.cur) return "Waiting for "+G.cur.p.name+" to pick."; if(G.phase==="move"&&G.cur) return G.cur.p.name+" is moving. Watch the tablet."; return "The table is playing. Watch the tablet."; }
-function sendWaits(except){ for(const u of Object.keys(Online.lastKey)) if(u!==except&&!(G&&SECRET.includes(G.phase))) delete Online.lastKey[u]; for(const u of Object.keys(seat)) if(u!==except&&joins[u]){ delete pending[u]; sendTo(u,{mode:"wait",text:waitText(),turn:G?G.turn:0,ring:Online.ring}); } }
-function onCmds(v){ v=v||{}; for(const u of Object.keys(v)){ const m=v[u], pd=pending[u]; if(!m||!pd||m.seq!==pd.seq||done[u]===m.seq) continue; done[u]=m.seq; const f=m.k==="t"?pd.tacts[m.i]:pd.acts[m.i]; if(typeof f==="function") f(); } }
+function sendWaits(except){ for(const u of Object.keys(Online.lastKey)) if(u!==except&&!(G&&PHONE.includes(G.phase))) delete Online.lastKey[u]; for(const u of Object.keys(seat)) if(u!==except&&joins[u]){ delete pending[u]; sendTo(u,{mode:"wait",text:waitText(),turn:G?G.turn:0,ring:Online.ring,sc:scene(null)}); } }
+function onCmds(v){ v=v||{}; for(const u of Object.keys(v)){ const m=v[u], pd=pending[u]; if(!m||!pd||m.seq!==pd.seq||done[u]===m.seq) continue; done[u]=m.seq; const f=({b:pd.acts,t:pd.tacts,h:pd.hacts,f:pd.facts}[m.k]||{})[m.i]; lastJ[u]=null; if(typeof f==="function") f(); } }
 const Online=window.Online={ override:null, ring:0, lastKey:{},
   result(f){ if(!code||!f.phone) return; Net.sendRes(code,f.phone.uid,{id:Date.now(),key:f.phone.key,rec:Object.assign({},f.phone.rec,{src:f.phone.src})}).catch(fail); },
   hook(c,t){
     if(!code) return;
-    const cur=G&&G.cur;
-    if(Online.override&&(!G||Online.override!==cur||!SECRET.includes(G.phase))) Online.override=null;
-    const who=G&&SECRET.includes(G.phase)&&cur&&G.players.includes(cur)?uidOfPlayer(G.players.indexOf(cur)):null;
+    const cur=actor();
+    if(Online.override&&(!G||Online.override!==cur||!PHONE.includes(G.phase))) Online.override=null;
+    const who=G&&PHONE.includes(G.phase)&&cur&&G.players.includes(cur)?uidOfPlayer(G.players.indexOf(cur)):null;
     if(!who||Online.override===cur){ sendWaits(null); return; }
+    const secret=SECRET.includes(G.phase);
     if(G.phase==="cover"||G.phase==="rcover"){ const b=c.querySelector("#bShow,#bRc"); if(b){ b.click(); return; } }   /* a phone needs no "pass the tablet" screen */
-    const pidx=G.players.indexOf(cur), rkey=(G.phase==="renew"?"r":"p")+G.turn+"|"+(G.pi||0)+"|"+who;
-    const acts=[], btns=[], tacts=[], tg=[]; let mode="pick";
+    const pidx=G.players.indexOf(cur), rkey=secret?(G.phase==="renew"?"r":"p")+G.turn+"|"+(G.pi||0)+"|"+who:G.phase+G.turn+"|"+(G.idx||0)+"|"+(G.pi||0)+"|"+who;
+    const acts=[], btns=[], tacts=[], tg=[], hacts={}, facts={}; let mode="pick", hl=null, hk="", fc=false;
     const addEl=e=>{ acts.push(()=>e.click()); btns.push({l:e.textContent,p:e.classList.contains("pri")}); };
     if(G.phase==="pick") c.querySelectorAll("[data-opt]").forEach(addEl);
     else if(G.phase==="spells") { c.querySelectorAll("[data-sp]").forEach(addEl); const bb=c.querySelector("#bBack"); if(bb) addEl(bb); }
     else if(G.phase==="renew") { c.querySelectorAll("[data-rn]").forEach(addEl); const bn=c.querySelector("#bRn"); if(bn) addEl(bn); }
+    else if(G.phase==="choose") c.querySelectorAll("#b1,#b2").forEach(addEl);
+    else if(G.phase==="advance") c.querySelectorAll("#bAdv,#bStay").forEach(addEl);
+    else if(G.phase==="retreat"){
+      mode="map"; hk="ret"; hl=[...G.ropts.values()];
+      for(const h of hl) hacts[key(h.q,h.r)]=()=>doRetreat(G.ropts.get(key(h.q,h.r)));
+      const bs=c.querySelector("#bSkip"); if(bs) addEl(bs); }
+    else if(G.phase==="move"){
+      mode="map"; hk="go"; fc=true; hl=[...G.reach.values()].filter(r=>!same(r,cur));
+      for(const r of hl) hacts[key(r.q,r.r)]=()=>{ const x=G.reach.get(key(r.q,r.r)); if(!x) return; G.cur.q=x.q; G.cur.r=x.r; G.moved=x.c; ui(); drawMap(); };
+      for(let d=0;d<6;d++) facts[d]=()=>{ G.cur.f=d; ui(); drawMap(); };
+      const ok=c.querySelector("#bOk"); if(ok) addEl(ok); const un=c.querySelector("#bUn"); if(un) addEl(un);
+      if(c.querySelector("#bEsc")){ acts.push(()=>quitDuel(cur,"escape")); btns.push({l:cur.p.name+" escapes through the door",p:false,cf:cur.p.name+" leaves through the door? They are out of the fight."}); } }
     else if(G.phase==="dest"){
       const hs=[...G.dopts.values()], near=!(cur.size>1)&&(G.destT==="disengage"||G.destT==="hesc")&&hs.every(h=>hdist(h,cur)===1);
+      hl=hs; hk="dest"; for(const h of hs) hacts[key(h.q,h.r)]=()=>{ const d=G.dopts.get(key(h.q,h.r)); if(!d) return; takePick(Object.assign({t:G.destT||"disengage",dest:d},G.destX||{})); G.destX=null; };
       if(near){ mode="dest"; for(const h of hs){ const d=dirIdx(cur,h); acts.push(()=>{ takePick(Object.assign({t:G.destT||"disengage",dest:h},G.destX||{})); G.destX=null; }); btns.push({l:"Move "+REL[(d-cur.f+6)%6],p:false}); } }
       else mode="map";
       const bb=c.querySelector("#bBack"); if(bb) addEl(bb);
     }
     if(G.phase==="pick"){ const E=enemiesOf(cur); if(E.length>1){ const T=other(cur); for(const e of E){ tg.push({l:e.p.name,on:e===T}); tacts.push(()=>{ cur.tgtSel=e; G.oth=other(cur); G.opts=options(cur,G.oth); ui(); drawMap(); }); } } }
-    let text=plain(t||"").replace(/\b(The others|[A-Z][^.]*?) must not look\. ?/,"");
-    if(mode==="map") text=cur.p.name+": this choice needs the map. Ask the table to hand you the tablet, or tap Back.";
+    let text=plain(t||"").replace(/\b(The others|[A-Z][^.]*?) must not look\. ?/,"").replace(/ ?\(on a phone, scroll to the map\)/,"").replace(/\bClick\b/g,"Tap").replace(/\bclick\b/g,"tap");
     if(Online.lastKey[who]!==rkey){ Online.lastKey[who]=rkey; Bell.ring(pidx); }   /* the table hears whose turn it is, once per pick */
-    const sq=sendTo(who,{mode,text,btns,tg,turn:G.turn,ph:G.phase,pi:G.pi||0,key:rkey,ring:Online.ring,who:cur.p.name});
-    pending[who]={seq:sq,acts,tacts}; sendWaits(who);
-    /* the tablet shows nothing secret: no options, no notes */
-    const ch=c.children; if(ch[1]) ch[1].innerHTML=`Waiting for <b class="${pcCls(cur)}">${esc(cur.p.name)}</b>'s phone to pick.${joins[who]&&joins[who].on?"":" <span style=\"color:var(--foe)\">(That phone is not connected.)</span>"}`;
-    if(ch[3]) ch[3].innerHTML=`<button id="bRing">Ring again</button> <button id="bTake">Play ${esc(cur.p.name)}'s pick on the tablet instead</button>`;
+    const sq=sendTo(who,{mode,text,btns,tg,turn:G.turn,ph:G.phase,pi:G.pi||0,key:rkey,ring:Online.ring,who:cur.p.name,sc:scene({u:cur},hl,hk,fc)});
+    pending[who]={seq:sq,acts,tacts,hacts,facts}; sendWaits(who);
+    if(secret){
+      /* the tablet shows nothing secret: no options, no notes */
+      const ch=c.children; if(ch[1]) ch[1].innerHTML=`Waiting for <b class="${pcCls(cur)}">${esc(cur.p.name)}</b>'s phone to pick.${joins[who]&&joins[who].on?"":" <span style=\"color:var(--foe)\">(That phone is not connected.)</span>"}`;
+      if(ch[3]) ch[3].innerHTML=`<button id="bRing">Ring again</button> <button id="bTake">Play ${esc(cur.p.name)}'s pick on the tablet instead</button>`; }
+    else {
+      /* public steps: the tablet map stays as it is, the panel says whose phone is deciding */
+      const ch=c.children; if(ch[1]) ch[1].innerHTML=`<b class="${pcCls(cur)}">${esc(cur.p.name)}</b> is deciding on their phone.${joins[who]&&joins[who].on?"":" <span style=\"color:var(--foe)\">(That phone is not connected.)</span>"}`;
+      if(ch[3]) ch[3].innerHTML=`<button id="bRing">Ring again</button> <button id="bTake">Play ${esc(cur.p.name)}'s move on the tablet instead</button>`; if(G.phase==="move"&&ch[4]&&ch[4].id!=="log") ch[4].innerHTML=""; }
     const r=$("bRing"), k=$("bTake"); if(r) r.onclick=()=>{ Online.ring++; Bell.ring(pidx); ui(); }; if(k) k.onclick=()=>{ Online.override=cur; ui(); drawMap(); };
   }
 };
