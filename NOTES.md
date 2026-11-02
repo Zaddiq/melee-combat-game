@@ -391,3 +391,6 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Not done: status effects in the phone's ST line (only down/asleep/flying/invisible), pinch zoom, the phone-side "Fight a friend online" start flow, several phones picking at once.
 - Tests: `tests/online_map_test.py` (21); `online_bell_test` counts changed because moves ring too.
 
+## Colosseum: wording for 1 to 4 players, bigger facing controls (Nov 1, branch colosseum-wording-facing)
+- Intro, map caption and menu card now say one to four players (and mention phones). On the tablet's map the facing circles are larger (visible r .27, tap r .5), and the move panel has Turn left / Turn right buttons like the phone's.
+

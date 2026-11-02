@@ -26,7 +26,7 @@ svg{width:100%;height:auto;max-height:80vh}
 </style></head><body><main>
 <h1>Colosseum</h1>
 <p style="margin:0 0 6px"><a href="index.html" style="color:var(--acc)">← Menu</a> · <a href="arena.html" style="color:var(--acc)">Solo arena</a> · <a href="duel.html" style="color:var(--acc)">Melee Duel (two players)</a> · <a href="phone.html" style="color:var(--acc)">Join with a phone</a> · <a href="builder.html" style="color:var(--acc)">Character builder</a></p>
-<p class="mut">Two to four players, one screen. Movement is in the open; each turn the players pick their actions in secret, one after the other, and the tablet is passed around. Experience is awarded (30 for the winner, 20 for the loser) and added to each fighter's arena EP, but nobody can die for good and no win or loss is marked. Any player may escape through their own door (stand on one of your four entrance hexes at the start of your move).</p>
+<p class="mut">One to four players. Alone you fight computer opponents; with two or more people the screen is shared, or players join with their phones (see "Join with a phone"). Movement is in the open; each turn the players pick their actions in secret, one after the other (on the tablet it is passed around, on a phone it stays with you). Experience is awarded (30 for the winner, 20 for the loser) and added to each fighter's arena EP, but nobody can die for good and no win or loss is marked. Any player may escape through their own door (stand on one of your four entrance hexes at the start of your move).</p>
 <div class="grid"><div>
  <div class="card"><h2>The fight</h2><div id="ctl" class="mut">Load both fighters first (the boxes below).</div></div>
  <details class="card" id="online"><summary style="cursor:pointer;font-weight:600">Phones (online table)</summary><div id="onBody" class="mut" style="margin-top:8px"></div></details>
@@ -38,7 +38,7 @@ svg{width:100%;height:auto;max-height:80vh}
 </details>
  <div class="card" id="stats"><h2>Fighters</h2><div class="mut">Load the fighters to see their stats here.</div></div>
 </div>
-<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">The starred (pink) hexes are the entrances. Two players start at the bottom and top. With 3 or 4 players in free for all, each also gets a west or east entrance; in Teams mode Team A starts at the bottom and Team B at the top. With computer creatures, all the players start at the bottom and the creatures come in from the top. Before the fight, each player taps one of the four outlined hexes of their own entrance to start there.</div></div></div>
+<div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">The starred (pink) hexes are the entrances. One or two players start at the bottom (and the top). With 3 or 4 players in free for all, each also gets a west or east entrance; in Teams mode Team A starts at the bottom and Team B at the top. With computer creatures, all the players start at the bottom and the creatures come in from the top. Before the fight, each player taps one of the four outlined hexes of their own entrance to start there.</div></div></div>
 </main>
 <script src="rules.js"></script>
 <script src="maps.js"></script>
@@ -162,7 +162,7 @@ let me=null, foe=null, placeStep=0;
 const MAXP=4, SIDEIDS=["me","foe","s3","s4"], PCV=["--me","--foe","--p3","--p4"], PCLS=["me","foe","p3","p4"], ROM=["","","II","III","IV"];
 const slot=[null,null,null,null];
 const pcI=u=>G.players.indexOf(ownerOf(u)), pcVar=u=>pcI(u)<0?"--mob":PCV[pcI(u)], pcCls=u=>pcI(u)<0?"mob":PCLS[pcI(u)];   /* the color and class of whoever runs a figure; the computer's creatures are charcoal */
-let NP=2;                              /* how many players are in the next duel (2 to 4) */
+let NP=2;                              /* how many players are in the next duel (1 to 4) */
 let MODE="ffa";                        /* with 3 or 4 players: "ffa" (everyone alone, each from their own entrance) or "teams" (two sides, Team A at the bottom end, Team B at the top). Never a mix. */
 const tmAB=[0,1,0,1];                  /* the side (0 = Team A, 1 = Team B) each player picked in Teams mode */
 const team=[0,1,2,3];                  /* the live team id of each player (set by applyMode); players with the same id are allies */
@@ -1084,8 +1084,8 @@ function ui(){
     b="";  G.qb=`<div style="margin-top:6px">${G.phase==="move"&&own&&!G.eng?`<button id="bEsc">${esc(cur.p.name)} escapes through the door</button>`:""}</div>`; } else G.qb="";
   if(G.phase==="choose"){ const w=G.players[G.chooser], lastW=G.rolls.length>2?"last":"second"; t=`${nm(w)} won the initiative roll. Move first or ${lastW}?`; b=`<button class="pri" id="b1">Move first</button><button id="b2">Move ${lastW}</button>`; }
   else if(G.phase==="move"){
-    t=`${nm(cur)} to move. `+(G.eng?"Engaged: you may shift one hex (staying next to the enemy). ":`Click a highlighted hex to move up to ${MAu(cur)} hexes. Entering an enemy front hex stops you. Moving more than half your MA (${Math.floor(MAu(cur)/2)}) means no attack this turn, and firing a missile weapon allows only 1 hex of movement. `)+"Click a small circle beside the counter to change facing.";
-    b=`<button class="pri" id="bOk">End movement</button>`+(G.moved?`<button id="bUn">Undo move</button>`:""); }
+    t=`${nm(cur)} to move. `+(G.eng?"Engaged: you may shift one hex (staying next to the enemy). ":`Click a highlighted hex to move up to ${MAu(cur)} hexes. Entering an enemy front hex stops you. Moving more than half your MA (${Math.floor(MAu(cur)/2)}) means no attack this turn, and firing a missile weapon allows only 1 hex of movement. `)+"Click a small circle beside the counter, or use Turn left / Turn right, to change facing.";
+    b=`<button class="pri" id="bOk">End movement</button><button id="bTl">↺ Turn left</button><button id="bTr">↻ Turn right</button>`+(G.moved?`<button id="bUn">Undo move</button>`:""); }
   else if(G.phase==="cover"){ t=`<b>Actions are secret.</b> Pass the tablet to ${nm(cur)}. ${lookAway(cur)}`; b=`<button class="pri" id="bShow">${esc(cur.p.name)} is ready</button>`; }
   else if(G.phase==="pick"){
     t=`${nm(cur)}: choose your action. ${G.players.length===1?"":(duel2?esc(opp(cur).p.name):"The others")+" must not look. "}`+esc(G.note||"")+nrNote(cur,G.oth)+(cur.stone||cur.iron||cur.shield||cur.rev||cur.shock||cur.sight?` <b>Your secret protection: ${[cur.iron?"Iron Flesh (stops 6)":cur.stone?"Stone Flesh (stops 4)":"",cur.shield?"Spell Shield (no spells can be cast on you, or by you on yourself)":"",cur.rev?"Reverse Missiles":"",cur.sight?"Mage Sight":"",cur.shock?"Shock Shield (hurts anything in your hex at the end of each turn)":""].filter(Boolean).join("; ")}.</b>`:"");
@@ -1100,7 +1100,7 @@ function ui(){
   c.innerHTML=`<div class="mut" style="margin-bottom:4px">Turn ${G.turn}</div><div>${t}</div><div class="mut" style="margin:4px 0">${st}</div><div>${b}</div>${G.qb||""}<div id="log">${(G.phase==="cover"||G.phase==="pick"?G.log.slice(-60):G.log.slice(-60)).map(esc).join("<br>")}</div>`;
   const lgE=$("log"); if(lgE) lgE.scrollTop=lgE.scrollHeight;
   const on=(id,f)=>{const e=$(id); if(e)e.onclick=f;};
-  on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bUn",undoMove); on("bShow",showPick);
+  on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bTl",()=>{ G.cur.f=(G.cur.f+1)%6; ui(); drawMap(); }); on("bTr",()=>{ G.cur.f=(G.cur.f+5)%6; ui(); drawMap(); }); on("bUn",undoMove); on("bShow",showPick);
   on("bSkip",()=>{lg(`${G.rdec.p.name} does not force a retreat.`);endTurn();ui();drawMap();}); on("bBack",()=>{G.destX=null;G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false));
   on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door?"+(new Set([...G.players.filter(x=>x!==cur&&x.hp>0&&!x.esc),...G.mobs.filter(m=>m.hp>0)].map(sideOf)).size<2?" This ends the fight.":" They are out of the fight."))) quitDuel(cur,"escape"); });
   on("bNew",()=>{ G=null; placeStep=0; $("setup").open=true; ui(); drawMap(); });
@@ -1192,7 +1192,7 @@ function drawMap(){
     { const cu=G.cur; if(cu&&["move","pick"].includes(G.phase)){ const E=enemiesOf(cu); if(E.length>1){ const T=other(cu); layer+=E.map(e=>{ const [x,y]=cenXY(e); return `<circle cx="${x}" cy="${y}" r=".72" fill="none" stroke="var(--acc)" stroke-width="${e===T?.12:.03}" stroke-dasharray=".2 .15" pointer-events="none"/><circle data-tgt="${allU().indexOf(e)}" cx="${x}" cy="${y}" r=".7" fill="transparent" style="cursor:pointer"/>`; }).join(""); } } }
     if(G.phase==="move"){ const [x,y]=M.get(key(G.cur.q,G.cur.r)).p, cc=cvOf(G.cur);
       for(let d=0;d<6;d++){ const a=SCR[d]*Math.PI/180; const cx=(x+Math.cos(a)*.98).toFixed(2), cy=(y+Math.sin(a)*.98).toFixed(2);
-        layer+=`<circle data-face="${d}" cx="${cx}" cy="${cy}" r=".2" fill="${d===G.cur.f?cc:"var(--card)"}" stroke="${cc}" stroke-width=".07" style="cursor:pointer"/><circle data-face="${d}" cx="${cx}" cy="${cy}" r=".42" fill="transparent" style="cursor:pointer"/>`; } }
+        layer+=`<circle data-face="${d}" cx="${cx}" cy="${cy}" r=".27" fill="${d===G.cur.f?cc:"var(--card)"}" stroke="${cc}" stroke-width=".09" style="cursor:pointer"/><circle data-face="${d}" cx="${cx}" cy="${cy}" r=".5" fill="transparent" style="cursor:pointer"/>`; } }
   }
   const m=$("map"); m.setAttribute("viewBox",`${x0} ${y0} ${x1-x0} ${y1-y0}`); m.innerHTML=s+edges+layer;
   /* the map stays pinned on screen next to the buttons, so no scrolling is needed */
