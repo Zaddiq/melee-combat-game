@@ -411,3 +411,6 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 ## Phone: short option names (Nov 2, branch phone-short-options)
 - Owner: too many words on the phone's pick screen. Options now show only the name before the first " (" (when the bracket is longer than 18 characters); a "Show what each choice does" button (remembered on that phone) adds the bracketed detail under each name. The seat note under "You are Player N" is hidden unless it says something unusual. `splitLabel` in phone.html; test P1/P1b in online_picks_test (16).
 
+
+## Builder: gear help under a menu (Nov 2, branch builder-gear-help-menu)
+- The two long paragraphs under the weapon boxes (hands, slings, sheaths) are now in a closed "How the hands, slings and sheaths work" menu, so the page is shorter on a phone. The gear section is redrawn when you change a choice, so an opened menu closes again.

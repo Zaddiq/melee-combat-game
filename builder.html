@@ -536,8 +536,10 @@ function renderGear(){
     <label class="f">Slung on back<select id="slotS1">${gearOptions("s1")}</select></label>
     <label class="f">Dagger or main-gauche at side (carried free)<select id="slotD1">${daggerOptions("d1")}</select></label>
   </div>
+  <details class="gearhelp"><summary>How the hands, slings and sheaths work</summary>
   <p class="note">The right and left hand are what is ready when the game starts. Anything slung on the back or sheathed at the side can be readied later, for example a bow first, then the main-gauche and a dagger after firing. A figure carries two weapons plus one dagger or main-gauche, and a shield counts as one weapon. The dagger or main-gauche is carried free.</p>
   <p class="note">The right hand holds a weapon. A two-handed weapon (†) fills both hands, so a shield has to be slung. The left hand holds nothing, a shield, a main-gauche, or a one-handed weapon as a second weapon. A main-gauche in the left hand parries 1 hit from one-handed weapons and allows a separate attack at −4 DX. The main-gauche and shields cannot go in the right hand. Weapons need basic ST at or above the number shown.${A?" Your staff is your right-hand weapon.":""}</p>${(S._notes||[]).filter(t=>/Carrying|shield|main-gauche|hands/.test(t)).map(t=>`<div class="alert">${esc(t)}</div>`).join("")}
+  </details>
   <div class="row" style="margin-top:10px">
     ${S.cls==="wizard"?`<label class="f" style="flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink)"><input type="checkbox" id="silver"${S.silver?" checked":""}> Wizard's gear is silver, not iron or steel</label>`:""}
   </div>
