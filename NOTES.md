@@ -425,3 +425,9 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Not simultaneous: the move (still in initiative order, public) and the spell-renewal step. The old tablet-driven phone pick code in the hook (pick/spells/dest branches) still exists for the case where a session is not active.
 - Tests: online_picks_test (20, rewritten), online_bell_test (13, rewritten), online_map_test (M14 to M16 now use a session). Real Firebase not tested by me.
 
+
+## Colosseum online table: phone layout v2 (Nov 2, branch phone-layout-v2)
+- Phone during a fight: map first and sticky at the top (max 40% of the screen), then the question and the choices, then a sticky "What just happened" strip at the bottom (last 3 log lines, "Show more" for 8). The character/load/save box is hidden while a fight is on (`lv` flag in every message) and comes back when it is over.
+- Every message to a phone now carries `lg` (last 8 log lines, plain text, so the to-hit target and roll and the damage show) and `lv` (1 while a fight is on). Added in `sendTo`.
+- Megahex outlines: board hexes are now `[q,r,end,megahex]`. phone-map.js draws a heavy line where the next hex is another megahex when `mega` is set; the move-cost numbers show only when it is off. A button under the map switches (default outlines, remembered in `colosseum-phone-mega`).
+- Starting hex on the phone: before the fight, a seated phone gets the board with its own entrance's free hexes tappable (hk "start", taps answered at once). It sets `starts[p]`, the same as the tablet's tap. The tablet can still change it. Test: tests/online_layout_test.py (15). Version label: Table version 9 (map on top).

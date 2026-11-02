@@ -38,9 +38,14 @@ function render(el,sc,o){
   for(const b of sc.ob||[]){ const c=C(b[0],b[1]), k=OBJ[b[2]]||OBJ.x; s+=`<polygon points="${poly(c)}" fill="${k[0]}" fill-opacity="${k[1]}" stroke="${k[0]}" stroke-width=".06" pointer-events="none"/>${k[2]?`<text x="${c[0]}" y="${c[1]+.3}" text-anchor="middle" font-size=".8" pointer-events="none">${k[2]}</text>`:""}`; }
   /* tappable hexes under the figures, so a figure never blocks a tap on its own hex */
   const kind=sc.hk||"";
+  if(o.mega){ const g=new Map(sc.bd.map(h=>[h[0]+","+h[1],h[3]])); let e="";   /* the megahex outlines: a heavy line wherever the next hex belongs to another megahex (or none) */
+    for(const h of sc.bd){ const c=C(h[0],h[1]); for(let d=0;d<6;d++){ const k=(h[0]+DIRS[d][0])+","+(h[1]+DIRS[d][1]);
+      if(!g.has(k)||g.get(k)!==h[3]){ const a0=Math.PI/180*(SCR[d]-30), a1=Math.PI/180*(SCR[d]+30);
+        e+=`<line x1="${(c[0]+Math.cos(a0)).toFixed(2)}" y1="${(c[1]+Math.sin(a0)).toFixed(2)}" x2="${(c[0]+Math.cos(a1)).toFixed(2)}" y2="${(c[1]+Math.sin(a1)).toFixed(2)}" stroke="var(--acc)" stroke-width=".16" stroke-linecap="round" pointer-events="none"/>`; } } }
+    s+=e; }
   for(const h of sc.hl||[]){ const c=C(h[0],h[1]), k=h[0]+","+h[1], on=k===sel;
     s+=`<polygon data-h="${k}" points="${poly(c)}" fill="var(--acc)" fill-opacity="${on?.6:.28}" stroke="var(--acc)" stroke-width="${on?.16:.07}" style="cursor:pointer"/>`;
-    if(kind==="go"&&h[2]>0) s+=`<text x="${c[0]}" y="${c[1]+.22}" text-anchor="middle" font-size=".6" font-weight="700" fill="var(--acc)" pointer-events="none">${h[2]}</text>`; }
+    if(kind==="go"&&h[2]>0&&!o.mega) s+=`<text x="${c[0]}" y="${c[1]+.22}" text-anchor="middle" font-size=".6" font-weight="700" fill="var(--acc)" pointer-events="none">${h[2]}</text>`; }
   for(const u of sc.u){ const col=COL[u.k<0?4:u.k]||COL[4], op=u.v&&u.d<2?.4:u.d===1?.6:1;
     if(u.z>1){ for(const x of u.c) s+=`<polygon points="${poly(C(x[0],x[1]))}" fill="var(--card)" stroke="${col}" stroke-width=".1" opacity="${op}" pointer-events="none"/>`;
       const cs=u.c.map(x=>C(x[0],x[1])), cx=cs.reduce((a,v)=>a+v[0],0)/cs.length, cy=cs.reduce((a,v)=>a+v[1],0)/cs.length, rot=vang(u.f);

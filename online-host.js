@@ -21,10 +21,10 @@ function render(){
   const e=err?`<div style="color:var(--foe);margin:6px 0">${esc(err)}</div>`:"";
   if(!code){
     const old=saved();
-    body.innerHTML=`<div class="mut">Table version 8 (phone map)</div><div>Let players join from their own phones. Choose a table name your group will remember (like STEVE) and use the same one every time, or leave it empty for a random code.</div>${e}<div class="row"><input id="onName" maxlength="12" placeholder="Table name, 3 to 12 letters or digits" value="${esc(old)}" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);text-transform:uppercase;min-width:230px"><button class="pri" id="onOpen">Open the table</button></div>`;
+    body.innerHTML=`<div class="mut">Table version 9 (map on top)</div><div>Let players join from their own phones. Choose a table name your group will remember (like STEVE) and use the same one every time, or leave it empty for a random code.</div>${e}<div class="row"><input id="onName" maxlength="12" placeholder="Table name, 3 to 12 letters or digits" value="${esc(old)}" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);text-transform:uppercase;min-width:230px"><button class="pri" id="onOpen">Open the table</button></div>`;
     $("onOpen").onclick=()=>open($("onName").value); $("onName").onkeydown=ev=>{ if(ev.key==="Enter") $("onOpen").click(); }; return; }
   const ids=Object.keys(joins).sort((a,b)=>(joins[a].t||0)-(joins[b].t||0));
-  body.innerHTML=`<div class="mut">Table version 8 (phone map)</div><div>Table name: <b style="font-size:28px;letter-spacing:3px">${esc(code)}</b></div>
+  body.innerHTML=`<div class="mut">Table version 9 (map on top)</div><div>Table name: <b style="font-size:28px;letter-spacing:3px">${esc(code)}</b></div>
    <div class="mut">On each phone open <b>${esc(url())}</b> and type the table name${Net.kind==="mem"?" (test mode)":""}.${locked?` <b style="color:var(--foe)">The table is locked: no new phones can join.</b>`:""}</div>${e}
    <div id="onList" style="margin-top:8px">${ids.length?ids.map(u=>`<div class="row" data-u="${esc(u)}"><span title="${joins[u].on?"connected":"not connected"}" style="color:${joins[u].on?"var(--me)":"var(--mut)"}">●</span> <b>${esc(joins[u].name)}</b>
      <select data-seat="${esc(u)}"><option value="-1">watching only</option>${[...Array(NP)].map((_,i)=>`<option value="${i}"${seat[u]===i?" selected":""}>${esc(pname(i))}</option>`).join("")}</select>
@@ -92,12 +92,24 @@ function scene(who,hl,hk,fc){
   const objs=(G.objs||[]).filter(o=>o.t!=="slick"||o.g.shown||(mine&&mine===cur&&slickVis(o))).map(o=>[o.q,o.r,o.t==="fire"?"f":o.t==="wall"?"w":o.t==="shadow"?"s":o.t==="slick"?"l":"x"]);
   const us=allU().filter(u=>u.hp>0||!u.minion).map(u=>({c:cells(u).map(x=>[x.q,x.r]),f:u.f,k:pcI(u),L:lab(u),z:u.size>1?u.size:1,d:u.hp<=0?2:(u.down||u.low==="prone")?1:0,v:u.inv?1:0,s:mine&&u===mine?1:0}));
   const info=allU().filter(u=>u.hp>0||!u.minion).map(u=>u.p.name+" ST "+Math.max(u.hp,0)+"/"+u.p.st+(u.down?" down":"")+(u.sleep?" asleep":"")+(u.air?" flying":"")+(u.inv?" invisible":"")).join(" · ");
-  const sc={bd:P.map(h=>(h.e||side.has(key(h.q,h.r)))?[h.q,h.r,1]:[h.q,h.r]),ob:objs,u:us,info};
+  const sc={bd:P.map(h=>[h.q,h.r,(h.e||side.has(key(h.q,h.r)))?1:0,h.g]),ob:objs,u:us,info};   /* the fourth number is the hex's megahex, for the outlines */
   if(hl&&hl.length){ sc.hl=hl.map(h=>[h.q,h.r,h.c||0]); sc.hk=hk; }
   if(fc&&mine) sc.fc={q:mine.q,r:mine.r,f:mine.f};
   return sc;
 }
 let seq={}, lastJ={}, done={}, pending={};
+/* ---- choosing the starting hex on the phone ----
+   Before the fight (no game yet, every fighter loaded) a seated phone sees the board with its own entrance outlined and taps the hex to start on.
+   The tap sets starts[p] just as the tablet's map does; the tablet can still change it. */
+const startSeat=u=>{ if(G||!joins[u]) return -1; const p=seat[u]; try{ return p!=null&&p>=0&&p<NP&&slot.slice(0,NP).every(Boolean)?p:-1; }catch(e){ return -1; } };
+function startSend(u){
+  const p=startSeat(u); if(p<0) return false;
+  const st=startHexes(), arr=st.zones[st.zi[p]].hexes, free=arr.filter(h=>!st.pick.some((x,i)=>i!==p&&x===h));
+  const ini=i=>String(slot[i].name||"?").trim().charAt(0).toUpperCase();
+  const sc={bd:P.map(h=>[h.q,h.r,h.e?1:0,h.g]),ob:[],info:"",u:st.pick.map((h,i)=>({c:[[h.q,h.r]],f:0,k:i,L:ini(i),z:1,d:0,v:0,s:i===p?1:0})),hl:free.map(h=>[h.q,h.r,0]),hk:"start"};
+  const sq=sendTo(u,{mode:"map",text:"Tap one of the outlined hexes to choose where you start. You can change your mind until the fight begins. Everyone starts facing the nearest enemy.",btns:[],tg:[],turn:0,ph:"start",pi:0,key:"start"+p+"|"+u,ring:Online.ring,sc});
+  const hacts={}; for(const h of free) hacts[key(h.q,h.r)]=()=>{ starts[p]=key(h.q,h.r); ui(); drawMap(); };
+  pending[u]={seq:sq,acts:[],tacts:[],hacts,facts:{}}; return true; }
 /* ---- everyone picks at once (item 5) ----
    When the picks of a turn begin, every player who has a phone gets their own pick session (the same steps as the tablet panel:
    action, spell, far hex, with Back) and answers at the same time as the others. The tablet's own players (no phone) go first, one after
@@ -155,9 +167,11 @@ function sessCheck(){ if(!G||!G.pq||!["cover","pick"].includes(G.phase)) return;
 function sessKill(uid){ const x=sess[uid]; if(x){ x.dead=true; delete lastJ[uid]; delete pending[uid]; } }
 
 const uidOfPlayer=p=>Object.keys(seat).find(u=>seat[u]===p&&joins[u]);
-function sendTo(u,payload){ const j=JSON.stringify(payload); if(lastJ[u]===j) return seq[u]; lastJ[u]=j; seq[u]=(seq[u]||Date.now())+1; Net.sendPriv(code,u,Object.assign({seq:seq[u]},payload)).catch(fail); return seq[u]; }
+/* every message also carries the last lines of the fight log (lg) and whether a fight is on (lv), so the phone can show what just happened */
+const logTail=()=>G&&G.log?G.log.slice(-8).map(x=>new DOMParser().parseFromString(String(x),"text/html").body.textContent.replace(/\s+/g," ").trim()):[];
+function sendTo(u,payload){ payload=Object.assign({lg:logTail(),lv:G&&G.phase!=="over"?1:0},payload); const j=JSON.stringify(payload); if(lastJ[u]===j) return seq[u]; lastJ[u]=j; seq[u]=(seq[u]||Date.now())+1; Net.sendPriv(code,u,Object.assign({seq:seq[u]},payload)).catch(fail); return seq[u]; }
 function waitText(){ if(!G) return "Waiting for the fight to start."; if(G.phase==="over") return (G.winner?(G.winners&&G.winners.length>1?G.winners:[G.winner]).map(u=>u.p.name).join(" and ")+" won the fight.":"The fight is over.")+" Watch the tablet."; if(SECRET.includes(G.phase)&&G.cur) return "Waiting for "+G.cur.p.name+" to pick."; if(G.phase==="move"&&G.cur) return G.cur.p.name+" is moving. Watch the tablet."; return "The table is playing. Watch the tablet."; }
-function sendWaits(except){ for(const u of Object.keys(Online.lastKey)) if(u!==except&&!(G&&PHONE.includes(G.phase))) delete Online.lastKey[u]; for(const u of Object.keys(seat)) if(u!==except&&joins[u]&&!activeSess(u)){ delete pending[u]; sendTo(u,{mode:"wait",text:waitText(),turn:G?G.turn:0,ring:Online.ring,sc:scene(null)}); } }
+function sendWaits(except){ for(const u of Object.keys(Online.lastKey)) if(u!==except&&!(G&&PHONE.includes(G.phase))) delete Online.lastKey[u]; for(const u of Object.keys(seat)) if(u!==except&&joins[u]&&!activeSess(u)){ if(startSend(u)) continue; delete pending[u]; sendTo(u,{mode:"wait",text:waitText(),turn:G?G.turn:0,ring:Online.ring,sc:scene(null)}); } }
 function onCmds(v){ v=v||{}; for(const u of Object.keys(v)){ const m=v[u], pd=pending[u]; if(!m||!pd||m.seq!==pd.seq||done[u]===m.seq) continue; done[u]=m.seq; const f=({b:pd.acts,t:pd.tacts,h:pd.hacts,f:pd.facts}[m.k]||{})[m.i]; lastJ[u]=null; if(typeof f==="function") f(); } }
 const Online=window.Online={ override:null, ring:0, lastKey:{},
   begin(pq){ sess={}; tabletTake=new Set(); if(!code||!G||!G.players) return null;

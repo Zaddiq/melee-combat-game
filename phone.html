@@ -17,11 +17,13 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
 .opt{display:block;width:100%;text-align:left;margin-top:10px;padding:14px 16px;font-size:18px}.opt.pri{background:var(--acc);color:#fff;border-color:var(--acc)}.opt[disabled]{opacity:.5}
 .tgs{margin-top:12px}.tg{display:inline-block;width:auto;margin:6px 6px 0 0;padding:8px 12px;font-size:16px}.tg.on{border:2px solid var(--acc);font-weight:700}
 .ring{background:#ffe9a8;color:#3a2a00;border-radius:10px;padding:10px 12px;margin-top:12px;font-weight:700}
-#pmap{display:block;width:100%;max-height:68vh;margin-top:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;touch-action:manipulation}.det{display:block;font-size:13px;opacity:.85;margin-top:4px;font-weight:400}.mrow{display:flex;gap:8px;flex-wrap:wrap}.mrow button{flex:1 1 auto;margin-top:8px;padding:12px 10px}
+#play{order:1}main.fight #play{order:-1}main.fight h1,main.fight .back,main.live #chrCard{display:none}
+#stick{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0 2px}#resBar{position:sticky;bottom:0;z-index:4;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-top:14px;font-size:15px;box-shadow:0 -4px 10px rgba(0,0,0,.08)}#resBar div{margin-top:3px}#resBar .nw{font-weight:700}
+#pmap{display:block;width:100%;max-height:40vh;margin-top:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;touch-action:manipulation}.det{display:block;font-size:13px;opacity:.85;margin-top:4px;font-weight:400}.mrow{display:flex;gap:8px;flex-wrap:wrap}.mrow button{flex:1 1 auto;margin-top:8px;padding:12px 10px}
 .dot{display:inline-block;width:10px;height:10px;border-radius:5px;background:var(--mut);margin-right:6px}.dot.on{background:var(--ok)}
 </style></head><body><main>
 <h1>Colosseum</h1>
-<p style="margin:0 0 10px"><a href="index.html" style="color:var(--acc)">← Menu</a></p>
+<p class="back" style="margin:0 0 10px"><a href="index.html" style="color:var(--acc)">← Menu</a></p>
 <div class="card" id="chrCard">
   <label for="chr" style="margin-top:0">Your character</label><select id="chr"></select>
   <div class="mut" id="chrNote" style="margin-top:6px"></div>
@@ -41,9 +43,9 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
   <div class="big" id="seat" style="margin-top:6px"></div>
   <div class="mut" id="seatNote" style="display:none"></div>
   <div class="row" style="display:flex;gap:8px;align-items:center;margin-top:6px"><button id="snd" style="margin-top:0;padding:8px 12px">Sound: on</button><span class="mut" id="awk"></span></div>
-  <div id="play" style="margin-top:12px"></div>
 </div>
-<p class="mut" style="order:9">Table version 8 (phone map). Keep this page open. When it is your turn to pick, your choices will show up here.</p>
+<div id="play"></div>
+<p class="mut" style="order:9">Table version 9 (map on top). Keep this page open. When it is your turn to pick, your choices will show up here.</p>
 </main>
 <script src="firebase-config.js"></script>
 <script src="net.js"></script>
@@ -73,9 +75,9 @@ function seatText(pub){
 let showDet=(()=>{ try{ return ST.getItem("colosseum-phone-details")==="1"; }catch(e){ return false; } })();
 /* a long option ("Dodge (move up to half your MA; ...)") shows its short name; the bracket is the detail, shown only when asked for */
 function splitLabel(l){ l=String(l); const i=l.indexOf(" ("); if(i<1) return [l,""]; const d=l.slice(i+1); return d.length>18?[l.slice(0,i),d]:[l,""]; }
-let zoomAll=false, selHex="", selSeq=null, lastP=null;
+let mapMega=(()=>{ try{ return ST.getItem("colosseum-phone-mega")!=="0"; }catch(e){ return true; } })(), logOpen=false, zoomAll=false, selHex="", selSeq=null, lastP=null;
 function showPlay(p){
-  const el=$("play"); if(!p){ el.innerHTML=""; lastP=null; return; }
+  const el=$("play"), mn=document.querySelector("main"); if(!p){ el.innerHTML=""; lastP=null; mn.classList.remove("fight","live"); return; }
   lastP=p;
   const ringUp=lastRing!==null&&(p.ring||0)>lastRing; lastRing=p.ring||0;
   const sc=p.sc||null, wait=p.mode==="wait";
@@ -83,14 +85,17 @@ function showPlay(p){
   const fresh=!wait&&p.key&&p.key!==lastKey; if(fresh) lastKey=p.key;
   if(selSeq!==p.seq){ selSeq=p.seq; selHex=""; }
   const sent=!wait&&sentSeq===p.seq;
-  const mapFirst=!wait&&(sc&&(sc.hl||sc.fc));
-  const mapHtml=sc?`<div class="mut" style="margin-top:8px;font-size:14px">${esc(sc.info||"")}</div><svg id="pmap" viewBox="0 0 10 10"></svg><div class="mrow"><button id="zoom" style="display:none"></button>${sc.fc&&!wait?`<button id="tl"${sent?" disabled":""}>↺ Turn left</button><button id="tr"${sent?" disabled":""}>↻ Turn right</button>`:""}</div>`:"";
+  mn.classList.toggle("fight",!!sc&&!!p.lv); mn.classList.toggle("live",!!p.lv);
+  const mapFirst=!!sc;
+  const mapHtml=sc?`<div id="stick"><svg id="pmap" viewBox="0 0 10 10"></svg><div class="mrow"><button id="zoom" style="display:none"></button>${sc.fc&&!wait?`<button id="tl"${sent?" disabled":""}>↺ Turn left</button><button id="tr"${sent?" disabled":""}>↻ Turn right</button>`:""}<button id="mega">${mapMega?"Show range numbers":"Show megahex outlines"}</button></div></div>`:"";
+  const infoHtml=sc&&sc.info?`<details class="mut" style="margin-top:10px"><summary>Everyone's ST</summary>${esc(sc.info)}</details>`:"";
+  const lg=p.lg||[], resHtml=lg.length?`<div id="resBar"><b>What just happened</b>${(logOpen?lg:lg.slice(-3)).map((x,i,a)=>`<div${i===a.length-1?' class="nw"':''}>${esc(x)}</div>`).join("")}${lg.length>3?`<button id="lgTg" class="mut" style="margin-top:6px;padding:6px 10px;font-size:14px">${logOpen?"Show less":"Show more"}</button>`:""}</div>`:"";
   const confirmHtml=!wait&&selHex&&sc&&sc.hk&&sc.hk!=="go"?`<button class="opt pri" id="cfm"${sent?" disabled":""}>${sc.hk==="ret"?"Push them back to the hex I marked":"Go to the hex I marked"}</button>`:"";
   const sp=(p.btns||[]).map(b=>splitLabel(b.l)), anyDet=sp.some(x=>x[1]);
   const btnHtml=!wait?(p.btns||[]).map((b,i)=>`<button class="opt${b.p?" pri":""}" data-b="${i}"${sent?" disabled":""}>${esc(sp[i][0])}${showDet&&sp[i][1]?`<span class="det">${esc(sp[i][1])}</span>`:""}</button>`).join("")+(anyDet?`<button id="detTg" class="mut" style="margin-top:8px;padding:8px 12px;font-size:14px">${showDet?"Hide the details":"Show what each choice does"}</button>`:""):"";
   const tgHtml=!wait&&(p.tg||[]).length?`<div class="tgs mut">Target:<br>${p.tg.map((x,i)=>`<button class="tg${x.on?" on":""}" data-t="${i}"${sent?" disabled":""}>${esc(x.l)}</button>`).join("")}</div>`:"";
   el.innerHTML=(ringUp?`<div class="ring">The table is waiting for you.</div>`:"")+(mapFirst?(()=>{ const t=String(p.text||""), i=t.indexOf(". "); return i<0||i>90?`<div style="margin-top:6px">${esc(t)}</div>`:`<div style="margin-top:6px"><b>${esc(t.slice(0,i+1))}</b></div><details class="mut" style="margin-top:4px"><summary>Reminder</summary>${esc(t.slice(i+2))}</details>`; })():`<div style="margin-top:6px">${esc(p.text||"")}</div>`)
-    +(mapFirst?mapHtml+confirmHtml+btnHtml+tgHtml:tgHtml+btnHtml+mapHtml)
+    +(mapFirst?mapHtml+confirmHtml+btnHtml+tgHtml:tgHtml+btnHtml)+infoHtml+resHtml
     +(sent?`<div class="mut" style="margin-top:10px">Sent.</div>`:"");
   const send=(k,i)=>{ if(wait||sentSeq===p.seq) return; sentSeq=p.seq; Net.sendCmd(room,{seq:p.seq,k,i,t:Date.now()}).catch(e=>{ sentSeq=null; $("err").textContent=e.message; }); showPlay(p); };
   el.querySelectorAll("[data-b]").forEach(e=>e.onclick=()=>{ const b=p.btns[+e.dataset.b]; if(b&&b.cf&&!confirm(b.cf)) return; send("b",+e.dataset.b); });
@@ -98,12 +103,14 @@ function showPlay(p){
   const dt=$("detTg"); if(dt) dt.onclick=()=>{ showDet=!showDet; try{ ST.setItem("colosseum-phone-details",showDet?"1":"0"); }catch(e){} showPlay(p); };
   if(sc){
     const draw=()=>PhoneMap.render($("pmap"),sc,{all:zoomAll,sel:selHex,
-      onHex:(k,kind)=>{ if(sent) return; if(kind==="go"){ send("h",k); return; } if(selHex===k){ send("h",k); return; } selHex=k; showPlay(p); },
-      onFace:d=>send("f",d)});
+      onHex:(k,kind)=>{ if(sent) return; if(kind==="go"||kind==="start"){ send("h",k); return; } if(selHex===k){ send("h",k); return; } selHex=k; showPlay(p); },
+      onFace:d=>send("f",d),mega:mapMega});
     const r=draw(), z=$("zoom"); if(z){ z.style.display=(r.focus||zoomAll)?"":"none"; z.textContent=zoomAll?"Zoom to the action":"Show the whole board"; z.onclick=()=>{ zoomAll=!zoomAll; showPlay(p); }; }
     const tl=$("tl"), tr=$("tr"); if(tl) tl.onclick=()=>send("f",(sc.fc.f+1)%6); if(tr) tr.onclick=()=>send("f",(sc.fc.f+5)%6);
+    const mg=$("mega"); if(mg) mg.onclick=()=>{ mapMega=!mapMega; try{ ST.setItem("colosseum-phone-mega",mapMega?"1":"0"); }catch(e){} showPlay(p); };
     const cf=$("cfm"); if(cf) cf.onclick=()=>send("h",selHex);
   }
+  const lt=$("lgTg"); if(lt) lt.onclick=()=>{ logOpen=!logOpen; showPlay(p); };
   if(fresh||ringUp){ Bell.ring(myP); Bell.buzz(); }
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
