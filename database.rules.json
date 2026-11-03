@@ -40,6 +40,32 @@
             ".read": "auth != null && auth.uid === $uid"
           }
         },
+        "vc": {
+          ".write": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid",
+          "peers": {
+            ".read": "auth != null && (root.child('rooms').child($code).child('host').val() === auth.uid || root.child('rooms').child($code).child('join').child(auth.uid).exists())",
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && (root.child('rooms').child($code).child('host').val() === auth.uid || root.child('rooms').child($code).child('join').child(auth.uid).exists())",
+              ".validate": "!newData.exists() || newData.child('t').isNumber()",
+              "t": { ".validate": "newData.isNumber()" },
+              "$other": { ".validate": false }
+            }
+          },
+          "sig": {
+            "$to": {
+              ".read": "auth != null && auth.uid === $to",
+              ".write": "auth != null && auth.uid === $to",
+              "$from": {
+                ".write": "auth != null && auth.uid === $from && (root.child('rooms').child($code).child('host').val() === auth.uid || root.child('rooms').child($code).child('join').child(auth.uid).exists())",
+                ".validate": "!newData.exists() || (newData.child('k').isString() && newData.child('sdp').isString() && newData.child('sdp').val().length <= 30000 && newData.child('n').isNumber())",
+                "k": { ".validate": "newData.isString()" },
+                "sdp": { ".validate": "newData.isString()" },
+                "n": { ".validate": "newData.isNumber()" },
+                "$other": { ".validate": false }
+              }
+            }
+          }
+        },
         "cmd": {
           ".read": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid",
           ".write": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid",

@@ -43,6 +43,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
   <div class="big" id="seat" style="margin-top:6px"></div>
   <div class="mut" id="seatNote" style="display:none"></div>
   <div class="row" style="display:flex;gap:8px;align-items:center;margin-top:6px"><button id="snd" style="margin-top:0;padding:8px 12px">Sound: on</button><span class="mut" id="awk"></span></div>
+  <div id="vcPhone" style="margin-top:10px"></div>
 </div>
 <div id="play"></div>
 <p class="mut" style="order:9">Table version 9 (map on top). Keep this page open. When it is your turn to pick, your choices will show up here.</p>
@@ -50,6 +51,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
 <script src="firebase-config.js"></script>
 <script src="net.js"></script>
 <script src="bell.js"></script>
+<script src="voice.js"></script>
 <script src="phone-map.js"></script>
 <script src="roster.js"></script>
 <script>
@@ -188,10 +190,10 @@ async function enter(c,name){
 function showSnd(){ $("snd").textContent="Sound: "+(Bell.on?"on":"off"); }
 $("snd").onclick=()=>{ Bell.setOn(!Bell.on); Bell.unlock(); if(Bell.on) Bell.ring(myP); showSnd(); };
 async function keepAwake(on){ const v=await Bell.awake(on); $("awk").textContent=on?(v?"Screen stays on.":"Turn off auto-lock so you do not miss your turn."):""; }
-function leave(){ keepAwake(false); const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); if(offRes) offRes(); offPub=offMe=offPriv=offRes=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); $("code").value=""; $("err").textContent=""; $("code").focus(); }
+function leave(){ keepAwake(false); try{ Voice.stop(); }catch(e){} const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); if(offRes) offRes(); offPub=offMe=offPriv=offRes=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); $("code").value=""; $("err").textContent=""; $("code").focus(); }
 $("code").onfocus=()=>{ try{ $("code").select(); }catch(e){} };
 $("go").onclick=()=>{ const c=Net.clean($("code").value); let n=$("nm").value.trim(); if(!n&&chosen()!=="none"){ try{ const f=JSON.parse(fjFor(chosen())); n=String(f.name).slice(0,20); }catch(e){} } if(c.length<3){ $("err").textContent="Type the table name shown on the tablet."; return; } if(!n){ $("err").textContent="Type your name (or choose a character)."; return; } enter(c,n); };
 $("leave").onclick=leave;
-fillChars(); Bell.init(ST,"bell-on-phone"); showSnd();
+Voice.mount($("vcPhone"),()=>room,{label:"Voice",help:"Tap Join voice only if you are NOT in the same room as the tablet (use headphones). Phones in the room stay silent so nothing echoes."}); fillChars(); Bell.init(ST,"bell-on-phone"); showSnd();
 if(saved&&saved.room&&saved.room===$("code").value&&saved.name) enter(saved.room,saved.name);   /* coming back after the phone slept */
 </script></body></html>

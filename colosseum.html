@@ -29,6 +29,7 @@ svg{width:100%;height:auto;max-height:80vh}
 <p class="mut">One to four players. Alone you fight computer opponents; with two or more people the screen is shared, or players join with their phones (see "Join with a phone"). Movement is in the open; each turn the players pick their actions in secret, one after the other (on the tablet it is passed around, on a phone it stays with you). Experience is awarded (30 for the winner, 20 for the loser) and added to each fighter's arena EP, but nobody can die for good and no win or loss is marked. Any player may escape through their own door (stand on one of your four entrance hexes at the start of your move).</p>
 <div class="grid"><div>
  <div class="card" id="friendBox" style="display:none"></div>
+ <div class="card" id="vcHost" style="display:none"></div>
  <div class="card"><h2>The fight</h2><div id="ctl" class="mut">Load both fighters first (the boxes below).</div></div>
  <details class="card" id="online"><summary style="cursor:pointer;font-weight:600">Phones (online table)</summary><div id="onBody" class="mut" style="margin-top:8px"></div></details>
  <details class="setup" id="setup" open><summary>The fighters</summary>
@@ -47,6 +48,7 @@ svg{width:100%;height:auto;max-height:80vh}
 <script src="firebase-config.js"></script>
 <script src="net.js"></script>
 <script src="bell.js"></script>
+<script src="voice.js"></script>
 <script>
 "use strict";
 const RACES=RULES.RACES, W=RULES.W, SHIELDS=RULES.SHIELDS;

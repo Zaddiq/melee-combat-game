@@ -104,7 +104,7 @@ with sync_playwright() as p:
     host.wait_for_function("G.phase==='advance'")
     ok("M18 the pushed figure moved to the chosen hex", host.evaluate("()=>[G.rd.q,G.rd.r]") == [r[0], r[1]])
     A.wait_for_function("lastP&&lastP.btns&&lastP.btns.some(b=>b.l==='Advance')")
-    A.click("text=Stay")
+    A.click('#play .opt:has-text("Stay")')
     host.wait_for_function("G.phase!=='advance'")
     ok("M19 Advance or Stay is decided on the phone", host.evaluate("()=>G.phase") != "advance")
     # ---- leaving through the door asks on the phone, then ends the fight ----

@@ -86,7 +86,7 @@ const Net={
     const pub=await this.b.get("rooms/"+want+"/pub");
     if(!pub||!pub.t||Date.now()-pub.t>this.STALE){   /* an abandoned table: take it over and clear what was left in it */
       await this.b.set("rooms/"+want+"/host",this.uid);
-      for(const k of ["join","priv","cmd","res"]) await this.b.remove("rooms/"+want+"/"+k);
+      for(const k of ["join","priv","cmd","res","vc"]) await this.b.remove("rooms/"+want+"/"+k);
       await this.b.set("rooms/"+want+"/pub",{open:true,t:Date.now()});
       return want;
     }
@@ -94,7 +94,7 @@ const Net={
   },
   publish(c,pub){ return this.b.set("rooms/"+c+"/pub",pub); },
   watchJoins(c,cb){ return this.b.on("rooms/"+c+"/join",cb); },
-  async closeRoom(c){ await this.b.remove("rooms/"+c+"/pub"); await this.b.remove("rooms/"+c+"/join"); await this.b.remove("rooms/"+c+"/priv"); await this.b.remove("rooms/"+c+"/cmd"); await this.b.remove("rooms/"+c+"/res"); await this.b.remove("rooms/"+c+"/host"); },
+  async closeRoom(c){ await this.b.remove("rooms/"+c+"/pub"); await this.b.remove("rooms/"+c+"/join"); await this.b.remove("rooms/"+c+"/priv"); await this.b.remove("rooms/"+c+"/cmd"); await this.b.remove("rooms/"+c+"/res"); await this.b.remove("rooms/"+c+"/vc"); await this.b.remove("rooms/"+c+"/host"); },
   kick(c,uid){ return this.b.remove("rooms/"+c+"/join/"+uid); },
   /* phone side */
   async joinRoom(c,name,fj){

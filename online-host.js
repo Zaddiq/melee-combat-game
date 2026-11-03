@@ -41,7 +41,7 @@ function render(){
 function watch(){ offJoins=Net.watchJoins(code,v=>{ joins={}; for(const u of Object.keys(v||{})) if(v[u]&&typeof v[u].name==="string") joins[u]=v[u];   /* an entry without a name is a leftover, not a player */
      autoSeat(); render(); sync(); loadFromPhones(); ui(); }); offCmds=Net.watchCmds(code,onCmds); }
 async function open(name){ err=""; Bell.unlock(); Bell.awake(true).then(v=>{ awakeOk=v; render(); }); try{ await Net.start(); const prev=saved(); code=await Net.openRoom(name); if(prev&&prev!==code) Net.closeRoom(prev).catch(()=>{});   /* the previous table of this tablet is closed (only its own host can: the rules refuse anyone else) */ try{ localStorage.setItem(KEYR,code); }catch(x){} seat={}; joins={}; applied={}; locked=false; try{ const pb=await Net.b.get("rooms/"+code+"/pub"); locked=!!(pb&&pb.locked); }catch(x){} watch(); render(); sync(); }catch(x){ code=null; fail(x); } }
-async function close(){ const c=code; Bell.awake(false); awakeOk=null; if(offJoins) offJoins(); offJoins=null; if(offCmds) offCmds(); offCmds=null; code=null; joins={}; seat={}; locked=false; try{ await Net.closeRoom(c); }catch(x){ err=x.message; } render(); }
+async function close(){ const c=code; try{ if(window.Voice) Voice.stop(); }catch(x){} Bell.awake(false); awakeOk=null; if(offJoins) offJoins(); offJoins=null; if(offCmds) offCmds(); offCmds=null; code=null; joins={}; seat={}; locked=false; try{ await Net.closeRoom(c); }catch(x){ err=x.message; } render(); }
 setInterval(()=>{ if(code) sync(); },5*60*1000);   /* keeps the table from looking abandoned */
 /* the player count and the loaded fighters can change on the page, so keep the phones' view in step */
 setInterval(()=>{ const s=code?NP+"|"+slot.slice(0,NP).map(f=>f?f.name:"").join(",")+"|"+JSON.stringify(seat):""; if(s!==sig){ sig=s; if(code){ autoSeat(); render(); sync(); } } if(code) loadFromPhones(); },600);
@@ -241,13 +241,15 @@ const Online=window.Online={ override:null, ring:0, lastKey:{},
   }
 };
 render();
+/* voice: one control for the host (mounted once; shown while a table is open) */
+{ const vb=$("vcHost"); if(vb&&window.Voice){ Voice.mount(vb,()=>code,{label:"Voice (this tablet)",help:"The tablet is the microphone and speaker for everyone sitting in the room. Remote players join voice on their phones. Use it when someone is not in the room."}); setInterval(()=>{ vb.style.display=code?"":"none"; },500); } }
 /* ---- Fight a friend online: this device plays Player 1 and the friend joins by table name (colosseum.html?friend=1) ----
    Two players, no pass-the-tablet screens (the only other player is far away), and the table opens by itself. If this page closes the fight ends. */
 if(new URLSearchParams(location.search).get("friend")){
   window.FRIEND=true; const fb=$("friendBox"); const og=$("online"); if(og) og.style.display="none";
   try{ if(NP!==2||MODE!=="ffa"){ NP=2; MODE="ffa"; applyMode(); resetSetup(); } }catch(e){}
   const draw=()=>{ if(!fb) return; fb.style.display=""; const joined=Object.keys(joins).filter(u=>seat[u]===1&&joins[u]);
-    fb.innerHTML=`<h2>Fight a friend online</h2>`+(code?`<div>Table name: <b style="font-size:30px;letter-spacing:3px">${esc(code)}</b></div><div class="mut">Your friend opens <b>${esc(url())}</b> on their phone or computer, types the table name, and picks their fighter there. You are Player 1 on this screen: load your fighter below (Player 1's box).</div><div style="margin-top:6px">${joined.length?`<b style="color:var(--me)">● ${esc(joins[joined[0]].name)} has joined as Player 2.</b>`:`<span class="mut">Waiting for your friend to join…</span>`}</div><div class="mut" style="margin-top:6px">Keep this page open: if it closes, the fight ends for both of you.</div>`:`<div class="mut">Opening the table…${err?" "+esc(err):""}</div>`); };
+    fb.innerHTML=`<h2>Fight a friend online</h2>`+(code?`<div>Table name: <b style="font-size:30px;letter-spacing:3px">${esc(code)}</b></div><div class="mut">Your friend opens <b>${esc(url())}</b> on their phone or computer, types the table name, and picks their fighter there. You are Player 1 on this screen: load your fighter below (Player 1's box).</div><div style="margin-top:6px">${joined.length?`<b style="color:var(--me)">● ${esc(joins[joined[0]].name)} has joined as Player 2.</b>`:`<span class="mut">Waiting for your friend to join…</span>`}</div><div class="mut" style="margin-top:6px">To talk, you and your friend each tap Join voice (use headphones). Keep this page open: if it closes, the fight ends for both of you.</div>`:`<div class="mut">Opening the table…${err?" "+esc(err):""}</div>`); };
   setInterval(draw,700); draw();
   setTimeout(()=>{ if(!code) open(""); },300);
 }
