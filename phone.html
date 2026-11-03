@@ -132,7 +132,9 @@ function fjFor(id){
   else if(String(id).startsWith("r:")){ const r=R[id.slice(2)]; if(!r||!r.src) return ""; o={name:r.name,st:r.st,dx:r.dx,src:r.src}; rec=r; }
   else return "";
   if(rec){ rec=Object.assign({},rec); delete rec.src; } o.rec=rec;
-  const j=JSON.stringify(o); return j.length>6000?"":j;
+  if(o.src&&o.src.pic){ o.src=Object.assign({},o.src); delete o.src.pic; }   /* the big picture stays on this phone; the small one (pt) goes to the table */
+  let j=JSON.stringify(o); if(j.length>6000&&o.src&&o.src.pt){ o.src=Object.assign({},o.src); delete o.src.pt; j=JSON.stringify(o); }   /* too big with the small picture: go without it */
+  return j.length>6000?"":j;
 }
 function chosen(){ return $("chr").value; }
 function fillChars(keep){

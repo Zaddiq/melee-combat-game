@@ -76,6 +76,7 @@ function fromBuilder(o){
   const f={name:String(o.name||"Unnamed").slice(0,60),race:RACES[o.race]?o.race:"human",cls:o.cls==="wizard"?"wizard":"fighter",
     st:Math.max(R.st,+o.st||R.st),dx:Math.max(R.dx,+o.dx||R.dx),iq:+o.iq||R.iq,
     armor:ARMOR[o.armor]?o.armor:"none",silver:!!o.silver,right:"none",left:"none",slung:"none",dag:[],src:o};
+  const pk=v=>typeof v==="string"&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(v)&&v.length<40000?v:""; f.pic=pk(o.pic); f.pt=pk(o.pt);   /* the player's own picture for the counter (checked: only a small JPEG data address gets in) */
   f.total=+o.total||(f.st+f.dx+f.iq); f.spells=Array.isArray(o.spells)?o.spells.slice():[];
   const hasStaff=f.cls==="wizard"&&Array.isArray(o.spells)&&o.spells.includes("Staff");
   f.right=hasStaff?"staff":(W[o.a]&&!W[o.a].left?o.a:"none");
@@ -1192,7 +1193,8 @@ function drawMap(){
     const R=f.right!==undefined?f.right:fr.right, Lh=f.left!==undefined?f.left:fr.left, dead=f.hp!==undefined&&f.hp<=0;
     const w=R!=="none"&&W[R];
     const L=lab(fr);
-    const fig=dead?`<ellipse cx="0" cy="-.05" rx=".2" ry=".22" fill="${c}"/><rect x="-.1" y=".1" width=".2" height=".12" fill="${c}"/><circle cx="-.08" cy="-.07" r=".05" fill="var(--card)"/><circle cx=".08" cy="-.07" r=".05" fill="var(--card)"/><path d="M-.3 .3 L.3 .1 M-.3 .1 L.3 .3" stroke="${c}" stroke-width=".06" stroke-linecap="round"/>`
+    const art=!dead&&fr&&(fr.pic||fr.pt);
+    const fig=art?`<image href="${art}" x="-.5" y="-.5" width="1" height="1" preserveAspectRatio="xMidYMid slice"/>`:dead?`<ellipse cx="0" cy="-.05" rx=".2" ry=".22" fill="${c}"/><rect x="-.1" y=".1" width=".2" height=".12" fill="${c}"/><circle cx="-.08" cy="-.07" r=".05" fill="var(--card)"/><circle cx=".08" cy="-.07" r=".05" fill="var(--card)"/><path d="M-.3 .3 L.3 .1 M-.3 .1 L.3 .3" stroke="${c}" stroke-width=".06" stroke-linecap="round"/>`
     :`<circle cx="0" cy="-.3" r=".1" fill="${c}"/>
       <path d="M-.14 -.17 Q0 -.22 .14 -.17 L.12 .08 L-.12 .08 Z" fill="${c}"/>
       <rect x="-.11" y=".08" width=".09" height=".26" rx=".03" fill="${c}"/><rect x=".02" y=".08" width=".09" height=".26" rx=".03" fill="${c}"/>

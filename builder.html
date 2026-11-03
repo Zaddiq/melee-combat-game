@@ -95,6 +95,8 @@ aside.sheet{position:sticky;top:12px;background:var(--panel);border:1px solid va
 .sheet #name{flex:1;font:700 26px var(--f-display);background:transparent;border:0;padding:0;border-radius:0;min-width:0}
 .sheet .who{font:500 12px var(--f-mono);color:var(--muted);margin-top:6px}
 .figure,.printtop,.ptitle,.pname{display:none}
+.picrow{display:flex;gap:12px;align-items:center;margin:8px 0}.picrow img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:2px solid var(--accent)}.picrow button{margin:2px 4px 2px 0}
+.figimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:12px 0}
 .stat{border:1px solid var(--line);border-radius:3px;padding:6px 8px;background:var(--bg)}
 .stat .k{font:500 11px var(--f-mono);color:var(--muted);letter-spacing:.08em}
@@ -217,6 +219,7 @@ summary{cursor:pointer;font:600 12px var(--f-mono);letter-spacing:.08em;text-tra
       </div>
       <div class="ptitle" id="ptitle"></div>
       <div class="nameline"><span class="pname">Name</span><input id="name" type="text" placeholder="Character name" aria-label="Character name" maxlength="60"></div>
+      <div class="picrow noprint" id="picRow"><img id="picThumb" alt="" style="display:none"><div><button id="picBtn" type="button">Choose a picture</button> <button id="picDel" type="button" style="display:none">Remove picture</button><input id="picFile" type="file" accept="image/*" style="display:none"><div class="help" id="picNote">A picture of your own drawing, with the top of the art as the way the figure faces. It becomes the counter in the Colosseum and prints in the Figure box. Shrunk and kept in this browser with the character.</div></div></div>
       <div class="who" id="who"></div>
       <div id="sheet"></div>
       <h3>Experience points</h3>
@@ -570,7 +573,7 @@ function renderSheet(){
     <div class="stat"><div class="k">IQ</div><div class="v">${S.iq}</div></div>
     <div class="stat"><div class="k">adjDX</div><div class="v">${(cfg.find(c=>c.start)||cfg[0]).adj}</div></div>
     <div class="stat"><div class="k">MA</div><div class="v">${ma()}</div></div>
-  </div><div class="figure"><span>Figure</span></div></div>
+  </div><div class="figure">${S.pic?`<img class="figimg" src="${S.pic}" alt="">`:""}<span>Figure</span></div></div>
   <div class="printtop">
     <div class="pcol pleft">${[["ST",S.st],["DX",S.dx],["IQ",S.iq],["MA",baseMA()]].map(([k,v])=>`<div class="prow"><span class="plab">${k}</span><span class="pbox">${v}</span></div>`).join("")}</div>
     <div class="pcol pmid">
@@ -579,7 +582,7 @@ function renderSheet(){
       <div class="prow"><span class="plab">Fatigue</span><span class="pbox"></span></div>
       <div class="prow"><span class="plab">adj MA</span><span class="pbox">${ma()}</span></div>
     </div>
-    <div class="pfig"><span>Figure</span></div>
+    <div class="pfig">${S.pic?`<img class="figimg" src="${S.pic}" alt="">`:""}<span>Figure</span></div>
   </div>
   ${S.race==="hobbit"?`<p class="note" style="margin:0">Halfling: +2 DX whenever throwing something, and may throw any weapon the turn it is readied.</p>`:""}
   <h3>Armor</h3>
@@ -614,7 +617,7 @@ function sheetText(){
   L.push("EP: "+S.ep); if(S.notes) L.push("Notes: "+S.notes);
   return L.join("\n");
 }
-function renderAll(){ renderWho(); renderAttr(); renderSpells(); renderGear(); renderSheet(); save(); }
+function renderAll(){ renderWho(); renderAttr(); renderSpells(); renderGear(); renderSheet(); showPic(); save(); }
 
 /* ---------- Events ---------- */
 function toast(t){ $("toast").textContent=t; setTimeout(()=>{ if($("toast").textContent===t) $("toast").textContent=""; },3000); }
@@ -656,13 +659,24 @@ document.addEventListener("change",e=>{
     case "ep": S.ep=Math.max(0,Math.round(+t.value||0)); renderSheet(); save(); break;
   }
 });
+/* the character's picture: a square crop, shrunk twice (128 px for the sheet and builder, 40 px for the table), kept as small JPEGs in the character */
+const okPic=v=>typeof v==="string"&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(v)&&v.length<40000;
+function shrink(img,px,q,maxLen){ const c=document.createElement("canvas"); c.width=c.height=px; const x=c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,px,px);
+  const m=Math.min(img.width,img.height), sx=(img.width-m)/2, sy=(img.height-m)/2; x.drawImage(img,sx,sy,m,m,0,0,px,px);
+  let out=c.toDataURL("image/jpeg",q); while(maxLen&&out.length>maxLen&&q>.3){ q-=.1; out=c.toDataURL("image/jpeg",q); } return out; }
+function showPic(){ const t=$("picThumb"); t.style.display=okPic(S.pic)?"":"none"; if(okPic(S.pic)) t.src=S.pic; $("picDel").style.display=okPic(S.pic)?"":"none"; $("picBtn").textContent=okPic(S.pic)?"Change picture":"Choose a picture"; }
+$("picBtn").onclick=()=>$("picFile").click();
+$("picDel").onclick=()=>{ delete S.pic; delete S.pt; showPic(); renderSheet(); save(); };
+$("picFile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return; if(!/^image\//.test(f.type)||/svg/.test(f.type)){ toast("Please choose a photo or a picture file (not SVG)."); return; }
+  const url=URL.createObjectURL(f), img=new Image(); img.onload=()=>{ try{ S.pic=shrink(img,128,.85,30000); S.pt=shrink(img,40,.7,2600); }catch(err){ toast("Could not read that picture."); } URL.revokeObjectURL(url); showPic(); renderSheet(); save(); toast("Picture saved with this character."); };
+  img.onerror=()=>{ URL.revokeObjectURL(url); toast("Could not read that picture."); }; img.src=url; };
 $("name").addEventListener("input",e=>{ S.name=e.target.value; save(); });
 $("notes").addEventListener("input",e=>{ S.notes=e.target.value; save(); });
 
 /* ---------- Start ---------- */
 load();
 $("name").value=S.name; $("notes").value=S.notes;
-S._notes=[]; renderAll();
+S._notes=[]; renderAll(); showPic();
 document.getElementById('printBtn').addEventListener('click',()=>window.print());
 </script>
 

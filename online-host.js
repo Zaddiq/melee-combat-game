@@ -90,7 +90,7 @@ function scene(who,hl,hk,fc){
   const side=new Set(); try{ if(ffaOn()) zones().slice(2,NP).forEach(z=>z.hexes.forEach(h=>side.add(key(h.q,h.r)))); }catch(e){}
   const mine=who&&who.u;
   const objs=(G.objs||[]).filter(o=>o.t!=="slick"||o.g.shown||(mine&&mine===cur&&slickVis(o))).map(o=>[o.q,o.r,o.t==="fire"?"f":o.t==="wall"?"w":o.t==="shadow"?"s":o.t==="slick"?"l":"x"]);
-  const us=allU().filter(u=>u.hp>0||!u.minion).map(u=>({c:cells(u).map(x=>[x.q,x.r]),f:u.f,k:pcI(u),L:lab(u),z:u.size>1?u.size:1,d:u.hp<=0?2:(u.down||u.low==="prone")?1:0,v:u.inv?1:0,s:mine&&u===mine?1:0}));
+  const us=allU().filter(u=>u.hp>0||!u.minion).map(u=>({c:cells(u).map(x=>[x.q,x.r]),f:u.f,k:pcI(u),L:lab(u),z:u.size>1?u.size:1,d:u.hp<=0?2:(u.down||u.low==="prone")?1:0,v:u.inv?1:0,s:mine&&u===mine?1:0,im:u.size>1?"":(u.p&&u.p.pt)||""}));
   const info=allU().filter(u=>u.hp>0||!u.minion).map(u=>u.p.name+" ST "+Math.max(u.hp,0)+"/"+u.p.st+(u.down?" down":"")+(u.sleep?" asleep":"")+(u.air?" flying":"")+(u.inv?" invisible":"")).join(" · ");
   const sc={bd:P.map(h=>[h.q,h.r,(h.e||side.has(key(h.q,h.r)))?1:0,h.g]),ob:objs,u:us,info};   /* the fourth number is the hex's megahex, for the outlines */
   if(hl&&hl.length){ sc.hl=hl.map(h=>[h.q,h.r,h.c||0]); sc.hk=hk; }
