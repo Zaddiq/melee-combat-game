@@ -87,6 +87,48 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .gear{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (max-width:560px){.gear{grid-template-columns:minmax(0,1fr)}}
 .gear select{width:100%}
+/* the sheet that prints (same design as sheet.html, black and white) */
+#psheet{display:none;--acc:#000;--ink:#000;--mut:#444;--line:#555;font:14px/1.35 Georgia,'Times New Roman',serif}
+#psheet .head{display:grid;grid-template-columns:1fr 1.3in;gap:.2in;align-items:end;border-bottom:3px double var(--acc);padding-bottom:6px}
+#psheet .fld{border-bottom:1px solid var(--ink);min-height:.3in;display:flex;align-items:flex-end;font-size:9pt;color:var(--mut);padding-bottom:1px}
+#psheet .big{font-size:9pt;color:var(--mut)}
+#psheet .ptp{display:grid;grid-template-columns:1.15in 1fr 1.9in;gap:.16in;margin-top:.14in;align-items:start}
+#psheet .sc{display:grid;grid-template-rows:.78in .78in .78in .78in 1.1in;gap:.08in}
+#psheet .sc>div{border:2px solid var(--acc);border-radius:8px;padding:3px 6px;display:flex;flex-direction:column}
+#psheet .sc b{font:700 12pt Georgia,serif;letter-spacing:.1em;color:var(--acc)}
+#psheet .sc small{font-size:7pt;color:var(--mut);line-height:1.1}
+#psheet .sc .v{flex:1}
+#psheet .mid{display:grid;grid-template-rows:.78in .78in .78in .78in 1.1in;gap:.08in}
+#psheet .mid>div{border:1.5px solid var(--line);border-radius:8px;padding:3px 7px;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+#psheet .mid .cap{font:600 8pt system-ui,sans-serif;color:var(--mut);letter-spacing:.05em}
+#psheet .mid .two{display:grid;grid-template-columns:1fr 1fr;gap:.1in;flex:1}
+#psheet .mid .two div{border-bottom:1px solid var(--ink);display:flex;align-items:flex-end;font-size:8pt;color:var(--mut)}
+#psheet .mid .one{flex:1;display:grid;grid-template-columns:.9in 1fr;gap:.1in;align-items:stretch}
+#psheet .mid .bx{border:1.5px solid var(--acc);border-radius:6px;margin:2px 0}
+#psheet .right .portrait{border:2px solid var(--acc);border-radius:6px;aspect-ratio:4/5;position:relative}
+#psheet .portrait span{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:8pt;font-style:italic;color:var(--mut)}
+#psheet .carry{border:1.5px solid var(--line);border-radius:8px;margin-top:.08in;padding:3px 7px;font-size:8pt;color:var(--mut)}
+#psheet .carry div{border-bottom:1px solid var(--ink);height:.27in;display:flex;align-items:flex-end}
+#psheet .cells{display:grid;grid-template-columns:repeat(20,1fr);gap:2px;flex:1}
+#psheet .cells i{border:1px solid var(--line);font:normal 6pt system-ui,sans-serif;color:var(--mut);display:flex;align-items:flex-end;justify-content:flex-end;padding:0 1px;border-radius:2px;min-height:.17in}
+#psheet .cells i.t{background:#eee}
+#psheet .note{font-size:7.5pt;color:var(--mut);margin-top:2px}
+#psheet .cols{display:grid;grid-template-columns:1fr 1fr;gap:.2in;margin-top:.12in}
+#psheet table{width:100%;border-collapse:collapse;font-size:9pt}
+#psheet th{font:600 8pt system-ui,sans-serif;color:var(--mut);text-align:left;padding:1px 3px;letter-spacing:.05em}
+#psheet td{border-bottom:1px solid var(--line);height:.26in;padding:0 3px}
+#psheet td.n,#psheet th.n{width:.65in;text-align:center}
+#psheet .sp td{height:.225in}
+#psheet .lines div{height:.26in;border-bottom:1px solid var(--line)}
+#psheet h2{font:700 11pt Georgia,serif;letter-spacing:.14em;text-transform:uppercase;margin:0 0 4px;border-bottom:1.5px solid #000;padding-bottom:2px}
+#psheet .fld{border-bottom:1px solid #000;min-height:.3in;display:flex;align-items:flex-end;font-size:9pt;color:#444;padding-bottom:1px}
+#psheet .fld b{color:#000;font-size:12pt;margin-left:6px}
+#psheet .big{font:700 15pt Arial,Helvetica,sans-serif;text-align:center;flex:1;display:flex;align-items:center;justify-content:center}
+#psheet .figimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#psheet td b{font-weight:600}
+#psheet .right .portrait{aspect-ratio:1/1}
+#psheet .sc,#psheet .mid{grid-template-rows:.66in .66in .66in .66in .85in}
+@media print{aside.sheet,.grid{display:none!important}#psheet{display:block;height:10.1in;overflow:hidden}@page{size:letter;margin:.4in}}
 /* sheet */
 aside.sheet{position:sticky;top:12px;background:var(--panel);border:1px solid var(--ink);border-radius:3px;padding:16px;min-width:0;box-shadow:4px 4px 0 var(--line)}
 @media screen and (min-width:861px){aside.sheet{max-height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain}}  /* the sheet scrolls on its own, so the DX adjustments are reachable without scrolling the whole spell list */
@@ -228,6 +270,7 @@ summary{cursor:pointer;font:600 12px var(--f-mono);letter-spacing:.08em;text-tra
       <textarea id="notes" rows="3" aria-label="Notes" placeholder="Pets, magic items, background"></textarea>
     </aside>
   </div>
+  <div id="psheet" aria-hidden="true"></div>
 </div>
 
 <script src="rules.js"></script>
@@ -602,6 +645,51 @@ function renderSheet(){
    <button id="trade"${ep<100?" disabled":""}>Trade 100 EP for 1 point</button>
    <span class="help">Each trade adds one point to the total, to spend on ST, DX or IQ.</span>`;
   $("json").value=JSON.stringify(exportObj());
+  renderPrint();
+}
+
+/* the printed sheet: the blank sheet's layout (sheet.html) with this character on it */
+function renderPrint(){
+  const P=pool(), cfg=configs(), st=cfg.find(c=>c.start)||cfg[0], R=RACES[S.race];
+  const item=loc=>P.filter(x=>x.loc===loc).map(x=>itemName(x.id)).join(", ");
+  const sh=P.filter(x=>SHIELDS[x.id]).map(x=>SHIELDS[x.id]);
+  const arm=ARMOR[S.armor], armTxt=S.armor==="none"?"none":`${arm.n}: stops ${arm.stops}, DX −${armorPen()}`;
+  const shTxt=sh.length?sh.map(x=>`${x.n}: stops ${x.stops}${x.pen?`, DX −${x.pen}`:""}`).join("; "):"none";
+  const wp=P.filter(x=>W[x.id]);
+  const wrows=Array.from({length:Math.max(5,wp.length)},(_,i)=>{ const x=wp[i]; return x?`<tr><td>${esc(W[x.id].n)} <span style="color:#444;font-size:7.5pt">${esc(x.loc.toLowerCase())}</span></td><td class="n">${damageText(x.id)}</td><td class="n">${W[x.id].st||"—"}</td></tr>`:`<tr><td></td><td class="n"></td><td class="n"></td></tr>`; }).join("");
+  const sp=S.cls==="wizard"?S.spells.map(n=>SPELL_BY[n]).filter(Boolean).sort((a,b)=>a.iq-b.iq||a.name.localeCompare(b.name)):[];
+  const nrow=Math.max(8,Math.ceil(sp.length/2)), cell=(x)=>x?`<tr><td class="n">${x.iq}</td><td>${esc(x.name)} <span style="color:#444;font-size:7.5pt">${x.type}</span></td><td class="n">${x.cost==="var"?"var.":x.cost}${x.up?" "+x.up:""}</td></tr>`:`<tr><td class="n"></td><td></td><td class="n"></td></tr>`;
+  const colA=Array.from({length:nrow},(_,i)=>cell(sp[i])).join(""), colB=Array.from({length:nrow},(_,i)=>cell(sp[nrow+i])).join("");
+  const spT=th=>`<table class="sp"><thead><tr><th class="n">IQ</th><th>Spell</th><th class="n">Cost</th></tr></thead><tbody>${th}</tbody></table>`;
+  const pic=okPic(S.pic)?`<img class="figimg" src="${S.pic}" alt="">`:"";
+  const lines=n=>`<div class="lines">${"<div></div>".repeat(n)}</div>`;
+  const wiz=S.cls==="wizard";
+  $("psheet").innerHTML=`<div class="page" style="padding:0;width:auto;min-height:0">
+   <div class="head"><div><div class="fld" style="font-size:11pt">Name<b>${esc(S.name||"")}</b></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.15in"><div class="fld">Player</div><div class="fld">Race<b>${esc(R.n)}</b></div><div class="fld">${wiz?"Wizard":"Fighter"}</div></div></div><div class="fld" style="justify-content:flex-end">Date</div></div>
+   <div class="ptp">
+    <div class="sc">
+     <div><b>ST</b><small>strength</small><span class="big">${S.st}</span></div>
+     <div><b>DX</b><small>dexterity</small><span class="big">${S.dx}</span></div>
+     <div><b>IQ</b><small>intelligence</small><span class="big">${S.iq}</span></div>
+     <div><b>MA</b><small>moves a turn</small><span class="big">${ma()}</span></div>
+     <div><b>EP</b><small>experience points</small><span class="big">${S.ep||""}</span></div>
+    </div>
+    <div class="mid">
+     <div><span class="cap">CURRENT ST (hits you take and ST you spend come off the same number)</span><div class="one"><div class="bx"></div><div class="note" style="align-self:end">Subtract each hit and each ST you spend, and write the new number here.</div></div></div>
+     <div><span class="cap">ADJUSTED DX NOW (with what is in your hands and your armor)</span><div class="one"><div class="bx" style="display:flex;align-items:center;justify-content:center;font:700 16pt Arial">${st.adj}</div><div class="note" style="align-self:end">Starts as shown. Write a new number when you change what you hold or when something hits your DX.</div></div></div>
+     <div><span class="cap">ARMOR AND SHIELD</span><div class="two"><div style="color:#000">${esc(armTxt)}</div><div style="color:#000">${esc(shTxt)}</div></div></div>
+     <div><span class="cap">IN YOUR HANDS</span><div class="two"><div style="color:#000">${esc(item("Right hand")||"")}</div><div style="color:#000">${esc(item("Left hand")||"")}</div></div></div>
+     <div><span class="cap">EXPERIENCE POINTS EARNED</span><div class="one" style="grid-template-columns:2in 1fr"><div class="bx"></div><div class="note" style="align-self:end">Write your new total here as you earn more. At 100 EP trade them for one point of ST, DX or IQ.</div></div></div>
+    </div>
+    <div class="right"><div class="portrait">${pic}<span>${pic?"":"Picture"}</span></div>
+     <div class="carry">Slung on your back<div style="color:#000;font-size:9pt">${esc(item("Slung"))}</div>Sheathed at your side<div style="color:#000;font-size:9pt">${esc(item("Sheathed"))}</div></div>
+     <div class="carry" style="height:.62in">Silver and other money</div></div>
+   </div>
+   <div class="cols"><div><h2>Weapons</h2><table><thead><tr><th>Weapon</th><th class="n">Damage</th><th class="n">Min ST</th></tr></thead><tbody>${wrows}</tbody></table></div>
+    <div><h2>Equipment and loot</h2>${lines(6)}</div></div>
+   ${wiz?`<div style="margin-top:.12in"><h2>Spells <span style="font:italic 8pt Georgia;letter-spacing:0;text-transform:none;color:#444">(${S.spells.length} of ${S.iq} known; add more in the notes)</span></h2><div class="cols" style="margin-top:2px">${spT(colA)}${spT(colB)}</div></div>`:""}
+   <div style="margin-top:.12in"><h2>Notes</h2>${S.notes?`<div style="white-space:pre-wrap;font-size:10pt;margin:3px 0">${esc(S.notes)}</div>`:""}${lines(wiz?(nrow>8?2:3):13)}</div>
+  </div>`;
 }
 function exportObj(){ const c=Object.assign({},S); delete c._notes; return c; }
 function sheetText(){
