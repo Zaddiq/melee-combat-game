@@ -690,6 +690,13 @@ function creaHexes(u,o,t,sp,form){ if(t==="mslp") return P.filter(h=>dist(u,h)<=
   if(sz>1){ const okc=c=>M.get(key(c.q,c.r))&&!WALLS.has(key(c.q,c.r))&&!G.objs.some(x=>x.t!=="slick"&&same(x,c))&&!occ(c);   /* a summoned big creature must fit whole on free hexes of the board, but only its tail hex has to be in your megahex or the ones next to it: the rest may stick out */
     return P.filter(h=>mhDist(u,h)<=1&&!blocked(u,h)&&[0,1,2,3,4,5].some(f=>cells({q:h.q,r:h.r,f,size:sz}).every(okc))); }
   return P.filter(h=>mhDist(u,h)<=1&&!blocked(u,h)&&!G.objs.some(x=>x.t!=="slick"&&same(x,h)&&(solid||x.t===t||x.t==="wall"))&&(!solid||!occ(h))&&(t!=="fire"||!same(h,u))); }
+/* the many-hex Fire, Shadow and Wall spells: the chosen hex plus the next ones of the dragon's footprint (3 hexes: the first three of the 4-hex one; 7 hexes: the 7-hex one).
+   The footprint is turned to the way that lays the most hexes, and nearest the enemy on a tie; a hex that cannot hold the thing (off the board, a wall, an occupant for a wall, the wizard's own hex for fire) is left out. */
+function multiCells(u,o,t,n,h){ const solid=t==="wall", occ=c=>allU().some(x=>x.hp>0&&cells(x).some(y=>same(y,c)));
+  const ok=c=>M.get(key(c.q,c.r))&&!WALLS.has(key(c.q,c.r))&&!G.objs.some(x=>x.t!=="slick"&&same(x,c)&&(solid||x.t===t||x.t==="wall"))&&(!solid||!occ(c))&&(t!=="fire"||!same(c,u));
+  let best=null; for(let f=0;f<6;f++){ const c=fpAt(h.q,h.r,f,n===7?7:4).slice(0,n).map(x=>M.get(key(x.q,x.r))||x).filter(ok); if(!c.length||!c.some(x=>same(x,h))) continue;
+    const near=c.reduce((a,x)=>a+dist(x,o),0)/c.length; if(!best||c.length>best.c.length||(c.length===best.c.length&&near<best.near)) best={c,near}; }
+  return best?best.c:[]; }
 function summonMinion(u,kind,h){ const C=CRE[kind], n=allU().filter(x=>x.minion&&x.p.name.indexOf(C.name)===0).length;
   const p=fromBuilder({name:C.name+(n?" "+(n+1):""),race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"});
   const m=mk(h,p); m.minion=true; m.kind=kind; if(kind==="gargoyle") m.natFly=true; m.side=sideOf(u); m.owner=u; m.fresh=true; m.f=faceToward(m,other(u));
@@ -725,6 +732,8 @@ const SP={
  "Fire":{k:"C",cost:()=>1,obj:"fire"},
  "Shadow":{k:"C",cost:()=>1,obj:"shadow"},
  "Create Wall":{k:"C",cost:()=>2,obj:"wall"},
+ "3-Hex Fire":{k:"C",cost:()=>2,obj:"fire",n:3}, "3-Hex Shadow":{k:"C",cost:()=>2,obj:"shadow",n:3}, "3-Hex Wall":{k:"C",cost:()=>4,obj:"wall",n:3},
+ "7-Hex Shadow":{k:"C",cost:()=>3,obj:"shadow",n:7}, "7-Hex Fire":{k:"C",cost:()=>4,obj:"fire",n:7}, "7-Hex Wall":{k:"C",cost:()=>6,obj:"wall",n:7},
  "Rope":{k:"C",cost:()=>2,rope:1},
  "Giant Rope":{k:"C",cost:()=>5,rope:1,giant:1},
  "Summon Wolf":{k:"C",cost:()=>2,obj:"summon",summon:"wolf"},
@@ -781,7 +790,7 @@ function castList(u,o){
     if(d.k==="C"){ const cc=d.cost(o); if(cc>mx) continue;
       if(d.rope){ const big=!!d.giant, two=big&&o.p.st<20; if(mhDist(u,o)<=1&&(big||o.p.st<20)&&!o.rope&&!blocked(u,o)) L.push({sp:name,cost:cc,dx:base,label:big?`Giant Rope (${cc} ST; needs ${base} or less): ${two?"two ropes at once on this weaker creature, each removed separately: MA quartered, DX −4 and two worse each turn":"one rope on this big creature: halves its MA, −2 DX and one worse each turn"}; it must stand still and roll to get free`:`Rope (${cc} ST; needs ${base} or less): halves the enemy's MA, −2 DX and one worse each turn; it must stand still and roll to get free`}); continue; }
       if(d.fake){ for(const fk of formsFor(d)) if(creaHexes(u,o,"summon",name,fk).length) L.push({sp:name,form:fk,cost:cc,dx:base,hexsel:"summon",label:`${name} of a ${CRE[fk].name} (${cc} ST; needs ${base} or less; you choose the hex${CRE[fk].size?" for its tail; the rest of it may stick out":""})`}); continue; }
-      if(creaHexes(u,o,d.obj,name).length) L.push({sp:name,cost:cc,dx:base,hexsel:d.obj,label:`${name} (${cc} ST${d.summon&&CRE[d.summon].up>1?", then "+CRE[d.summon].up+" a turn":""}; needs ${base} or less; you choose the hex${d.summon&&CRE[d.summon].size?" for its tail (the rest of it may stick out)":""}, in your megahex or next to it)`}); continue; }
+      if(creaHexes(u,o,d.obj,name).length) L.push({sp:name,cost:cc,dx:base,hexsel:d.obj,label:`${name} (${cc} ST${d.summon&&CRE[d.summon].up>1?", then "+CRE[d.summon].up+" a turn":""}; needs ${base} or less; you choose the hex${d.summon&&CRE[d.summon].size?" for its tail (the rest of it may stick out)":""}${d.n?"; it fills up to "+d.n+" connected hexes from there":""}, in your megahex or next to it)`}); continue; }
     if(d.destroy){ if(mx<1) continue; (G.objs||[]).forEach((ob,i)=>{ if(ob.t==="slick") return; const dd=dist(u,ob), dx=base-dd; L.push({sp:name,cost:1,dx,objId:i,label:`Destroy Creation: the ${ob.t} ${dd} hex${dd===1?"":"es"} away (1 ST; needs ${dx} or less)`}); }); continue; }
   if(d.dispel){ if(mx>=5) L.push({sp:name,cost:5,dx:base,label:`Dispel Illusions (5 ST; needs ${base} or less): every illusion and image within 5 megahexes vanishes, yours too`}); continue; }
   if(d.reveal){ if(mx>=1) L.push({sp:name,cost:1,dx:base,label:`Reveal Magic (1 ST; needs ${base} or less): you learn which enemy figures within 5 megahexes are protected by Reverse Missiles, a Spell Shield, Stone Flesh, Iron Flesh or a Shock Shield, and where slippery floors lie`}); continue; }
@@ -824,6 +833,9 @@ function doCast(u,o,pa){
   { const T0=(d.self||c.on==="self")?u:o;
     if(T0.shield&&T0!==u&&!c.tele&&d.k!=="C"&&!d.destroy&&!d.dispel&&!d.reveal&&!d.slick&&c.on!=="mh"&&c.sp!=="Spell Shield"){ const x=c.sp==="Death Spell"?1:0; if(x) payST(u,1); lg(`${head}: it works, but ${sub(o)} ${vb(o,"are","is")} protected by a Spell Shield, so nothing happens. ${sub(u)} ${vb(u,"lose","loses")} ${c.cost+x} ST.`); endCheck(); return; } }
   if(d.k==="C"&&!d.rope){ if(d.summon||d.fake){ const m=summonMinion(u,d.fake?c.form:d.summon,c.dest); if(d.fake) m.fake=d.fake; lg(`${head}: it works. ${m.p.name} appears (it cannot move or fight this turn).`); endCheck(); return; }
+  if(d.n){ const cs=multiCells(u,o,d.obj,d.n,c.dest); cs.forEach(x=>G.objs.push({t:d.obj,q:x.q,r:x.r,age:0})); syncWalls();
+    lg(`${head}: it works (${c.cost} ST). ${cs.length} hexes of ${d.obj==="wall"?"wall":d.obj==="fire"?"flame":"black shadow"} appear.`);
+    if(d.obj==="fire"){ const hit=allU().filter(x=>x.hp>0&&cells(x).some(y=>cs.some(z=>same(z,y)))); hit.forEach(f=>fireHits(f,2)); if(!hit.length) endCheck(); } else endCheck(); return; }
   const ob={t:d.obj,q:c.dest.q,r:c.dest.r,age:0}; G.objs.push(ob); syncWalls(); lg(`${head}: it works (${c.cost} ST). A ${d.obj==="wall"?"wall":d.obj==="fire"?"hex of flame":"hex of black shadow"} appears.`);
     if(d.obj==="fire"){ const f=allU().find(x=>x.hp>0&&same(x,ob)); if(f) fireHits(f,2); } else endCheck(); return; }
   if(d.rope){ const two=!!d.giant&&o.p.st<20; o.rope=1; o.ropeN=two?2:1;
