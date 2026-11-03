@@ -1,0 +1,85 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blank character sheet</title>
+<style>
+:root{--ink:#1d1a16;--mut:#6b655b;--line:#8a8174;--acc:#7a2e1d;--paper:#fffdf8;--bg:#e9e4d9}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1b19}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 Georgia,"Times New Roman",serif}
+.bar{max-width:8.5in;margin:0 auto;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-family:system-ui,sans-serif;color:#222}
+.bar a{color:#1d4e9e}.bar button,.bar label{font:inherit}.bar button{padding:8px 14px;border-radius:8px;border:1px solid #888;background:#fff;cursor:pointer}.bar button.pri{background:#1d4e9e;color:#fff;border-color:#1d4e9e}
+.page{width:8.5in;min-height:11in;margin:0 auto 24px;background:var(--paper);color:var(--ink);padding:.4in .45in;position:relative}
+@page{size:letter;margin:0}
+@media print{body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:0;height:11in;overflow:hidden;page-break-after:always}}
+h2{font:700 11pt Georgia,serif;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:0 0 4px;border-bottom:1.5px solid var(--acc);padding-bottom:2px}
+.head{display:grid;grid-template-columns:1fr 1.3in;gap:.2in;align-items:end;border-bottom:3px double var(--acc);padding-bottom:6px}
+.fld{border-bottom:1px solid var(--ink);min-height:.3in;display:flex;align-items:flex-end;font-size:9pt;color:var(--mut);padding-bottom:1px}
+.big{font-size:9pt;color:var(--mut)}
+.row2{display:grid;grid-template-columns:2in 1fr;gap:.2in;margin-top:.14in}
+.portrait{border:2px solid var(--acc);border-radius:6px;aspect-ratio:4/5;position:relative}
+.portrait span{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:8pt;font-style:italic;color:var(--mut)}
+.attrs{display:grid;grid-template-columns:repeat(3,1fr);gap:.12in}
+.attr{border:2px solid var(--acc);border-radius:8px;padding:4px 6px 6px;text-align:center}
+.attr b{display:block;font:700 12pt Georgia,serif;letter-spacing:.1em;color:var(--acc)}
+.attr .num{height:.58in;border:1px solid var(--line);border-radius:5px;margin:3px 0 2px}
+.attr small{display:block;font-size:7.5pt;color:var(--mut)}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:.12in;margin-top:.1in}
+.mini .m{border:1.5px solid var(--acc);border-radius:6px;padding:3px 6px;display:grid;grid-template-columns:1fr .6in;align-items:center;gap:6px;font-size:9pt}
+.mini .m i{display:block;height:.34in;border:1px solid var(--line);border-radius:4px}
+.mini .m em{font-size:7pt;color:var(--mut);display:block;font-style:normal}
+.track{margin-top:.12in}
+.cells{display:grid;grid-template-columns:repeat(20,1fr);gap:2px}
+.cells i{border:1px solid var(--line);aspect-ratio:1;font:normal 6.5pt system-ui,sans-serif;color:var(--mut);display:flex;align-items:flex-end;justify-content:flex-end;padding:0 2px;border-radius:2px}
+.cells i.t{background:#f1ece0}
+.note{font-size:8pt;color:var(--mut);margin-top:2px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:.2in;margin-top:.14in}
+table{width:100%;border-collapse:collapse;font-size:9pt}
+th{font:600 8pt system-ui,sans-serif;color:var(--mut);text-align:left;padding:1px 3px;letter-spacing:.05em}
+td{border-bottom:1px solid var(--line);height:.27in;padding:0 3px}
+td.n,th.n{width:.6in;text-align:center}
+.sp td{height:.235in}
+.notes{margin-top:.14in}.lines{height:1.2in;background:repeating-linear-gradient(transparent,transparent .26in,var(--line) .26in,var(--line) calc(.26in + 1px))}
+.ep .cells{grid-template-columns:repeat(20,1fr)}
+body.fighter .wiz{display:none}body.fighter .lines{height:2.1in}body.fighter .cols{grid-template-columns:1fr}
+</style></head><body class="wizard">
+<div class="bar"><a href="index.html">← Menu</a>
+<label><input type="radio" name="k" value="wizard" checked> Wizard sheet</label><label><input type="radio" name="k" value="fighter"> Fighter sheet</label>
+<button class="pri" id="pr">Print</button><span style="font-size:13px;color:#555">Prints one US letter page (set the printer to "actual size", no margins).</span></div>
+<div class="page">
+ <div class="head"><div><div class="fld" style="font-size:11pt">Name</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.15in"><div class="fld">Player</div><div class="fld">Race</div><div class="fld wiz-t">Wizard or fighter</div></div></div><div class="fld" style="justify-content:flex-end">Date</div></div>
+ <div class="row2">
+  <div class="portrait"><span>Picture</span></div>
+  <div>
+   <div class="attrs">
+    <div class="attr"><b>ST</b><div class="num"></div><small>strength: your hits and your fatigue</small></div>
+    <div class="attr"><b>DX</b><div class="num"></div><small>dexterity: your skill</small></div>
+    <div class="attr"><b>IQ</b><div class="num"></div><small>intelligence</small></div>
+   </div>
+   <div class="mini">
+    <div class="m"><span>Moves<em>MA</em></span><i></i></div>
+    <div class="m"><span>DX now<em>adjDX with your gear</em></span><i></i></div>
+    <div class="m"><span>Armor stops<em>and DX penalty</em></span><i></i></div>
+   </div>
+   <div class="track"><h2>Strength track</h2>
+    <div class="cells" id="st"></div>
+    <div class="note">Hits you take and ST you spend on spells both come off your ST. Cross boxes off from the right, and write your current ST in the box above if you like.</div></div>
+  </div>
+ </div>
+ <div class="cols">
+  <div><h2>Gear</h2><table><thead><tr><th>Item</th><th class="n">Damage</th><th class="n">Min ST</th><th style="width:.9in">Where</th></tr></thead><tbody id="gear"></tbody></table></div>
+  <div><h2>Adjusted DX by what is ready</h2><table><thead><tr><th>Ready</th><th class="n">adjDX</th><th class="n">Stops</th></tr></thead><tbody id="adj"></tbody></table>
+   <div style="margin-top:.12in"><h2>Armor and shield</h2><table><tbody id="arm"></tbody></table></div></div>
+ </div>
+ <div class="wiz" style="margin-top:.14in"><h2>Spells</h2><div class="cols" style="margin-top:2px"><table class="sp"><thead><tr><th class="n">IQ</th><th>Spell</th><th class="n">Cost</th></tr></thead><tbody class="spb"></tbody></table><table class="sp"><thead><tr><th class="n">IQ</th><th>Spell</th><th class="n">Cost</th></tr></thead><tbody class="spb"></tbody></table></div></div>
+ <div class="notes"><h2>Notes</h2><div class="lines"></div></div>
+ <div class="ep" style="margin-top:.12in"><h2>Experience (EP)</h2><div class="cells" id="ep"></div><div class="note">Tick one box for every 5 EP earned. When all 20 are ticked (100 EP), trade them for one more point of ST, DX or IQ.</div></div>
+</div>
+<script>
+const rows=(id,n,cls)=>{ document.getElementById(id).innerHTML=Array.from({length:n},()=>"<tr>"+cls.map(c=>`<td class="${c}"></td>`).join("")+"</tr>").join(""); };
+document.getElementById("st").innerHTML=Array.from({length:40},(_,i)=>`<i${(i+1)%5===0?' class="t"':''}>${i+1}</i>`).join("");
+document.getElementById("ep").innerHTML=Array.from({length:20},(_,i)=>`<i class="t">${(i+1)*5}</i>`).join("");
+rows("gear",6,["","n","n",""]); rows("adj",5,["","n","n"]); rows("arm",2,[""]);
+document.querySelectorAll(".spb").forEach(t=>rows2(t,13));
+function rows2(t,n){ t.innerHTML=Array.from({length:n},()=>"<tr><td class='n'></td><td></td><td class='n'></td></tr>").join(""); }
+document.querySelectorAll("input[name=k]").forEach(r=>r.onchange=()=>{ document.body.className=r.value; });
+document.getElementById("pr").onclick=()=>window.print();
+</script></body></html>
