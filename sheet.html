@@ -41,7 +41,7 @@ th{font:600 8pt system-ui,sans-serif;color:var(--mut);text-align:left;padding:1p
 td{border-bottom:1px solid var(--line);height:.26in;padding:0 3px}
 td.n,th.n{width:.65in;text-align:center}
 .sp td{height:.225in}
-.lines{height:var(--h,1.2in);background:repeating-linear-gradient(transparent,transparent .26in,var(--line) .26in,var(--line) calc(.26in + 1px))}
+.lines div{height:.26in;border-bottom:1px solid var(--line)}
 body{--nh:1.05in}body.fighter{--nh:3.6in}body.fighter .wiz{display:none}
 </style></head><body class="wizard">
 <div class="bar"><a href="index.html">← Menu</a>
@@ -70,16 +70,18 @@ body{--nh:1.05in}body.fighter{--nh:3.6in}body.fighter .wiz{display:none}
  </div>
  <div class="cols">
   <div><h2>Weapons</h2><table><thead><tr><th>Weapon</th><th class="n">Damage</th><th class="n">Min ST</th></tr></thead><tbody id="gear"></tbody></table></div>
-  <div><h2>Equipment and loot</h2><div class="lines" style="--h:1.65in"></div></div>
+  <div><h2>Equipment and loot</h2><div class="lines" data-n="6"></div></div>
  </div>
  <div class="wiz" style="margin-top:.12in"><h2>Spells <span style="font:italic 8pt Georgia;letter-spacing:0;text-transform:none;color:var(--mut)">(you may know as many as your IQ; add more in the notes)</span></h2><div class="cols" style="margin-top:2px"><table class="sp"><thead><tr><th class="n">IQ</th><th>Spell</th><th class="n">Cost</th></tr></thead><tbody class="spb"></tbody></table><table class="sp"><thead><tr><th class="n">IQ</th><th>Spell</th><th class="n">Cost</th></tr></thead><tbody class="spb"></tbody></table></div></div>
- <div class="notes" style="margin-top:.12in"><h2>Notes</h2><div class="lines" style="--h:var(--nh)"></div></div>
+ <div class="notes" style="margin-top:.12in"><h2>Notes</h2><div class="lines" data-n="4" data-f="13"></div></div>
 </div>
 <script>
 const rows=(id,n,cls)=>{ document.getElementById(id).innerHTML=Array.from({length:n},()=>"<tr>"+cls.map(c=>`<td class="${c}"></td>`).join("")+"</tr>").join(""); };
 rows("gear",5,["","n","n"]);
 document.querySelectorAll(".spb").forEach(t=>rows2(t,10));
 function rows2(t,n){ t.innerHTML=Array.from({length:n},()=>"<tr><td class='n'></td><td></td><td class='n'></td></tr>").join(""); }
-document.querySelectorAll("input[name=k]").forEach(r=>r.onchange=()=>{ document.body.className=r.value; });
+const fillLines=()=>{ const f=document.body.classList.contains("fighter"); document.querySelectorAll(".lines").forEach(e=>{ e.innerHTML="<div></div>".repeat(+(f&&e.dataset.f?e.dataset.f:e.dataset.n)); }); };
+fillLines();
+document.querySelectorAll("input[name=k]").forEach(r=>r.onchange=()=>{ document.body.className=r.value; fillLines(); });
 document.getElementById("pr").onclick=()=>window.print();
 </script></body></html>
