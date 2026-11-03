@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Blank character sheet</title>
 <style>
-:root{--ink:#1d1a16;--mut:#6b655b;--line:#8a8174;--acc:#7a2e1d;--paper:#fffdf8;--bg:#e9e4d9}
+:root{--ink:#1d1a16;--mut:#6b655b;--line:#555;--acc:#000;--paper:#fff;--bg:#e9e4d9}
 @media (prefers-color-scheme:dark){:root{--bg:#1c1b19}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 Georgia,"Times New Roman",serif}
@@ -33,7 +33,7 @@ h2{font:700 11pt Georgia,serif;letter-spacing:.14em;text-transform:uppercase;col
 .carry div{border-bottom:1px solid var(--ink);height:.27in;display:flex;align-items:flex-end}
 .cells{display:grid;grid-template-columns:repeat(20,1fr);gap:2px;flex:1}
 .cells i{border:1px solid var(--line);font:normal 6pt system-ui,sans-serif;color:var(--mut);display:flex;align-items:flex-end;justify-content:flex-end;padding:0 1px;border-radius:2px;min-height:.17in}
-.cells i.t{background:#f1ece0}
+.cells i.t{background:#eee}
 .note{font-size:7.5pt;color:var(--mut);margin-top:2px}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:.2in;margin-top:.12in}
 table{width:100%;border-collapse:collapse;font-size:9pt}
@@ -58,11 +58,11 @@ body{--nh:1.05in}body.fighter{--nh:3.6in}body.fighter .wiz{display:none}
    <div><b>EP</b><small>experience points</small><span class="v"></span></div>
   </div>
   <div class="mid">
-   <div><span class="cap">HITS AND FATIGUE: cross off from the right (hits you take and ST you spend come off the same ST)</span><div class="cells" id="st"></div></div>
+   <div><span class="cap">CURRENT ST (hits you take and ST you spend come off the same number)</span><div class="one"><div class="bx"></div><div class="note" style="align-self:end">Subtract each hit and each ST you spend, and write the new number here.</div></div></div>
    <div><span class="cap">ADJUSTED DX NOW (with what is in your hands and your armor)</span><div class="one"><div class="bx"></div><div class="note" style="align-self:end">Write a new number when you change what you hold or when something hits your DX.</div></div></div>
    <div><span class="cap">ARMOR AND SHIELD</span><div class="two"><div>Armor: stops / DX penalty</div><div>Shield: stops / DX penalty</div></div></div>
    <div><span class="cap">IN YOUR HANDS</span><div class="two"><div>Right hand</div><div>Left hand</div></div></div>
-   <div><span class="cap">EXPERIENCE: tick a box for every 5 EP; at 100 EP trade for a point of ST, DX or IQ</span><div class="cells" id="ep"></div></div>
+   <div><span class="cap">EXPERIENCE POINTS EARNED</span><div class="one" style="grid-template-columns:2in 1fr"><div class="bx"></div><div class="note" style="align-self:end">At 100 EP trade them for one point of ST, DX or IQ.</div></div></div>
   </div>
   <div class="right"><div class="portrait"><span>Picture</span></div>
    <div class="carry">Slung on your back<div></div>Sheathed at your side<div></div></div>
@@ -77,8 +77,6 @@ body{--nh:1.05in}body.fighter{--nh:3.6in}body.fighter .wiz{display:none}
 </div>
 <script>
 const rows=(id,n,cls)=>{ document.getElementById(id).innerHTML=Array.from({length:n},()=>"<tr>"+cls.map(c=>`<td class="${c}"></td>`).join("")+"</tr>").join(""); };
-document.getElementById("st").innerHTML=Array.from({length:40},(_,i)=>`<i${(i+1)%5===0?' class="t"':''}>${i+1}</i>`).join("");
-document.getElementById("ep").innerHTML=Array.from({length:20},(_,i)=>`<i class="t">${(i+1)*5}</i>`).join("");
 rows("gear",5,["","n","n"]);
 document.querySelectorAll(".spb").forEach(t=>rows2(t,10));
 function rows2(t,n){ t.innerHTML=Array.from({length:n},()=>"<tr><td class='n'></td><td></td><td class='n'></td></tr>").join(""); }
