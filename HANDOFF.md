@@ -103,6 +103,6 @@ Owner has only one phone, so test with several browser tabs or windows.
 ## Nov 2: Megahex Sleep built (branch megahex-sleep, merged). Spell Reference Booklet PDF was attached this session (booklet text: pdftotext works). Remaining spells: Megahex Avert (IQ 15, 3 ST + 1 a turn for the whole megahex; needs one shared upkeep), 3-/4-/7-Hex Fire, Shadow, Wall (3-Hex IQ 12 cost 2 each; 7-Hex Fire 4, 7-Hex Wall 6; 4-hex versions: check the booklet). Owner's earlier note: owner had been holding the multi-hex work until flying over figures was settled; it is.
 
 
-## START HERE next session (Nov 2, late)
+## START HERE next session (Nov 2, evening): Fight a friend online and the phone layout v2 are built and merged. Next: see the owner for their new idea (multi-hex spells on hold), then the backlog below. (older note:)
 - Owner asked: work on **Fight a friend online** next (see "Next, in the owner's order" item 2 in the Nov 1 late section: the host device also plays a seat, no cover screens when every other player is remote, menu card plus a simple start flow, Colosseum only, tell the owner the fight ends if the host page closes). The phone map it needs is built (table version 8).
 - Everything is merged to main and pushed (last: licence and builder gear-help menu). Owner is letting friends try it before contacting Steve Jackson Games about a paid version; repo stays public for now.

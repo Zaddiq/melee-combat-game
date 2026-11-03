@@ -12,7 +12,7 @@ const pname=i=>"Player "+(i+1)+(slot[i]?" ("+slot[i].name+")":"");
 function autoSeat(){
   for(const u of Object.keys(seat)) if(!joins[u]) delete seat[u];
   for(const u of Object.keys(seat)) if(seat[u]>=NP) seat[u]=-1;
-  for(const u of Object.keys(joins)) if(seat[u]===undefined){ const used=new Set(Object.values(seat)); seat[u]=-1; for(let i=0;i<NP;i++) if(!used.has(i)){ seat[u]=i; break; } }
+  for(const u of Object.keys(joins)) if(seat[u]===undefined){ const used=new Set(Object.values(seat)); if(window.FRIEND) used.add(0);   /* a friend's phone never takes the host's own seat */ seat[u]=-1; for(let i=0;i<NP;i++) if(!used.has(i)){ seat[u]=i; break; } }
 }
 function pubObj(){ const seats={}; for(const u of Object.keys(seat)) if(joins[u]) seats[u]={p:seat[u],name:joins[u].name,fighter:seat[u]>=0&&slot[seat[u]]?slot[seat[u]].name:""}; return {open:true,locked,np:NP,seats,t:Date.now()}; }
 const fail=e=>{ err=(e&&e.message)||String(e); render(); };
@@ -241,5 +241,15 @@ const Online=window.Online={ override:null, ring:0, lastKey:{},
   }
 };
 render();
+/* ---- Fight a friend online: this device plays Player 1 and the friend joins by table name (colosseum.html?friend=1) ----
+   Two players, no pass-the-tablet screens (the only other player is far away), and the table opens by itself. If this page closes the fight ends. */
+if(new URLSearchParams(location.search).get("friend")){
+  window.FRIEND=true; const fb=$("friendBox"); const og=$("online"); if(og) og.style.display="none";
+  try{ if(NP!==2||MODE!=="ffa"){ NP=2; MODE="ffa"; applyMode(); resetSetup(); } }catch(e){}
+  const draw=()=>{ if(!fb) return; fb.style.display=""; const joined=Object.keys(joins).filter(u=>seat[u]===1&&joins[u]);
+    fb.innerHTML=`<h2>Fight a friend online</h2>`+(code?`<div>Table name: <b style="font-size:30px;letter-spacing:3px">${esc(code)}</b></div><div class="mut">Your friend opens <b>${esc(url())}</b> on their phone or computer, types the table name, and picks their fighter there. You are Player 1 on this screen: load your fighter below (Player 1's box).</div><div style="margin-top:6px">${joined.length?`<b style="color:var(--me)">● ${esc(joins[joined[0]].name)} has joined as Player 2.</b>`:`<span class="mut">Waiting for your friend to join…</span>`}</div><div class="mut" style="margin-top:6px">Keep this page open: if it closes, the fight ends for both of you.</div>`:`<div class="mut">Opening the table…${err?" "+esc(err):""}</div>`); };
+  setInterval(draw,700); draw();
+  setTimeout(()=>{ if(!code) open(""); },300);
+}
 window.__online={state:()=>({code,joins,seat,pending,locked,sess})};
 })();
