@@ -40,7 +40,7 @@ with sync_playwright() as p:
     ok("L7 the load/save/character box is hidden while the fight is on", not A.locator("#chrCard").is_visible())
     ok("L8 megahex outlines are drawn by default and the numbers are not", A.locator("#pmap line").count() > 20)
     A.click("#mega"); 
-    ok("L9 the switch gives back the plain map (no outlines)", A.locator("#pmap line").count() == 0 and "outlines" in A.inner_text("#mega"))
+    ok("L9 the switch gives back the plain map (no outlines)", A.locator("#pmap line").count() == 0 and "Outlines" in A.inner_text("#mega"))
     A.click("#mega")
     ok("L10 and back again", A.locator("#pmap line").count() > 20)
     # play a turn to get log lines with the numbers

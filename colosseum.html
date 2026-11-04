@@ -487,7 +487,8 @@ function startFight(){
   G.players=pl.map((p,i)=>{ const u=mk(s.pick[i],p); u.side=SIDEIDS[team[i]]; return u; }); G.me=G.players[0]; G.foe=G.players[1];
   G.units=[...G.players]; WALLS=new Set();
   if(mobOn()) spawnMobs();
-  for(const u of G.players) u.f=faceToward(u,other(u));   /* everyone starts facing their nearest enemy */
+  G.players.forEach((u,i)=>{ const sf=window.Online&&Online.startFace&&Online.startFace[i]; u.f=(sf!=null&&sf>=0&&sf<6)?sf:faceToward(u,other(u)); });   /* everyone starts facing their nearest enemy, unless a phone player turned to face another way */
+  if(window.Online) Online.startFace={};
   $("setup").open=false;
   nextTurn(); ui(); drawMap();
 }

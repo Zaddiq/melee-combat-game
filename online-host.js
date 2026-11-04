@@ -105,11 +105,12 @@ const startSeat=u=>{ if(G||!joins[u]) return -1; const p=seat[u]; try{ return p!
 function startSend(u){
   const p=startSeat(u); if(p<0) return false;
   const st=startHexes(), arr=st.zones[st.zi[p]].hexes, free=arr.filter(h=>!st.pick.some((x,i)=>i!==p&&x===h));
-  const ini=i=>String(slot[i].name||"?").trim().charAt(0).toUpperCase();
-  const sc={bd:P.map(h=>[h.q,h.r,h.e?1:0,h.g]),ob:[],info:"",u:st.pick.map((h,i)=>({c:[[h.q,h.r]],f:0,k:i,L:ini(i),z:1,d:0,v:0,s:i===p?1:0})),hl:free.map(h=>[h.q,h.r,0]),hk:"start"};
-  const sq=sendTo(u,{mode:"map",text:"Tap one of the outlined hexes to choose where you start. You can change your mind until the fight begins. Everyone starts facing the nearest enemy.",btns:[],tg:[],turn:0,ph:"start",pi:0,key:"start"+p+"|"+u,ring:Online.ring,sc});
+  const ini=i=>String(slot[i].name||"?").trim().charAt(0).toUpperCase(), sf=Online.startFace||(Online.startFace={}), mc=P.find(h=>h.q===0&&h.r===0)||P[0], dflt=h=>{ try{ return faceToward(h,mc); }catch(e){ return 0; } };
+  const sc={bd:P.map(h=>[h.q,h.r,h.e?1:0,h.g]),ob:[],info:"",u:st.pick.map((h,i)=>({c:[[h.q,h.r]],f:sf[i]!=null?sf[i]:dflt(h),k:i,L:ini(i),z:1,d:0,v:0,s:i===p?1:0})),hl:free.map(h=>[h.q,h.r,0]),hk:"start",fc:{q:st.pick[p].q,r:st.pick[p].r,f:sf[p]!=null?sf[p]:-1}};
+  const sq=sendTo(u,{mode:"map",text:"Tap one of the outlined hexes to choose where you start, then tap one of the small circles to choose which way you face (if you skip it you face the nearest enemy). You can change your mind until the fight begins.",btns:[],tg:[],turn:0,ph:"start",pi:0,key:"start"+p+"|"+u,ring:Online.ring,sc});
   const hacts={}; for(const h of free) hacts[key(h.q,h.r)]=()=>{ starts[p]=key(h.q,h.r); ui(); drawMap(); };
-  pending[u]={seq:sq,acts:[],tacts:[],hacts,facts:{}}; return true; }
+  const facts={}; for(let d=0;d<6;d++) facts[d]=()=>{ sf[p]=d; ui(); drawMap(); };
+  pending[u]={seq:sq,acts:[],tacts:[],hacts,facts}; return true; }
 /* ---- everyone picks at once (item 5) ----
    When the picks of a turn begin, every player who has a phone gets their own pick session (the same steps as the tablet panel:
    action, spell, far hex, with Back) and answers at the same time as the others. The tablet's own players (no phone) go first, one after

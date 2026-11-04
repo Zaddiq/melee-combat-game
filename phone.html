@@ -17,9 +17,9 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
 .opt{display:block;width:100%;text-align:left;margin-top:10px;padding:14px 16px;font-size:18px}.opt.pri{background:var(--acc);color:#fff;border-color:var(--acc)}.opt[disabled]{opacity:.5}
 .tgs{margin-top:12px}.tg{display:inline-block;width:auto;margin:6px 6px 0 0;padding:8px 12px;font-size:16px}.tg.on{border:2px solid var(--acc);font-weight:700}
 .ring{background:#ffe9a8;color:#3a2a00;border-radius:10px;padding:10px 12px;margin-top:12px;font-weight:700}
-#play{order:1}main.fight #play{order:-1}main.fight h1,main.fight .back,main.live #chrCard{display:none}
-#stick{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0 2px}#resBar{position:sticky;bottom:0;z-index:4;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-top:14px;font-size:15px;box-shadow:0 -4px 10px rgba(0,0,0,.08)}#resBar div{margin-top:3px}#resBar .nw{font-weight:700}
-#pmap{display:block;width:100%;max-height:40vh;margin-top:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;touch-action:manipulation}.det{display:block;font-size:13px;opacity:.85;margin-top:4px;font-weight:400}.mrow{display:flex;gap:8px;flex-wrap:wrap}.mrow button{flex:1 1 auto;margin-top:8px;padding:12px 10px}
+#play{order:1}main.in #play{order:-1}main.in h1,main.in .back,main.live #chrCard{display:none}
+#stick{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0 2px}#resBar{position:sticky;bottom:0;z-index:4;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 12px;margin-top:10px;font-size:15px;box-shadow:0 -4px 10px rgba(0,0,0,.08);max-height:45vh;overflow:auto}#resBar div{margin-top:3px}#resBar .nw{font-weight:700}
+#pmap{display:block;width:100%;max-height:32vh;margin-top:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;touch-action:manipulation}.det{display:block;font-size:13px;opacity:.85;margin-top:4px;font-weight:400}.mrow{display:flex;gap:8px;flex-wrap:wrap}.mrow button{flex:1 1 auto;margin-top:8px;padding:12px 10px}#stick .mrow{gap:6px}#stick .mrow button{flex:1 1 0;margin-top:6px;padding:8px 4px;font-size:13px;min-width:0;white-space:nowrap}#resBar.c div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dot{display:inline-block;width:10px;height:10px;border-radius:5px;background:var(--mut);margin-right:6px}.dot.on{background:var(--ok)}
 </style></head><body><main>
 <h1>Colosseum</h1>
@@ -65,7 +65,7 @@ let myP=0, lastKey=null, room=null, offPub=null, offMe=null, offPriv=null, offRe
 const q=new URLSearchParams(location.search), saved=rd();
 $("code").value=Net.clean(q.get("room")||(saved&&saved.room)||"");
 $("nm").value=(saved&&saved.name)||"";
-function showIn(on){ $("joinCard").style.display=on?"none":""; $("inCard").style.display=on?"":"none"; $("chrCard").style.order=on?"5":"0"; }   /* once at the table the map comes first and the character box moves below it (it can still be changed) */
+function showIn(on){ document.querySelector("main").classList.toggle("in",on); $("joinCard").style.display=on?"none":""; $("inCard").style.display=on?"":"none"; $("chrCard").style.order=on?"5":"0"; }   /* once at the table the map comes first and the character box moves below it (it can still be changed) */
 function seatText(pub){
   const me=pub&&pub.seats&&pub.seats[Net.uid];
   if(!pub||!pub.open) return ["The table was closed.","Ask the host for a new code."];
@@ -89,9 +89,9 @@ function showPlay(p){
   const sent=!wait&&sentSeq===p.seq;
   mn.classList.toggle("fight",!!sc&&!!p.lv); mn.classList.toggle("live",!!p.lv);
   const mapFirst=!!sc;
-  const mapHtml=sc?`<div id="stick"><svg id="pmap" viewBox="0 0 10 10"></svg><div class="mrow"><button id="zoom" style="display:none"></button>${sc.fc&&!wait?`<button id="tl"${sent?" disabled":""}>↺ Turn left</button><button id="tr"${sent?" disabled":""}>↻ Turn right</button>`:""}<button id="mega">${mapMega?"Show range numbers":"Show megahex outlines"}</button></div></div>`:"";
+  const mapHtml=sc?`<div id="stick"><svg id="pmap" viewBox="0 0 10 10"></svg><div class="mrow"><button id="zoom" style="display:none"></button>${sc.fc&&!wait?`<button id="tl"${sent?" disabled":""}>↺ Left</button><button id="tr"${sent?" disabled":""}>↻ Right</button>`:""}<button id="mega">${mapMega?"Numbers":"Outlines"}</button></div></div>`:"";
   const infoHtml=sc&&sc.info?`<details class="mut" style="margin-top:10px"><summary>Everyone's ST</summary>${esc(sc.info)}</details>`:"";
-  const lg=p.lg||[], resHtml=lg.length?`<div id="resBar"><b>What just happened</b>${(logOpen?lg:lg.slice(-3)).map((x,i,a)=>`<div${i===a.length-1?' class="nw"':''}>${esc(x)}</div>`).join("")}${lg.length>3?`<button id="lgTg" class="mut" style="margin-top:6px;padding:6px 10px;font-size:14px">${logOpen?"Show less":"Show more"}</button>`:""}</div>`:"";
+  const lg=p.lg||[], resHtml=lg.length?`<div id="resBar"${logOpen?"":' class="c"'}><b>What just happened</b>${(logOpen?lg:lg.slice(-1)).map((x,i,a)=>`<div${i===a.length-1?' class="nw"':''}>${esc(x)}</div>`).join("")}${lg.length>1?`<button id="lgTg" class="mut" style="margin-top:6px;padding:6px 10px;font-size:14px">${logOpen?"Hide earlier results":"Earlier results"}</button>`:""}</div>`:"";
   const confirmHtml=!wait&&selHex&&sc&&sc.hk&&sc.hk!=="go"?`<button class="opt pri" id="cfm"${sent?" disabled":""}>${sc.hk==="ret"?"Push them back to the hex I marked":"Go to the hex I marked"}</button>`:"";
   const sp=(p.btns||[]).map(b=>splitLabel(b.l)), anyDet=sp.some(x=>x[1]);
   const btnHtml=!wait?(p.btns||[]).map((b,i)=>`<button class="opt${b.p?" pri":""}" data-b="${i}"${sent?" disabled":""}>${esc(sp[i][0])}${showDet&&sp[i][1]?`<span class="det">${esc(sp[i][1])}</span>`:""}</button>`).join("")+(anyDet?`<button id="detTg" class="mut" style="margin-top:8px;padding:8px 12px;font-size:14px">${showDet?"Hide the details":"Show what each choice does"}</button>`:""):"";
@@ -107,7 +107,7 @@ function showPlay(p){
     const draw=()=>PhoneMap.render($("pmap"),sc,{all:zoomAll,sel:selHex,
       onHex:(k,kind)=>{ if(sent) return; if(kind==="go"||kind==="start"){ send("h",k); return; } if(selHex===k){ send("h",k); return; } selHex=k; showPlay(p); },
       onFace:d=>send("f",d),mega:mapMega});
-    const r=draw(), z=$("zoom"); if(z){ z.style.display=(r.focus||zoomAll)?"":"none"; z.textContent=zoomAll?"Zoom to the action":"Show the whole board"; z.onclick=()=>{ zoomAll=!zoomAll; showPlay(p); }; }
+    const r=draw(), z=$("zoom"); if(z){ z.style.display=(r.focus||zoomAll)?"":"none"; z.textContent=zoomAll?"Zoom in":"Whole board"; z.onclick=()=>{ zoomAll=!zoomAll; showPlay(p); }; }
     const tl=$("tl"), tr=$("tr"); if(tl) tl.onclick=()=>send("f",(sc.fc.f+1)%6); if(tr) tr.onclick=()=>send("f",(sc.fc.f+5)%6);
     const mg=$("mega"); if(mg) mg.onclick=()=>{ mapMega=!mapMega; try{ ST.setItem("colosseum-phone-mega",mapMega?"1":"0"); }catch(e){} showPlay(p); };
     const cf=$("cfm"); if(cf) cf.onclick=()=>send("h",selHex);
