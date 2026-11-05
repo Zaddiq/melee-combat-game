@@ -191,7 +191,7 @@ function spendPoint(i,k){ const f=slot[i]; if(!f||f.phone) return; const R=loadR
   try{ localStorage.setItem(RKEY,JSON.stringify(R)); }catch(e){} REC=R; Roster.syncBuilder(localStorage,KEY,r);
   if(k!=="bank"){ f[k]=r[k]; if(k==="st") f.hp=f.st; }   /* the loaded fighter has the new number for the next fight */
   $("msg"+i).textContent=k==="bank"?"Point banked.":"+1 "+k.toUpperCase()+" for "+f.name+"."; showSlot(i); }
-function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot.slice(0,NP).some(Boolean)?`<div class="two">${slot.slice(0,NP).map((f,i)=>f?`<div>${card(f,PCLS[i])}${epLine(f,i)}</div>`:"").join("")}</div>`:`<div class="mut">Load the fighters to see their stats here.</div>`); el.querySelectorAll("[data-spend]").forEach(b=>b.onclick=()=>{ const [i,k]=b.dataset.spend.split(":"); spendPoint(+i,k); }); }
+function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot.slice(0,NP).some(Boolean)?`<div class="two">${slot.slice(0,NP).map((f,i)=>f?`<div>${card(f,PCLS[i])}${epLine(f,i)}</div>`:"").join("")}</div>`:`<div class="mut">Load the fighters to see their stats here.</div>`)+(G&&G.mobs&&G.mobs.length?`<h2 style="margin-top:12px">The computer's side</h2><div class="two">${[...new Map(G.mobs.map(m=>[m.p.name,m])).values()].map(m=>`<div>${card(m.p,"mob")}</div>`).join("")}</div>`:""); el.querySelectorAll("[data-spend]").forEach(b=>b.onclick=()=>{ const [i,k]=b.dataset.spend.split(":"); spendPoint(+i,k); }); }
 function setP(i,f,msg){
   if(G&&G.phase!=="over"&&!confirm("Leave the fight in progress?")) return; G=null;
   placeStep=0; f.rname=f.name; if(!f.phone){ const r0=loadRec()[rkey(f)]; if(r0){ f.st=r0.st; f.dx=r0.dx; } } slot[i]=f; const taken=n=>slot.some((o,j)=>j!==i&&o&&o.name.trim().toLowerCase()===n.trim().toLowerCase()); if(taken(f.name)){ const base=f.name; let k=2; while(k<4&&taken(base+" "+ROM[k])) k++; f.name=base+" "+ROM[k]; }
@@ -490,6 +490,7 @@ function startFight(){
   G.players.forEach((u,i)=>{ const sf=window.Online&&Online.startFace&&Online.startFace[i]; u.f=(sf!=null&&sf>=0&&sf<6)?sf:faceToward(u,other(u)); });   /* everyone starts facing their nearest enemy, unless a phone player turned to face another way */
   if(window.Online) Online.startFace={};
   $("setup").open=false;
+  showStats();
   nextTurn(); ui(); drawMap();
 }
 function nextTurn(){
