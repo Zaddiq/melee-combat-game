@@ -185,13 +185,20 @@ function epLine(f,i){
   if(f.phone){ const r=f.phone.rec; return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/100 EP${r&&r.pend>0?" · attribute point waiting (spend it on that phone)":""}</div>`; }
   const r=loadRec()[rkey(f)], o=Roster.options(r);
   return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/100 EP${r&&r.pend>0?" · <b>attribute point to spend</b>"+(r.must?" (you hold a banked point too, so you must spend both)":""):""}</div>`
-    +(o.length?`<div class="row">${o.map(k=>`<button data-spend="${i}:${k}">${k==="bank"?"Bank it for later":"+1 "+k.toUpperCase()}</button>`).join("")}</div>`:"");
+    +(o.length?`<div class="row">${o.map(k=>`<button data-spend="${i}:${k}">${k==="bank"?"Bank it for later":"+1 "+k.toUpperCase()}</button>`).join("")}</div>`:"")
+    +(r?(builderHolds(r)?`<div class="mut">The builder already holds ${esc(r.name)}, up to date.</div>`:`<div class="row"><button data-send="${i}">Send to builder</button></div>`):"");
 }
+function builderHolds(r){ try{ const b=JSON.parse(localStorage.getItem(KEY)||"null"); return !!b&&Roster.rk(b.name)===Roster.rk(r.name); }catch(e){ return false; } }
+function sendToBuilder(i){ const f=slot[i]; if(!f||f.phone) return; const r=loadRec()[rkey(f)]; if(!r) return;
+  let b=null; try{ b=JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){}
+  if(b&&b.name&&Roster.rk(b.name)!==Roster.rk(r.name)&&!confirm("The builder holds "+b.name+". Replace it with "+r.name+"? "+b.name+" will be gone from the builder unless you saved it elsewhere (Copy data, or Send to bench).")) return;
+  try{ localStorage.setItem(KEY,JSON.stringify(Roster.updated(r))); $("msg"+i).textContent=r.name+" is in the builder now. Open the builder to print or edit."; }catch(e){ $("msg"+i).textContent="Could not write to this browser's storage."; }
+  showStats(); }
 function spendPoint(i,k){ const f=slot[i]; if(!f||f.phone) return; const R=loadRec(), key=rkey(f), r=R[key]; if(!r||!Roster.spend(r,k)) return;
   try{ localStorage.setItem(RKEY,JSON.stringify(R)); }catch(e){} REC=R; Roster.syncBuilder(localStorage,KEY,r);
   if(k!=="bank"){ f[k]=r[k]; if(k==="st") f.hp=f.st; }   /* the loaded fighter has the new number for the next fight */
   $("msg"+i).textContent=k==="bank"?"Point banked.":"+1 "+k.toUpperCase()+" for "+f.name+"."; showSlot(i); }
-function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot.slice(0,NP).some(Boolean)?`<div class="two">${slot.slice(0,NP).map((f,i)=>f?`<div>${card(f,PCLS[i])}${epLine(f,i)}</div>`:"").join("")}</div>`:`<div class="mut">Load the fighters to see their stats here.</div>`)+(G&&G.mobs&&G.mobs.length?`<h2 style="margin-top:12px">The computer's side</h2><div class="two">${[...new Map(G.mobs.map(m=>[m.p.name,m])).values()].map(m=>`<div>${card(m.p,"mob")}</div>`).join("")}</div>`:""); el.querySelectorAll("[data-spend]").forEach(b=>b.onclick=()=>{ const [i,k]=b.dataset.spend.split(":"); spendPoint(+i,k); }); }
+function showStats(){ const el=$("stats"); if(!el) return; el.innerHTML="<h2>Fighters</h2>"+(slot.slice(0,NP).some(Boolean)?`<div class="two">${slot.slice(0,NP).map((f,i)=>f?`<div>${card(f,PCLS[i])}${epLine(f,i)}</div>`:"").join("")}</div>`:`<div class="mut">Load the fighters to see their stats here.</div>`)+(G&&G.mobs&&G.mobs.length?`<h2 style="margin-top:12px">The computer's side</h2><div class="two">${[...new Map(G.mobs.map(m=>[m.p.name,m])).values()].map(m=>`<div>${card(m.p,"mob")}</div>`).join("")}</div>`:""); el.querySelectorAll("[data-spend]").forEach(b=>b.onclick=()=>{ const [i,k]=b.dataset.spend.split(":"); spendPoint(+i,k); });  el.querySelectorAll("[data-send]").forEach(b=>b.onclick=()=>sendToBuilder(+b.dataset.send)); }
 function setP(i,f,msg){
   if(G&&G.phase!=="over"&&!confirm("Leave the fight in progress?")) return; G=null;
   placeStep=0; f.rname=f.name; if(!f.phone){ const r0=loadRec()[rkey(f)]; if(r0){ f.st=r0.st; f.dx=r0.dx; } } slot[i]=f; const taken=n=>slot.some((o,j)=>j!==i&&o&&o.name.trim().toLowerCase()===n.trim().toLowerCase()); if(taken(f.name)){ const base=f.name; let k=2; while(k<4&&taken(base+" "+ROM[k])) k++; f.name=base+" "+ROM[k]; }
