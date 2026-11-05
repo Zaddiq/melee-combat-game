@@ -1,4 +1,4 @@
-# Colosseum: what is done (Nov 2, 2026)
+# Colosseum: what is done (updated Nov 4, 2026)
 
 Everything below is merged to `main` and live at https://zaddiq.github.io/melee-combat-game/ (hard-refresh; the footer should say "Table version 9").
 
@@ -20,3 +20,15 @@ Multi-hex spells (your new idea first), compact phone setup, computer-run seats,
 
 ## To resume
 Tell Claude to read HANDOFF.md and NOTES.md in the repo Zaddiq/melee-combat-game, then say what you want next.
+
+## Added after the first version of this file
+- Many-hex Fire, Shadow and Wall (3 and 7 hexes, dragon-shaped footprint).
+- Voice chat (Join voice / Listen only / Mute; new Firebase rules were needed).
+- Character pictures: builder upload, printed sheet, picture counters that turn with the facing.
+- New black-and-white character sheets: blank (menu card) and the builder's filled-in printout.
+- Phone fixes from the first solo playtest: choose start facing, End movement always on screen, connection info at the bottom.
+
+## Waiting on you
+- Easier start for new characters (first 4 points after 32) and a fairer rating for wizards: tell me which page you found too hard (Colosseum or Unlimited Arena) and say "build it".
+- Your forgotten "new idea".
+- Try voice chat and Fight a friend with a real friend.
