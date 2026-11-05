@@ -21,6 +21,12 @@ with sync_playwright() as p:
     # experience earned in a fight reaches the builder at once
     pg.evaluate("()=>{ awardXp(slot[0],20); }")
     ok("T5 experience earned at the table updates the builder's EP at once", pg.evaluate("()=>JSON.parse(localStorage.getItem('wizard-builder-v1')).ep") == 30)
-    ok("T6 no script errors", not errs)
+    # after a fight the result panel offers Return to Colosseum (not the main menu), with the point waiting
+    pg.evaluate("()=>{ const k='wulf (example)', R=JSON.parse(localStorage.getItem('melee-arena-v1')); R[k].pend=1; R[k].ep=0; localStorage.setItem('melee-arena-v1',JSON.stringify(R)); REC=R; }")
+    pg.evaluate("()=>{ G={phase:'over',turn:3,log:[],xp:[],players:[],mobs:[],winners:[],qb:''}; ui(); }")
+    ok("T6 the result panel has Rematch and Return to Colosseum, and no link to the main menu", pg.locator("#bHome").count() == 1 and pg.locator("#bNew").count() == 1 and pg.locator("a[href='index.html']:has(button)").count() == 0)
+    pg.click("#bHome")
+    ok("T7 Return to Colosseum leaves the fight, keeps the fighter loaded and shows the point to spend", pg.evaluate("()=>G===null && !!slot[0] && document.getElementById('setup').open") and pg.locator("#stats [data-spend]").count() >= 2)
+    ok("T8 no script errors", not errs)
     br.close()
 bad = [n for n, c in R if not c]; print(f"{len(R)-len(bad)}/{len(R)} passed"); raise SystemExit(1 if bad else 0)
