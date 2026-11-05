@@ -22,5 +22,21 @@ with sync_playwright() as p:
     ok("B8 after spending a point it asks first, then resets to 8/8/8", len(dialogs)==1 and pg.evaluate("S.st===8"))
     pg.fill("#name","Zed"); pg.click("#newChar")
     ok("B9 a typed name also triggers the warning and is cleared by the reset", len(dialogs)==2 and pg.evaluate("S.name===''")  and pg.input_value("#name")=="")
+    # load from bench A, bench B or the roster
+    pg.evaluate("""()=>{ const mk=(n,st)=>Object.assign({},normalize(BLANK),{name:n,st:st});
+      localStorage.setItem('melee-bench-v1',JSON.stringify({a:mk('Bench Ann',10),b:mk('Bench Bo',11)}));
+      const ex=Object.assign({},normalize(BLANK),{name:'Rosie',st:12,dx:9,iq:8,ep:40});
+      localStorage.setItem('melee-arena-v1',JSON.stringify({rosie:{name:'Rosie',st:12,dx:9,iq:8,total0:32,pts:1,wins:2,ep:40,pend:0,src:ex}})); fillRoster(); }""")
+    pg.click("#saveBox summary")
+    ok("B10 the roster list shows the saved fighter", "Rosie" in pg.inner_text("#rosterSel"))
+    n0=len(dialogs); pg.click("#loadBenchA")
+    ok("B11 Load bench A puts bench A's fighter on screen and in the name box", pg.evaluate("S.name==='Bench Ann'&&S.st===10") and pg.input_value("#name")=="Bench Ann")
+    pg.click("#loadBenchB")
+    ok("B12 Load bench B puts bench B's fighter on screen, asking first because Ann is on screen", pg.evaluate("S.name==='Bench Bo'") and len(dialogs)>n0)
+    pg.click("#loadRoster")
+    ok("B13 Load from roster brings Rosie with her new total and EP", pg.evaluate("S.name==='Rosie'&&S.st===12&&S.total===33&&S.ep===40"))
+    pg.evaluate("()=>localStorage.removeItem('melee-bench-v1')"); pg.click("#loadBenchA")
+    ok("B14 an empty bench says so and changes nothing", pg.evaluate("S.name==='Rosie'") and "Nothing on bench A" in pg.inner_text("#toast"))
+    ok("B15 no script errors", not errs)
     pg.screenshot(path=os.environ.get("SHOT","/tmp/builder_new.png"))
     print(sum(1 for r in res if r[1]),'/',len(res),'passed'); print(errs[:3])

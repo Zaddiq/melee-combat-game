@@ -258,6 +258,9 @@ summary{cursor:pointer;font:600 12px var(--f-mono);letter-spacing:.08em;text-tra
           <p class="help">The bench holds two fighters, A and B, that the simulator and the duel can load. The page remembers your last character in this browser. To keep it elsewhere, use Copy data, and paste the text here later.</p>
           <textarea id="json" rows="5" aria-label="Character data" spellcheck="false"></textarea>
           <div class="btnrow"><button id="loadJson">Load from box</button></div>
+          <p class="help">Or load a fighter that is already saved in this browser:</p>
+          <div class="btnrow"><button id="loadBenchA">Load bench A</button><button id="loadBenchB">Load bench B</button></div>
+          <div class="btnrow"><select id="rosterSel" aria-label="Saved roster fighters"></select><button id="loadRoster">Load from roster</button></div>
         </details>
       </div>
       <div class="ptitle" id="ptitle"></div>
@@ -275,6 +278,7 @@ summary{cursor:pointer;font:600 12px var(--f-mono);letter-spacing:.08em;text-tra
 </div>
 
 <script src="rules.js"></script>
+<script src="roster.js"></script>
 <script>
 "use strict";
 /* ---------- Rules data (Wizard 2018 spells + Melee 2018 numbers from rules.js) ---------- */
@@ -711,6 +715,12 @@ function renderAll(){ renderWho(); renderAttr(); renderSpells(); renderGear(); r
 /* ---------- Events ---------- */
 function toast(t){ $("toast").textContent=t; setTimeout(()=>{ if($("toast").textContent===t) $("toast").textContent=""; },3000); }
 function commit(){ S._notes=[]; enforce(S); renderAll(); }
+function fillRoster(){ const sel=$("rosterSel"); if(!sel) return; let R={}; try{ R=JSON.parse(localStorage.getItem("melee-arena-v1")||"{}")||{}; }catch(err){} const ks=Object.keys(R).filter(k=>R[k]&&R[k].src);
+  sel.innerHTML=ks.length?ks.map(k=>`<option value="${k.replace(/"/g,"&quot;")}">${String(R[k].name||k).replace(/</g,"&lt;")} (${R[k].st+R[k].dx+(R[k].iq!=null?R[k].iq:0)} pts, ${R[k].ep||0} EP${R[k].dead?", dead":R[k].retired?", retired":""})</option>`).join(""):`<option value="">No saved fighters yet</option>`; }
+function takeOver(o,from){ const strip=x=>{ const c=Object.assign({},x); delete c._notes; return JSON.stringify(c); }; let n; try{ n=normalize(JSON.parse(JSON.stringify(o))); }catch(err){ toast("Could not read that fighter."); return; }
+  if(strip(S)!==strip(normalize(BLANK))&&strip(S)!==strip(n)&&!confirm("Load "+(n.name||"this fighter")+" from "+from+"? The character on screen ("+(S.name||"unnamed")+") will be replaced. Use Copy data or Send to bench first if you want to keep it.")) return;
+  S=n; $("name").value=S.name; $("notes").value=S.notes; renderAll(); toast((S.name||"Fighter")+" loaded from "+from+"."); }
+document.addEventListener("DOMContentLoaded",fillRoster); if($("saveBox")) $("saveBox").addEventListener("toggle",fillRoster);
 document.addEventListener("click",e=>{
   const t=e.target.closest("button, input[data-spell]"); if(!t) return;
   if(t.dataset.cls){ S.cls=t.dataset.cls; commit(); return; }
@@ -723,6 +733,8 @@ document.addEventListener("click",e=>{
   if(t.id==="benchA"||t.id==="benchB"){ try{ const c=Object.assign({},S); delete c._notes; let B={}; try{ B=JSON.parse(localStorage.getItem("melee-bench-v1")||"{}")||{}; }catch(e){} const k=t.id==="benchA"?"a":"b"; B[k]=c; localStorage.setItem("melee-bench-v1",JSON.stringify(B)); toast((c.name||"This fighter")+" is on the bench as "+k.toUpperCase()+". Open the simulator or the duel to use it."); }catch(e){ toast("Could not write to this browser's storage."); } return; }
   if(t.id==="copyJson"){ copy($("json").value,"Data copied."); return; }
   if(t.id==="copySheet"){ copy(sheetText(),"Sheet copied."); return; }
+  if(t.id==="loadBenchA"||t.id==="loadBenchB"){ let B={}; try{ B=JSON.parse(localStorage.getItem("melee-bench-v1")||"{}")||{}; }catch(err){} const k=t.id==="loadBenchA"?"a":"b"; if(!B[k]){ toast("Nothing on bench "+k.toUpperCase()+" yet. Use Send to bench first."); return; } takeOver(B[k],"bench "+k.toUpperCase()); return; }
+  if(t.id==="loadRoster"){ let R={}; try{ R=JSON.parse(localStorage.getItem("melee-arena-v1")||"{}")||{}; }catch(err){} const r=R[$("rosterSel").value]; if(!r||!r.src){ toast("Pick a fighter from the roster first."); return; } takeOver(Roster.updated(r),"the roster"); return; }
   if(t.id==="loadJson"){ try{ S=normalize(JSON.parse($("json").value)); $("name").value=S.name; $("notes").value=S.notes; renderAll(); toast("Loaded."); }catch(err){ toast("That text is not valid character data."); } return; }
 });
 function copy(text,msg){
