@@ -37,6 +37,7 @@ with sync_playwright() as p:
     ok("B13 Load from roster brings Rosie with her new total and EP", pg.evaluate("S.name==='Rosie'&&S.st===12&&S.total===33&&S.ep===40"))
     pg.evaluate("()=>localStorage.removeItem('melee-bench-v1')"); pg.click("#loadBenchA")
     ok("B14 an empty bench says so and changes nothing", pg.evaluate("S.name==='Rosie'") and "Nothing on bench A" in pg.inner_text("#toast"))
-    ok("B15 no script errors", not errs)
+    ok("B15 the page links to the Colosseum", pg.locator("nav.navrow a[href='colosseum.html']").count()==1)
+    ok("B16 no script errors", not errs)
     pg.screenshot(path=os.environ.get("SHOT","/tmp/builder_new.png"))
     print(sum(1 for r in res if r[1]),'/',len(res),'passed'); print(errs[:3])
