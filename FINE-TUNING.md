@@ -21,3 +21,5 @@ Megahex Avert (shared upkeep); facing choice and preview for multi-hex shapes; c
 - Owner's pen name is Zaddiq (LICENSE holder). Prints black and white only: no color fills or CSS gradients in print.
 - Test setup: Playwright with `?net=mem`; suites in tests/ (colosseum, colosseum_solo, colosseum_start, online_*, avatar, voice, multihex_spells, opponent_gear, spend_tablet). All passed at the last commit.
 - Key files: colosseum.html (host and Gladiator), online-host.js, phone.html, phone-map.js, net.js, voice.js, builder.html, sheet.html, rules.js, database.rules.json. Opponent generation: `makeOpponent(total)` and `bestGear` (colosseum.html, duel.html); wizard-arena.html uses its own armor list.
+
+- Adventure game idea (spitballing only, nothing approved): see ADVENTURE-IDEA.md.
