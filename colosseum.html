@@ -111,7 +111,7 @@ function dmg(f,k){ if(!W[k])return""; let m=W[k].m; return dice(W[k].d,m)+(W[k].
 const wavg=k=>W[k].d*3.5+W[k].m;
 function bestGear(f,hands){   /* f has race/st/dx and a right-hand weapon; returns the most protection that keeps adjDX >= 11 (or the best DX if none does) */
   const lefts=hands?["none","small","large","mg"]:["none"]; let best=null;
-  for(const ar of Object.keys(ARMOR)) for(const l of lefts){
+  for(const ar of Object.keys(ARMOR).filter(k=>!ARMOR[k].hid)) for(const l of lefts){   /* not the creatures' hides and scales (they stop a lot and cost no DX) */
     const g=Object.assign({},f,{armor:ar,left:l}); const a=adjDX(g), stp=ARMOR[ar].stops+(SHIELDS[l]?SHIELDS[l].stops:0)+(l==="mg"?1:0);
     const sc=(a>=11?100:a*3)+stp+(l==="none"?0:.01);
     if(!best||sc>best.sc) best={sc,ar,l,a,stp}; }
