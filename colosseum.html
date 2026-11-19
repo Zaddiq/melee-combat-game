@@ -35,7 +35,7 @@ svg{width:100%;height:auto;max-height:80vh}
  <details class="setup" id="setup" open><summary>The fighters</summary>
  <div class="card"><h2>Map</h2><div class="row"><select id="mapSel"><option value="melee">Melee map (two boards, 99 hexes)</option><option value="wizard">Wizard map (166 hexes, 21 megahexes)</option></select><span class="mut" id="mapNote"></span></div></div>
 
- <details class="card" id="encCard"><summary style="cursor:pointer;font-weight:600">Encounter (a room with monsters)</summary><div class="mut" style="margin:8px 0 6px">Pick it in the computer-side box under Players. The monsters, their gear and where they stand are plain text kept in this browser only; replace the sample with the monsters of your own module. Weapons and armor use the builder's names (broad, sbow, leather, small ...); a shaman is <code>"cls":"wizard"</code> with a short <code>spells</code> list (it casts Magic Fist and Clumsiness, and fights with its staff when its ST runs low).</div><textarea id="encJson" rows="16" spellcheck="false"></textarea><div class="row"><button id="encApply">Save this encounter</button><button id="encReset">Back to the sample</button><span class="mut" id="encMsg"></span></div></details>
+ <details class="card" id="encCard"><summary style="cursor:pointer;font-weight:600">Encounter (a room with monsters)</summary><div class="mut" style="margin:8px 0 6px">Pick it in the computer-side box under Players. The monsters, their gear and where they stand are plain text kept in this browser only; replace the sample with the monsters of your own module. Weapons and armor use the builder's names (broad, sbow, leather, small ...); a shaman is <code>"cls":"wizard"</code> with a short <code>spells</code> list (it casts Magic Fist and Clumsiness, and fights with its staff when its ST runs low).</div><div class="row"><label><input type="checkbox" id="campOn"> Campaign: fighters keep their ST from one fight to the next</label><button id="campRest">Rest (everyone to full ST)</button></div><div class="mut" id="campNote"></div><textarea id="encJson" rows="16" spellcheck="false"></textarea><div class="row"><button id="encApply">Save this encounter</button><button id="encReset">Back to the sample</button><span class="mut" id="encMsg"></span></div></details>
 
  <div class="card"><h2>Players</h2><div class="row"><select id="npSel" autocomplete="off"><option value="1">1 player (against the computer)</option><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><select id="modeSel" autocomplete="off"><option value="ffa">Free for all</option><option value="teams">Teams (two sides)</option></select><select id="creSel" autocomplete="off" title="A side run by the computer"></select><select id="creN" autocomplete="off" title="How many"></select></div><div class="mut" id="npNote"></div></div>
  <div id="pcards"></div>
@@ -220,6 +220,14 @@ function roomHexes(wft,hft){
   for(let q=0;q<R;q++) for(let c=0;c<C;c++) out.push([q,c-Math.floor(q/2),0,(q<2||q>=R-2)&&(c===mid-1||c===mid)?1:0]);
   return out; }
 let ROOMH=null;
+/* Campaign: with this on, an encounter fight that the players win leaves each fighter at the ST they ended with (a fighter who went down comes back at 1), and the next encounter fight starts from that. "Rest" puts everyone back to full. Kept in this browser by fighter name. */
+const CAMKEY="colosseum-campaign";
+let CAMP={on:false,hp:{}};
+try{ const c=JSON.parse(localStorage.getItem(CAMKEY)||"null"); if(c&&typeof c==="object"){ CAMP.on=!!c.on; if(c.hp&&typeof c.hp==="object") for(const [k,v] of Object.entries(c.hp)) if(typeof v==="number"&&v>=1&&v<=200) CAMP.hp[String(k).slice(0,60)]=v; } }catch(e){}
+function campStore(){ try{ localStorage.setItem(CAMKEY,JSON.stringify(CAMP)); }catch(e){} }
+function campNote(){ const el=$("campNote"); if(!el) return; const names=Object.keys(CAMP.hp); el.textContent=CAMP.on?(names.length?"Carried ST: "+names.map(n=>n+" "+CAMP.hp[n]).join(", ")+".":"Everyone starts at full ST."):"Off: every fight starts at full ST."; }
+function campSave(win){ if(!CAMP.on||CREK!=="enc"||!win.size) return; for(const u of G.players) CAMP.hp[u.p.name]=Math.max(1,Math.min(u.p.st,u.hp)); campStore(); campNote(); lg("Campaign: each fighter keeps the ST they have left for the next fight (use Rest to heal everyone)."); }
+function campRest(){ CAMP.hp={}; campStore(); campNote(); }
 try{ const t=localStorage.getItem(ENCKEY); const o=t?JSON.parse(t):null; applyEnc(o&&!checkEnc(o,false)?o:SAMPLE_ENC); }catch(e){ applyEnc(SAMPLE_ENC); }
 function applyMode(){ for(let i=0;i<MAXP;i++) team[i]=mobOn()?0:teamsOn()?tmAB[i]:i; }
 const starts=[null,null,null,null];    /* each player's chosen start hex (a key) */
@@ -283,6 +291,9 @@ function saveEnc(o,store){ if(G&&G.phase!=="over"&&CREK==="enc"&&!leaveOK()) ret
 $("encApply").onclick=()=>{ let o; try{ o=JSON.parse($("encJson").value); }catch(e){ $("encMsg").textContent="That is not valid text: "+e.message; return; } const bad=checkEnc(o,true); if(bad){ $("encMsg").textContent=bad; return; } saveEnc(o,true); };
 $("encReset").onclick=()=>saveEnc(SAMPLE_ENC,false);
 showEnc();
+$("campOn").checked=CAMP.on; campNote();
+$("campOn").onchange=()=>{ CAMP.on=$("campOn").checked; campStore(); campNote(); };
+$("campRest").onclick=()=>{ campRest(); };
 $("modeSel").onchange=()=>{ if(!leaveOK()){ $("modeSel").value=MODE; return; } MODE=$("modeSel").value; resetSetup(); };
 for(let i=0;i<MAXP;i++) $("tm"+i).onchange=()=>{ if(!leaveOK()){ $("tm"+i).value=String(tmAB[i]); return; } tmAB[i]=+$("tm"+i).value; resetSetup(); };
 /* the last setup used on this device (players, mode, computer side) comes back after a reload */
@@ -445,7 +456,7 @@ function settle(){
   if(G.mobs.length){   /* a fight against the computer's creatures: each human on the winning side gets 50 XP, nobody else gets any */
     const win=new Set(G.winners||[]);
     G.xp=G.players.map(u=>{ if(!win.has(u)) return `${u.p.name}: no experience${u.esc?" (left the fight)":""}.`; const r=awardXp(u.p,50); return `${u.p.name}: +50 XP (now ${r.ep}/100)${r.pend>0?", attribute point earned (spend it in the Fighters box below)":""}`; });
-    lg(win.size?`The ${mobName()} ${CREN>1?"are":"is"} beaten: every player on the winning side gets 50 XP.`:"No experience this time."); G.xp.forEach(x=>lg(x)); showStats(); return; }
+    lg(win.size?`The ${mobName()} ${CREN>1?"are":"is"} beaten: every player on the winning side gets 50 XP.`:"No experience this time."); G.xp.forEach(x=>lg(x)); campSave(win); showStats(); return; }
   const PL=G.players, sums=PL.map(u=>u.p.st+u.p.dx), win=new Set(G.winners||[]);
   const bonus=u=>{ const i=PL.indexOf(u); return PL.some((v,j)=>sideOf(v)!==sideOf(u)&&sums[j]-sums[i]>=3)?10:0; };   /* +10 if some opponent is 3 or more points stronger */
   const lostOf=u=>u.p.st-u.hp, unhurt=u=>!!u.esc&&lostOf(u)<Math.ceil(u.p.st/3);
@@ -547,6 +558,7 @@ function startFight(){
   G={turn:0,phase:"",log:[],order:[],idx:0,start:null,reach:null,eng:false,moved:0,floor:[],objs:[],exhib:true,settled:false,cur:null,mobs:[]};
   G.players=pl.map((p,i)=>{ const u=mk(s.pick[i],p); u.side=SIDEIDS[team[i]]; return u; }); G.me=G.players[0]; G.foe=G.players[1];
   G.units=[...G.players]; WALLS=new Set();
+  if(CAMP.on&&CREK==="enc") for(const u of G.players){ const v=CAMP.hp[u.p.name]; if(v!=null&&v<u.p.st){ u.hp=Math.max(1,v); G.log.push(`Campaign: ${u.p.name} starts hurt, at ST ${u.hp} of ${u.p.st}.`); } }
   if(mobOn()) spawnMobs();
   G.players.forEach((u,i)=>{ const sf=window.Online&&Online.startFace&&Online.startFace[i]; u.f=(sf!=null&&sf>=0&&sf<6)?sf:faceToward(u,other(u)); });   /* everyone starts facing their nearest enemy, unless a phone player turned to face another way */
   if(window.Online) Online.startFace={};
@@ -1205,13 +1217,14 @@ function ui(){
   else if(G.phase==="dest"){ t=`${nm(cur)}: click the highlighted hex on the map that you want to move or teleport into (on a phone, scroll to the map).`; b=`<button id="bBack">Back</button>`; }
   else if(G.phase==="retreat"){ const d=G.rd; t=`${nm(G.rdec)} hit ${esc(d.p.name)} and took no hits, so may force a retreat: click a highlighted hex on the map to push ${esc(d.p.name)} there (on a phone, scroll to the map). Or skip it.`; b=`<button id="bSkip">Skip the retreat</button>`; }
   else if(G.phase==="advance"){ t=`${nm(G.rdec)}: move into the hex they left, or hold your ground?`; b=`<button class="pri" id="bAdv">Advance</button><button id="bStay">Stay</button>`; }
-  else if(G.phase==="over"){ t=(G.winner?`<b>${(G.winners&&G.winners.length>1?G.winners:[G.winner]).map(u=>esc(u.p.name)).join(" and ")} win${G.winners&&G.winners.length>1?"":"s"} the fight!</b>`:"Nobody wins.")+`<br><span class="mut">${(G.xp||[]).map(esc).join("<br>")}</span>`; b=`<button class="pri" id="bNew">Rematch</button> <button id="bHome">Return to Colosseum</button>`; }
+  else if(G.phase==="over"){ t=(G.winner?`<b>${(G.winners&&G.winners.length>1?G.winners:[G.winner]).map(u=>esc(u.p.name)).join(" and ")} win${G.winners&&G.winners.length>1?"":"s"} the fight!</b>`:"Nobody wins.")+`<br><span class="mut">${(G.xp||[]).map(esc).join("<br>")}</span>`; b=`<button class="pri" id="bNew">Rematch</button> <button id="bHome">Return to Colosseum</button>`+(CAMP.on&&CREK==="enc"?` <button id="bRest">Rest (everyone to full ST)</button>`:""); }
   c.innerHTML=`<div class="mut" style="margin-bottom:4px">Turn ${G.turn}</div><div>${t}</div><div class="mut" style="margin:4px 0">${st}</div><div>${b}</div>${G.qb||""}<div id="log">${(G.phase==="cover"||G.phase==="pick"?G.log.slice(-60):G.log.slice(-60)).map(esc).join("<br>")}</div>`;
   const lgE=$("log"); if(lgE) lgE.scrollTop=lgE.scrollHeight;
   const on=(id,f)=>{const e=$(id); if(e)e.onclick=f;};
   on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bTl",()=>{ G.cur.f=(G.cur.f+1)%6; ui(); drawMap(); }); on("bTr",()=>{ G.cur.f=(G.cur.f+5)%6; ui(); drawMap(); }); on("bUn",undoMove); on("bShow",showPick);
   on("bSkip",()=>{lg(`${G.rdec.p.name} does not force a retreat.`);endTurn();ui();drawMap();}); on("bBack",()=>{G.destX=null;G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false));
   on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door?"+(new Set([...G.players.filter(x=>x!==cur&&x.hp>0&&!x.esc),...G.mobs.filter(m=>m.hp>0)].map(sideOf)).size<2?" This ends the fight.":" They are out of the fight."))) quitDuel(cur,"escape"); });
+  on("bRest",()=>{ campRest(); lg("The party rests: everyone is back to full ST."); const b=$("bRest"); if(b) b.textContent="Rested"; });
   on("bNew",()=>{ G=null; placeStep=0; $("setup").open=true; showStats(); ui(); drawMap(); });
   on("bHome",()=>{ G=null; placeStep=0; $("setup").open=true; slot.forEach((_,j)=>showSlot(j)); showStats(); ui(); drawMap(); const s=$("stats"); if(s&&s.scrollIntoView) s.scrollIntoView({behavior:"smooth",block:"start"}); });   /* back to the Fighters box with the same characters loaded, so XP can be spent; XP is already saved to the roster and the builder */
   on("bRc",()=>{ G.phase="renew"; ui(); drawMap(); }); c.querySelectorAll("[data-rn]").forEach(e=>e.onclick=()=>{ const r=G.rlist[+e.dataset.rn]; r.on=!r.on; ui(); }); on("bRn",()=>{ doRenew(); ui(); drawMap(); });

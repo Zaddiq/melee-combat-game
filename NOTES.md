@@ -476,3 +476,10 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - Owner said the Unlimited Arena wizards are hard enough: the shaman is kept modest on purpose (2 or 3 spells, ST-limited).
 - Tests: `tests/campaign_test.py` (19: setup, room, entrances, placement, editor, reload, 24 random fights with 2 to 4 players that all finish, shaman casts, archer shoots). All older suites listed in HANDOFF still pass (spells_test and the fuzzers were not re-run: the Wizard arena page is untouched).
 - Not done (next): carrying damage, fatigue and spent items from one fight to the next, loot and XP screens, rest between rooms, monsters with upkeep or summoning spells, monster pictures, an encounter picker with several saved encounters, the owner's own module data (the owner types it into the editor).
+
+## Campaign mode, step 2: ST carried from fight to fight (Nov 19, branch campaign-carryover)
+- A "Campaign" switch in the Encounter box of colosseum.html (off by default, remembered in `localStorage` `colosseum-campaign`, with the carried ST by fighter name). Only encounter fights use it (beasts and the Gladiator ignore it).
+- When the players WIN an encounter fight, `settle()` calls `campSave`: each fighter's remaining ST is kept (a fighter who went down comes back at 1; the keeper is `min(ST, remaining)`). A lost fight changes nothing. The next encounter fight starts each fighter at the carried ST and logs "Campaign: Aria starts hurt, at ST 5 of 12."
+- Rest: a "Rest (everyone to full ST)" button in the Encounter box and on the end-of-fight panel clears the carried ST (`campRest`). XP and spent points work as before, so a fighter whose ST was raised keeps the carried number until rested.
+- Not carried yet: broken or dropped weapons, used-up missiles, continuing spells (they end with the fight), loot.
+- Tests: `tests/campaign_carry_test.py` (16). `tests/campaign_test.py` C9 now checks the starting hexes (`u.from`), because a monster that wins initiative moves before the check.

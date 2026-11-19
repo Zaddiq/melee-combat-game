@@ -125,3 +125,7 @@ Owner has only one phone, so test with several browser tabs or windows.
 - Owner said: Unlimited Arena wizards are hard enough (no wizard buff); the "too hard" report was the Colosseum Gladiator. Keep the shaman modest.
 - Tests: `python3 tests/campaign_test.py` (19) plus all older Colosseum/online/rules suites pass.
 - Next in the owner's likely order: (1) owner tests on tablet + phones, report; (2) party carry-over between fights (damage, fatigue, items), loot/XP screen; (3) smarter monsters. Merge to main only after the owner says it works (the working Colosseum must stay safe before the visit).
+
+## Nov 19 (after midnight): Campaign step 2, carry-over (branch campaign-carryover, merged to main)
+- Switch "Campaign: fighters keep their ST" in the Encounter box; wins save each fighter's remaining ST (down = 1), the next encounter fight starts from it; Rest buttons clear it. See NOTES.md "Campaign mode, step 2". Tests: `campaign_carry_test.py` (16), `campaign_test.py` (19); older Colosseum/online suites pass.
+- Owner has not yet played step 1 or 2 (they were tired, said to do what I could). Next: wait for their report after the kids' first game on Friday. Ideas if asked: loot and gold, carrying broken weapons and arrows, monsters with summon spells, several saved encounters with a picker, an easy-win handicap for the Colosseum Gladiator only (NOT the Unlimited Arena: the owner said its wizards are hard enough).
