@@ -51,7 +51,13 @@ const SHIELDS = {
   small:{n:"Small shield", stops:1, pen:0},
   large:{n:"Large shield", stops:2, pen:1}
 };
+/* Campaign-only items (from the 1980 In the Labyrinth). They are NOT in SHIELDS, so the builder, simulator and arenas never show them;
+   the Colosseum and the campaign builder call RULES.addCampaign() to add them. */
+const CAMP_SHIELDS = {
+  tower:{n:"Tower shield", stops:3, pen:2}
+};
 const RATE = {sbow:15,hbow:16,lbow:18,lxbow:14,hxbow:14};
 
-return {EDITION:"Melee Third Edition (2018)",RACES,ARMOR,W,SHIELDS,RATE};
+function addCampaign(){ Object.assign(SHIELDS,CAMP_SHIELDS); return SHIELDS; }
+return {EDITION:"Melee Third Edition (2018)",RACES,ARMOR,W,SHIELDS,RATE,CAMP_SHIELDS,addCampaign};
 })();

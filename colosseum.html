@@ -53,6 +53,7 @@ svg{width:100%;height:auto;max-height:80vh}
 <script src="voice.js"></script>
 <script>
 "use strict";
+RULES.addCampaign();   /* the tower shield, for campaign heroes only */
 const RACES=RULES.RACES, W=RULES.W, SHIELDS=RULES.SHIELDS;
 const ARMOR=Object.fromEntries(Object.entries(RULES.ARMOR).map(([k,v])=>[k,{n:v.n,stops:v.stops,ma:v.ma,pen:v.pen.m}]));  /* Melee DX penalties */
 /* natural weapons and hides for summoned creatures (Wizard 2018 p. 15-16); kept out of the fighter menus with hid */

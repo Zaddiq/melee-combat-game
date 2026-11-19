@@ -79,6 +79,7 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
 <script src="rules.js"></script>
 <script>
 "use strict";
+RULES.addCampaign();
 const {RACES,ARMOR,W,SHIELDS}=RULES;
 const $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const DKEY="campaign-data-v1", CKEY="campaign-char-v1", RKEY="campaign-roster-v1", BKEY="wizard-builder-v1";

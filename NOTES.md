@@ -505,3 +505,6 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - colosseum.html fromBuilder: only when the character has a `camp` block, keeps up to 3 extra carried weapons in `dag` (ready-able in a fight) and sets `f.camp`. wxu(u,wid,kind) gives -4 for a weapon without its talent, +3 missile, +2 thrown; used in doAttack, shotDX and the jab label. Regular fighters have no `camp`, so nothing changes for them.
 - Not done: Two Weapons, Fencing, Warrior, Veteran, Running, Shield effects; the 2018 extra weapons (hatchet, war ax, bastard sword, great sword, great hammer, trident, pike, cavalry lance) need their damage/ST numbers.
 - tests/campaign_talents_test.py
+
+## Tower shield (campaign only)
+rules.js keeps it in CAMP_SHIELDS (stops 3, DX -2, from the 1980 book as the owner stated), not in SHIELDS, so builder/sim/arenas never show it. colosseum.html and campaign-builder.html call RULES.addCampaign(). Price and its talent go in the owner's pasted data (prices.tower, talentFor.tower).
