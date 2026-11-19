@@ -35,6 +35,8 @@ svg{width:100%;height:auto;max-height:80vh}
  <details class="setup" id="setup" open><summary>The fighters</summary>
  <div class="card"><h2>Map</h2><div class="row"><select id="mapSel"><option value="melee">Melee map (two boards, 99 hexes)</option><option value="wizard">Wizard map (166 hexes, 21 megahexes)</option></select><span class="mut" id="mapNote"></span></div></div>
 
+ <details class="card" id="encCard"><summary style="cursor:pointer;font-weight:600">Encounter (a room with monsters)</summary><div class="mut" style="margin:8px 0 6px">Pick it in the computer-side box under Players. The monsters, their gear and where they stand are plain text kept in this browser only; replace the sample with the monsters of your own module. Weapons and armor use the builder's names (broad, sbow, leather, small ...); a shaman is <code>"cls":"wizard"</code> with a short <code>spells</code> list (it casts Magic Fist and Clumsiness, and fights with its staff when its ST runs low).</div><textarea id="encJson" rows="16" spellcheck="false"></textarea><div class="row"><button id="encApply">Save this encounter</button><button id="encReset">Back to the sample</button><span class="mut" id="encMsg"></span></div></details>
+
  <div class="card"><h2>Players</h2><div class="row"><select id="npSel" autocomplete="off"><option value="1">1 player (against the computer)</option><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><select id="modeSel" autocomplete="off"><option value="ffa">Free for all</option><option value="teams">Teams (two sides)</option></select><select id="creSel" autocomplete="off" title="A side run by the computer"></select><select id="creN" autocomplete="off" title="How many"></select></div><div class="mut" id="npNote"></div></div>
  <div id="pcards"></div>
 </details>
@@ -176,8 +178,49 @@ const mobOn=()=>CREK!=="none"&&!!CRE[CREK];
 const teamsOn=()=>NP>2&&MODE==="teams"&&!mobOn();
 const ffaOn=()=>NP>2&&!teamsOn()&&!mobOn();
 const PLURAL={"Gladiator":"Gladiators","Wolf":"Wolves","Myrmidon":"Myrmidons","Bear":"Bears","Gargoyle":"Gargoyles","Giant":"Giants","Small Dragon":"Small Dragons","Dragon":"Dragons"};
-const mobName=()=>mobOn()?(CREN>1?(PLURAL[CRE[CREK].name]||CRE[CREK].name+"s"):CRE[CREK].name):"";
-const creMax=()=>!mobOn()?1:CRE[CREK].size===7?1:CRE[CREK].size===4?2:3;   /* a Dragon is 7 hexes, a Small Dragon 4: they only fit one or two on the board */
+const mobName=()=>mobOn()?(CREK==="enc"?(ENC.foe||"monsters"):CREN>1?(PLURAL[CRE[CREK].name]||CRE[CREK].name+"s"):CRE[CREK].name):"";
+const creMax=()=>!mobOn()?1:CREK==="enc"?1:CRE[CREK].size===7?1:CRE[CREK].size===4?2:3;   /* a Dragon is 7 hexes, a Small Dragon 4: they only fit one or two on the board */
+
+/* ---- Campaign mode, step 1: an encounter is a mixed computer side placed in a rectangular room ----
+   The data is plain JSON kept in this browser (localStorage "colosseum-encounter"), so a game master can type in the monsters of any module
+   without it being part of the site. creatures: id -> {name, st, dx, iq, w (weapon), armor, sh (shield), d ("dagger"), race, cls ("wizard"), spells}.
+   foes: which creature stands where; at = [across, down] as fractions of the room (0,0 = north-west corner as drawn, 1,1 = south-east). room = [feet across, feet deep]. */
+const SAMPLE_ENC={name:"Sample room fight",foe:"monsters",room:[50,60],
+  creatures:{orc:{name:"Orc",race:"orc",st:12,dx:10,iq:8,w:"broad",armor:"leather",sh:"small"},
+    shaman:{name:"Hobgoblin Shaman",race:"hobgoblin",st:10,dx:9,iq:11,cls:"wizard",spells:["Staff","Magic Fist","Clumsiness"],armor:"cloth"},
+    kobold:{name:"Kobold Archer",race:"goblin",st:8,dx:12,iq:8,w:"sbow",armor:"none",d:"dagger"}},
+  foes:[{c:"orc",at:[.3,.22]},{c:"orc",at:[.7,.22]},{c:"shaman",at:[.5,.08]},{c:"kobold",at:[.85,.16]}]};
+let ENC=null;
+const ENCKEY="colosseum-encounter";
+function checkEnc(o,spells){   /* returns "" when the encounter is usable, else what is wrong with it */
+  if(!o||typeof o!=="object") return "That is not an encounter.";
+  const num=(v,a,b)=>typeof v==="number"&&v>=a&&v<=b;
+  if(!Array.isArray(o.room)||!num(o.room[0],15,150)||!num(o.room[1],15,150)) return "room must be [feet across, feet deep], each from 15 to 150.";
+  if(!o.creatures||typeof o.creatures!=="object"||!Object.keys(o.creatures).length) return "creatures is empty.";
+  for(const [id,c] of Object.entries(o.creatures)){
+    if(!/^[a-z0-9_]{1,20}$/.test(id)) return `Creature id "${id}": use 1 to 20 lowercase letters, digits or _.`;
+    if(!c||typeof c.name!=="string"||!c.name) return `Creature "${id}" needs a name.`;
+    if(!num(c.st,1,80)||!num(c.dx,1,40)||!num(c.iq,1,40)) return `Creature "${id}": st, dx and iq must be numbers.`;
+    if(c.w!=null&&!(W[c.w]&&!W[c.w].left)) return `Creature "${id}": weapon "${c.w}" is not in the weapon table.`;
+    if(c.armor!=null&&!ARMOR[c.armor]) return `Creature "${id}": armor "${c.armor}" is not an armor.`;
+    if(c.sh!=null&&!SHIELDS[c.sh]) return `Creature "${id}": shield must be small or large.`;
+    if(c.race!=null&&!RACES[c.race]) return `Creature "${id}": race "${c.race}" is not a race.`;
+    if(c.spells!=null&&(!Array.isArray(c.spells)||(spells&&c.spells.some(n=>n!=="Staff"&&!SP[n])))) return `Creature "${id}": spells must be a list of spell names from the builder.`; }
+  if(!Array.isArray(o.foes)||o.foes.length<1||o.foes.length>8) return "foes must list 1 to 8 monsters.";
+  for(const f of o.foes) if(!f||!o.creatures[f.c]||!Array.isArray(f.at)||!num(f.at[0],0,1)||!num(f.at[1],0,1)) return "Each foe needs c (a creature id) and at: [across, down] from 0 to 1.";
+  return ""; }
+function applyEnc(o){   /* make the encounter's creatures available to the same code that runs beasts */
+  for(const k of Object.keys(CRE)) if(k.startsWith("e_")) delete CRE[k];
+  ENC=o; if(!o){ delete CRE.enc; return; }
+  for(const [id,c] of Object.entries(o.creatures)) CRE["e_"+id]=Object.assign({},c,{enc:1});
+  CRE.enc={name:o.name||"Encounter",enc:1}; }
+/* a rectangular room as a hex map: [q, r, megahex, entrance]. Rows run north to south (q); the hexes are 1 yard across, so 50 ft is about 17 hexes. The south and north entrances are four hexes in the middle of the end rows. */
+function roomHexes(wft,hft){
+  const C=Math.max(5,Math.round(wft/3)), R=Math.max(5,Math.round(hft/2.6)), mid=Math.floor(C/2), out=[];
+  for(let q=0;q<R;q++) for(let c=0;c<C;c++) out.push([q,c-Math.floor(q/2),0,(q<2||q>=R-2)&&(c===mid-1||c===mid)?1:0]);
+  return out; }
+let ROOMH=null;
+try{ const t=localStorage.getItem(ENCKEY); const o=t?JSON.parse(t):null; applyEnc(o&&!checkEnc(o,false)?o:SAMPLE_ENC); }catch(e){ applyEnc(SAMPLE_ENC); }
 function applyMode(){ for(let i=0;i<MAXP;i++) team[i]=mobOn()?0:teamsOn()?tmAB[i]:i; }
 const starts=[null,null,null,null];    /* each player's chosen start hex (a key) */
 function showSlot(i){ $("pf"+i).innerHTML=slot[i]?card(slot[i],PCLS[i]):""; showStats(); }
@@ -222,23 +265,29 @@ for(const i of [0,1,2,3]){
   $("pg"+i).onclick=()=>{ try{ setP(i,fromBuilder(JSON.parse($("paste"+i).value)),"Loaded pasted fighter."); }catch(e){ $("msg"+i).textContent="That does not look like a builder fighter."; } };
   $("rg"+i).onclick=()=>{ const r=REC[$("rs"+i).value]; if(r&&r.src) setP(i,fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx,name:r.name})),"Loaded from your arena roster (its own record is not touched)."); };
 }
-const noteText=()=>mobOn()&&NP===1?`You fight alone against ${CREN>1?CREN+" "+mobName():"a "+mobName()}, run by the computer. It comes in from the north end, you from the south. If you win you get 50 XP.`:mobOn()?`All ${NP} players fight together against ${CREN>1?CREN+" "+mobName():"a "+mobName()} run by the computer. The creatures come in from the north end, the players from the south. If you win, each of you gets 50 XP.`:NP===2?"Two players: one against the other.":teamsOn()?"Two teams fight each other: pick Team A or Team B for each player. Teammates start at the same end and can never hurt each other.":"Free for all: everyone fights for themselves and starts from their own entrance (bottom, top, west, east).";
+const noteText=()=>CREK==="enc"&&mobOn()?`${NP===1?"You fight":"All "+NP+" players fight together"} against ${ENC.foes.length} ${mobName()} placed in a ${ENC.room[0]}' × ${ENC.room[1]}' room, run by the computer. The players come in at the south end. If you win, each of you gets 50 XP.`:mobOn()&&NP===1?`You fight alone against ${CREN>1?CREN+" "+mobName():"a "+mobName()}, run by the computer. It comes in from the north end, you from the south. If you win you get 50 XP.`:mobOn()?`All ${NP} players fight together against ${CREN>1?CREN+" "+mobName():"a "+mobName()} run by the computer. The creatures come in from the north end, the players from the south. If you win, each of you gets 50 XP.`:NP===2?"Two players: one against the other.":teamsOn()?"Two teams fight each other: pick Team A or Team B for each player. Teammates start at the same end and can never hurt each other.":"Free for all: everyone fights for themselves and starts from their own entrance (bottom, top, west, east).";
 function refreshPlayers(){ $("npSel").value=String(NP); for(let i=0;i<MAXP;i++){ const t=$("tm"+i); if(t) t.value=String(tmAB[i]); }   /* the boxes show what the game really has, whatever the browser restored */
   for(let i=0;i<MAXP;i++){ const c=$("pcard"+i); if(c) c.style.display=i<NP?"":"none"; const r=$("tm"+i); if(r&&r.closest) r.closest(".tmrow").style.display=teamsOn()?"":"none"; }
   $("modeSel").style.display=NP>2&&!mobOn()?"":"none"; $("modeSel").value=MODE;
-  $("creSel").innerHTML=(NP===1?"":`<option value="none">No computer side</option>`)+["man",...Object.keys(CRE).filter(k=>k!=="man")].map(k=>`<option value="${k}">${k==="man"?"Gladiator (a computer fighter, like the arena's)":CRE[k].name}</option>`).join(""); $("creSel").value=mobOn()?CREK:"none";
-  CREN=Math.max(1,Math.min(CREN,creMax())); $("creN").innerHTML=[...Array(creMax())].map((_,i)=>`<option value="${i+1}">${i+1}</option>`).join(""); $("creN").value=String(CREN); $("creN").style.display=mobOn()&&creMax()>1?"":"none";
+  $("creSel").innerHTML=(NP===1?"":`<option value="none">No computer side</option>`)+["man",...Object.keys(CRE).filter(k=>k!=="man"&&k!=="enc"&&!k.startsWith("e_")),...(ENC?["enc"]:[])].map(k=>`<option value="${k}">${k==="man"?"Gladiator (a computer fighter, like the arena's)":k==="enc"?"Encounter: "+esc(ENC.name)+" ("+ENC.foes.length+" monsters, "+ENC.room[0]+"' × "+ENC.room[1]+"' room)":CRE[k].name}</option>`).join(""); $("creSel").value=mobOn()?CREK:"none";
+  CREN=CREK==="enc"&&ENC?ENC.foes.length:Math.max(1,Math.min(CREN,creMax())); $("creN").innerHTML=[...Array(creMax())].map((_,i)=>`<option value="${i+1}">${i+1}</option>`).join(""); $("creN").value=String(CREN); $("creN").style.display=mobOn()&&creMax()>1?"":"none";
   $("npNote").textContent=noteText(); }
-const resetSetup=()=>{ try{ localStorage.setItem("colosseum-setup",JSON.stringify({NP,MODE,CREK,CREN})); }catch(e){} applyMode(); G=null; placeStep=0; starts.fill(null); $("setup").open=true; refreshPlayers(); showStats(); ui(); drawMap(); };
+const resetSetup=()=>{ try{ localStorage.setItem("colosseum-setup",JSON.stringify({NP,MODE,CREK,CREN})); }catch(e){} applyMode(); syncMap(); G=null; placeStep=0; starts.fill(null); $("setup").open=true; refreshPlayers(); showStats(); ui(); drawMap(); };
 const leaveOK=()=>!(G&&G.phase!=="over")||confirm("A fight is in progress. Leave it and change the setup?");   /* changing players, the computer side or teams during a fight starts the setup again, after asking */
 $("npSel").onchange=()=>{ if(!leaveOK()){ $("npSel").value=String(NP); return; } NP=+$("npSel").value; if(NP===1&&!mobOn()){ CREK="man"; CREN=1; } resetSetup(); };
 $("creSel").onchange=()=>{ if(!leaveOK()){ $("creSel").value=mobOn()?CREK:"none"; return; } CREK=$("creSel").value; CREN=1; resetSetup(); };
 $("creN").onchange=()=>{ if(!leaveOK()){ $("creN").value=String(CREN); return; } CREN=+$("creN").value; resetSetup(); };
+/* the encounter editor: check, save in this browser, and rebuild the setup if the encounter is the one in play */
+function showEnc(){ $("encJson").value=JSON.stringify(ENC,null,1); }
+function saveEnc(o,store){ if(G&&G.phase!=="over"&&CREK==="enc"&&!leaveOK()) return; applyEnc(o); try{ if(store) localStorage.setItem(ENCKEY,JSON.stringify(o)); else localStorage.removeItem(ENCKEY); }catch(e){} showEnc(); $("encMsg").textContent=store?"Saved.":"Back to the sample."; if(CREK==="enc") resetSetup(); else refreshPlayers(); }
+$("encApply").onclick=()=>{ let o; try{ o=JSON.parse($("encJson").value); }catch(e){ $("encMsg").textContent="That is not valid text: "+e.message; return; } const bad=checkEnc(o,true); if(bad){ $("encMsg").textContent=bad; return; } saveEnc(o,true); };
+$("encReset").onclick=()=>saveEnc(SAMPLE_ENC,false);
+showEnc();
 $("modeSel").onchange=()=>{ if(!leaveOK()){ $("modeSel").value=MODE; return; } MODE=$("modeSel").value; resetSetup(); };
 for(let i=0;i<MAXP;i++) $("tm"+i).onchange=()=>{ if(!leaveOK()){ $("tm"+i).value=String(tmAB[i]); return; } tmAB[i]=+$("tm"+i).value; resetSetup(); };
 /* the last setup used on this device (players, mode, computer side) comes back after a reload */
 const SKEY="colosseum-setup";
-try{ const o=JSON.parse(localStorage.getItem(SKEY)||"null"); if(o){ if([1,2,3,4].includes(o.NP)) NP=o.NP; if(o.MODE==="ffa"||o.MODE==="teams") MODE=o.MODE; if(o.CREK==="none"||CRE[o.CREK]) CREK=o.CREK; if(o.CREN>=1&&o.CREN<=3) CREN=o.CREN; } }catch(e){}
+try{ const o=JSON.parse(localStorage.getItem(SKEY)||"null"); if(o){ if([1,2,3,4].includes(o.NP)) NP=o.NP; if(o.MODE==="ffa"||o.MODE==="teams") MODE=o.MODE; if(o.CREK==="none"||CRE[o.CREK]) CREK=o.CREK; if(o.CREN>=1&&o.CREN<=8) CREN=o.CREN; } }catch(e){}
 if(NP===1&&!mobOn()) CREK="man";
 applyMode(); refreshPlayers();
 /* the solo arena's saved fighters can be borrowed; duel XP is written to the same record */
@@ -478,10 +527,15 @@ const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.sl
 function newMob(kind,h,n){ const C=CRE[kind];
   let p; if(C.man){ const f=makeOpponent(Math.max(16,Math.round(G.players.reduce((t,u)=>t+u.p.st+u.p.dx,0)/G.players.length)));   /* an even match: the same ST+DX as the average player, like the arena */
     p=fromBuilder({name:f.name+(n>0?" "+ROM[Math.min(n+1,4)]:""),race:f.race,cls:"fighter",st:f.st,dx:f.dx,iq:f.iq,a:f.right,b:f.left,s1:f.slung,armor:f.armor,d1:f.dag[0]||"none"}); }
-  else p=fromBuilder({name:C.name+(n>0?" "+(n+1):""),race:"human",cls:"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:"none",armor:C.armor,d1:"none"});
+  else p=fromBuilder({name:C.name+(n>0?" "+(n+1):""),race:C.race||"human",cls:C.cls==="wizard"?"wizard":"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:C.sh||"none",armor:C.armor||"none",d1:C.d||"none",spells:C.spells});
   const m=mk(h,p); m.minion=true; m.kind=kind; m.side="mob"; m.owner=null; m.fresh=false; if(kind==="gargoyle") m.natFly=true; if(C.up) m.up=C.up;
   if(C.size>1){ m.size=C.size; p.breath=C.breath; m.natFly=C.fly||false; } return m; }
-function spawnMobs(){ const north=zones()[1].hexes, hum=G.players, near=u=>[...hum].sort((a,b)=>hdist(u,a)-hdist(u,b))[0];
+/* an encounter: each monster goes to the free hex nearest its spot in the room, facing the nearest player */
+function spawnEnc(){ const hum=G.players, near=u=>[...hum].sort((a,b)=>hdist(u,a)-hdist(u,b))[0], xs=P.map(h=>h.p[0]), ys=P.map(h=>h.p[1]), x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys), seen={};
+  for(const f of ENC.foes){ const tx=x0+f.at[0]*(x1-x0), ty=y0+f.at[1]*(y1-y0), id="e_"+f.c, n=seen[id]||0; seen[id]=n+1;
+    const h=[...P].filter(x=>!allU().some(y=>y.hp>0&&same(y,x))).sort((a,b)=>Math.hypot(a.p[0]-tx,a.p[1]-ty)-Math.hypot(b.p[0]-tx,b.p[1]-ty))[0];
+    const m=newMob(id,h,n); m.f=faceToward(m,near(m)); m.caster=CRE[id].cls==="wizard"; G.units.push(m); G.mobs.push(m); } }
+function spawnMobs(){ if(CREK==="enc"){ spawnEnc(); return; } const north=zones()[1].hexes, hum=G.players, near=u=>[...hum].sort((a,b)=>hdist(u,a)-hdist(u,b))[0];
   const c0={q:Math.round(north.reduce((a,h)=>a+h.q,0)/north.length),r:Math.round(north.reduce((a,h)=>a+h.r,0)/north.length)};
   const free=[...north].sort((a,b)=>hdist(a,c0)-hdist(b,c0));
   for(let k=0;k<CREN;k++){ const C=CRE[CREK]; let m;
@@ -546,6 +600,7 @@ function aiMove(a){
   if(MWid(a)&&!eng){ for(const h of R.values()){ if(h.c>1)continue; const s=Math.min(dist(h,b),4)*2-(relOf(b,h)==="front"?9:0)+(h.c===0?0.4:0)+Math.random()*0.3; if(!best||s>best.s) best={h,s}; } }
   else if(MWid(a)&&eng){ best={h:R.get(key(a.q,a.r))||a,s:0}; }
   else if(poleOf(a)&&!eng&&dist(a,b)<=MAu(a)+3&&Math.random()<.75){ best={h:R.get(key(a.q,a.r))||a,s:0}; }
+  else if(a.caster&&!eng&&a.hp>=6&&dist(a,b)<=8){ best={h:R.get(key(a.q,a.r))||a,s:0}; }   /* a shaman with ST to spare stands off and casts instead of charging */
   else for(const h of R.values()){
     const d=dist(h,b); let s=d*10;
     if(d===1){ const r=relOf(b,h); s=r==="rear"?0:r==="side"?2:5; if(!eng&&h.c>MAu(a)/2) s+=6; }
@@ -968,6 +1023,10 @@ function aiAct(u,o){
   if(u.low){ if(dist(u,o)<=2&&has("rise")) return has("rise"); const sh=has("fire")||has("last"); return sh||(u.cool>0?{t:"none"}:has("rise"));}
   if(!u.low&&dist(u,o)>=5){ const pf=L.find(x=>x.t==="fire"&&x.pos==="prone"); if(pf&&Math.random()<.5) return pf; }
   if(u.hth){ if(!hthWeap(u)&&has("hdraw")&&Math.random()<.6) return has("hdraw"); if(u.hp<=3&&Math.random()<.35){ const fr=freeNeighbors(u).sort(()=>Math.random()-.5)[0]; if(fr) return {t:"hesc",dest:fr}; } return has("hattack"); }
+  if(u.caster&&u.hp>=6&&has("cast")){   /* a computer shaman: mostly Magic Fist with 1 or 2 ST, now and then Clumsiness; never below 6 ST, then it fights with its staff */
+    const cl=castList(u,o), fist=cl.filter(x=>x.sp==="Magic Fist"&&x.n<=2&&x.dx>=8).sort((a,b)=>b.n-a.n)[0], clum=cl.find(x=>x.sp==="Clumsiness"&&x.n===1&&x.dx>=8);
+    if(clum&&!o.clum&&Math.random()<.3) return {t:"cast",sp:clum.sp,n:clum.n};
+    if(fist&&Math.random()<.75) return {t:"cast",sp:fist.sp,n:fist.n}; }
   const shot=has("fire")||has("last"); if(shot) return shot;
   if(has("jab")) return has("jab");
   if(MWid(u)&&!u.engStart) return {t:"none"};   /* an archer waiting for its crossbow, or with no target in front */
@@ -1258,15 +1317,19 @@ function drawMap(){
 
 function copyText(t){ try{ const pr=navigator.clipboard&&navigator.clipboard.writeText(t); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} }
 function setMap(name){
-  HEXES=name==="wizard"?WIZARD_HEXES:MELEE_HEXES; P=HEXES.map(h=>({q:h[0],r:h[1],g:h[2],e:h[3],p:pt(h[0],h[1])})); M=new Map(P.map(h=>[key(h.q,h.r),h]));
-  starts.fill(null); try{ localStorage.setItem("melee-map",name); }catch(e){}
+  HEXES=name==="room"&&ROOMH?ROOMH:name==="wizard"?WIZARD_HEXES:MELEE_HEXES; P=HEXES.map(h=>({q:h[0],r:h[1],g:h[2],e:h[3],p:pt(h[0],h[1])})); M=new Map(P.map(h=>[key(h.q,h.r),h]));
+  starts.fill(null); if(name!=="room") try{ localStorage.setItem("melee-map",name); }catch(e){}   /* the room belongs to its encounter and does not replace the saved choice of board */
 }
+/* an encounter plays in its own room; any other setup goes back to the board saved in the Map box */
+function syncMap(){
+  if(CREK==="enc"&&ENC&&mobOn()){ ROOMH=roomHexes(ENC.room[0],ENC.room[1]); setMap("room"); $("mapSel").disabled=true; $("mapNote").textContent="The encounter sets the room."; }
+  else { let n="melee"; try{ n=localStorage.getItem("melee-map")==="wizard"?"wizard":"melee"; }catch(e){} if(HEXES!==(n==="wizard"?WIZARD_HEXES:MELEE_HEXES)) setMap(n); $("mapSel").disabled=false; if($("mapNote").textContent==="The encounter sets the room.") $("mapNote").textContent=""; $("mapSel").value=n; } }
 function initMap(){
   let n="melee"; try{ n=localStorage.getItem("melee-map")==="wizard"?"wizard":"melee"; }catch(e){}
   setMap(n); $("mapSel").value=n;
   $("mapSel").onchange=()=>{ if(G&&G.phase!=="over"){ $("mapSel").value=localStorage.getItem("melee-map")||"melee"; $("mapNote").textContent="Finish or leave the fight first."; return; } $("mapNote").textContent=""; setMap($("mapSel").value); ui(); drawMap(); };
 }
-initMap();
+initMap(); syncMap();
 ui(); drawMap();
 </script>
 <script src="online-host.js"></script></body></html>
