@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campaign character builder</title>
+<style>
+:root{--bg:#f6f4ef;--fg:#1d1d1f;--mut:#666;--card:#fff;--line:#d8d4ca;--acc:#1d4e9e;--bad:#a3121e;--ok:#2b7a3d;--warn:#9a5600}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e8e8ea;--mut:#9aa0a8;--card:#1f2228;--line:#363a42;--acc:#7fa8ee;--bad:#ee7b7f;--ok:#6cc27f;--warn:#e0a24a}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif}
+main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:0 0 8px}h3{font-size:14px;margin:12px 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+a{color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.mut{color:var(--mut);font-size:14px}.bad{color:var(--bad)}.ok{color:var(--ok)}.warn{color:var(--warn)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+input,select,button,textarea{font:inherit;padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+input[type=number]{width:5em}input[type=checkbox]{padding:0}
+button{cursor:pointer}button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}button:disabled{opacity:.45;cursor:not-allowed}
+textarea{width:100%;box-sizing:border-box;font:12px monospace}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px 18px}
+.tal{display:flex;gap:6px;align-items:baseline;padding:2px 0}.tal label{flex:1}.tal .c{color:var(--mut);font-size:13px;white-space:nowrap}
+table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;border-top:1px solid var(--line);font-size:15px}th{font-size:13px;color:var(--mut)}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:4px 0}.bar i{display:block;height:100%;background:var(--acc)}.bar i.over{background:var(--bad)}
+</style>
+</head>
+<body><main>
+<h1>Campaign character builder</h1>
+<p style="margin:0 0 8px"><a href="index.html">← Menu</a> · <a href="builder.html">Character builder (Melee legal)</a> · <a href="colosseum.html">Colosseum</a></p>
+<p class="mut">For campaign play: a hero or wizard with talents, a purse and as much gear as the money allows. The talents, their costs and the prices are NOT part of this page: you paste them in once (the "Rules data" box) and they stay in this browser only. Start from a fighter or wizard you already made in the regular builder, add talents and buy gear here, then copy the result to the Colosseum.</p>
+
+<details class="card" id="dataCard" open><summary style="cursor:pointer;font-weight:600">Rules data <span id="dataState" class="mut"></span></summary>
+ <div class="mut" style="margin:6px 0">Paste your campaign data (JSON) and press Save. It never leaves this browser. Check every number against your own book: the data decides what a talent costs and what a sword sells for.</div>
+ <textarea id="dataBox" rows="6" spellcheck="false" placeholder='{"talents":[...],"prices":{...}}'></textarea>
+ <div class="row"><button id="dataSave">Save the data</button><button id="dataClear">Remove it</button><span class="mut" id="dataMsg"></span></div>
+</details>
+
+<div id="work" style="display:none">
+<div class="card"><h2>1. The character</h2>
+ <div class="row"><button id="fromBuilder">Take the regular builder's open character</button><button id="newChar">New human hero</button>
+  <select id="rosterSel"></select><button id="rosterLoad">Load</button><button id="rosterSave">Save in my list</button><button id="rosterDel">Delete</button></div>
+ <div class="row"><label>Name <input id="chName" size="22"></label>
+  <label>Race <select id="chRace"></select></label>
+  <label>Kind <select id="chCls"><option value="fighter">Hero</option><option value="wizard">Wizard</option></select></label></div>
+ <div class="row"><label>ST <input type="number" id="chSt" min="1" max="60"></label><label>DX <input type="number" id="chDx" min="1" max="40"></label><label>IQ <input type="number" id="chIq" min="1" max="40"></label>
+  <label>Points in all <input type="number" id="chTotal" min="1" max="200"></label><span id="ptsNote" class="mut"></span></div>
+ <div class="mut" id="spellNote"></div>
+</div>
+
+<div class="card"><h2>2. Talents</h2>
+ <div class="row"><b id="iqUsed"></b><span class="mut" id="iqNote"></span></div><div class="bar"><i id="iqBar" style="width:0"></i></div>
+ <div class="row"><label>Languages besides your own (1 IQ each) <input type="number" id="chLangs" min="0" max="20"></label></div>
+ <div id="talents"></div>
+</div>
+
+<div class="card"><h2>3. Money and gear</h2>
+ <div class="row"><label>Money to spend <input type="number" id="purse" min="0" step="10" style="width:7em"></label><label><input type="checkbox" id="silver"> Silver weapons and armor (cost ten times as much)</label><b id="moneyLeft"></b></div>
+ <h3>Shop</h3><div id="shop"></div>
+ <h3>What you own</h3><div id="owned" class="mut">Nothing yet.</div>
+</div>
+
+<div class="card"><h2>4. Ready for the fight</h2>
+ <div class="mut">Your gear has no count limit: money is the limit. For a fight you choose what is in your hands, slung on your back and sheathed. The Colosseum uses the right hand, the left hand, the first slung item and the first sheathed dagger for now (it does not know the other slots yet).</div>
+ <div class="row"><label>Armor <select id="ldArmor"></select></label></div>
+ <div class="row"><label>Right hand <select id="ld_a"></select></label><label>Left hand <select id="ld_b"></select></label></div>
+ <div class="row"><label>Slung 1 <select id="ld_s1"></select></label><label>Slung 2 <select id="ld_s2"></select></label></div>
+ <div class="row"><label>Sheathed 1 <select id="ld_d1"></select></label><label>Sheathed 2 <select id="ld_d2"></select></label></div>
+ <div id="fightNote" class="mut"></div>
+</div>
+
+<div class="card"><h2>5. Use the character</h2>
+ <div id="problems" class="bad"></div>
+ <div class="row"><button class="pri" id="copyBtn">Copy the character data</button><button id="setBuilder">Make it the regular builder's open character</button><span class="mut" id="outMsg"></span></div>
+ <div class="mut">In the Colosseum, paste this text into a player's "paste" box. A phone can use it too if you make it the open character (second button) on that phone's browser.</div>
+ <textarea id="outBox" rows="5" readonly></textarea>
+</div>
+</div>
+
+<script src="rules.js"></script>
+<script>
+"use strict";
+const {RACES,ARMOR,W,SHIELDS}=RULES;
+const $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const DKEY="campaign-data-v1", CKEY="campaign-char-v1", RKEY="campaign-roster-v1", BKEY="wizard-builder-v1";
+const store={get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} }};
+
+/* ---- the rules data (kept in this browser; never part of the page) ----
+   {talents:[{id,n,iq,c,wc?,pre?[],preAny?[],dx?,st?,cIf?[[id,cost]]}], prices:{itemId:silver}, talentFor:{itemId:talentId}, misc:[{id,n,p}]}
+   item ids are the weapon, armor and shield ids used by the rest of the site (rules.js). */
+let D=null;
+function checkData(o){
+  if(!o||typeof o!=="object") return "That is not data.";
+  if(!Array.isArray(o.talents)) return "talents must be a list.";
+  const ids=new Set();
+  for(const t of o.talents){
+    if(!t||!/^[a-z0-9_]{1,30}$/.test(t.id||"")) return "Every talent needs an id of lowercase letters, digits and _.";
+    if(ids.has(t.id)) return "Talent id "+t.id+" appears twice."; ids.add(t.id);
+    if(typeof t.n!=="string"||!t.n) return "Talent "+t.id+" needs a name (n).";
+    for(const k of ["iq","c"]) if(typeof t[k]!=="number"||t[k]<0||t[k]>40) return "Talent "+t.id+": "+k+" must be a number.";
+    for(const k of ["pre","preAny"]) if(t[k]!=null&&(!Array.isArray(t[k])||t[k].some(x=>typeof x!=="string"))) return "Talent "+t.id+": "+k+" must be a list of talent ids.";
+  }
+  for(const t of o.talents){ for(const k of ["pre","preAny"]) for(const x of t[k]||[]) if(!ids.has(x)) return "Talent "+t.id+" needs "+x+", which is not in the list."; for(const [x] of t.cIf||[]) if(!ids.has(x)) return "Talent "+t.id+": cIf names "+x+", which is not in the list."; }
+  if(!o.prices||typeof o.prices!=="object") return "prices must be a table of item ids and costs.";
+  for(const [k,v] of Object.entries(o.prices)){ if(!(W[k]||ARMOR[k]||SHIELDS[k])||k==="none"||k==="staff") return "prices: "+k+" is not an item this site knows."; if(typeof v!=="number"||v<0) return "prices: "+k+" needs a number."; }
+  if(o.talentFor) for(const [k,v] of Object.entries(o.talentFor)){ if(!(W[k]||SHIELDS[k])) return "talentFor: "+k+" is not a weapon or shield."; if(!ids.has(v)) return "talentFor: "+v+" is not a talent in the list."; }
+  if(o.misc!=null&&(!Array.isArray(o.misc)||o.misc.some(m=>!m||!/^[a-z0-9_]{1,30}$/.test(m.id||"")||typeof m.n!=="string"||typeof m.p!=="number"))) return "misc must be a list of {id, n, p}.";
+  return ""; }
+function loadData(){ try{ const o=JSON.parse(store.get(DKEY)||"null"); if(o&&!checkData(o)){ D=o; return; } }catch(e){} D=null; }
+
+/* ---- the character ---- */
+let C=null;   /* {base (everything else the regular builder knows), name, race, cls, st, dx, iq, total, langs, tal:[ids], purse, silver, inv:{id:n}, armor, a,b,s1,s2,d1,d2} */
+const BLANKC=()=>({base:{},name:"",race:"human",cls:"fighter",st:8,dx:8,iq:8,total:32,langs:0,tal:[],purse:0,silver:false,inv:{},armor:"none",a:"none",b:"none",s1:"none",s2:"none",d1:"none",d2:"none"});
+function fromBuilderJson(o){
+  const c=BLANKC(), R=RACES[o.race]||RACES.human; c.base=JSON.parse(JSON.stringify(o)); for(const k of ["a","b","s1","d1","d2","armor","name","race","cls","st","dx","iq","total","silver"]) delete c.base[k];
+  delete c.base.camp;
+  c.name=String(o.name||"").slice(0,60); c.race=RACES[o.race]?o.race:"human"; c.cls=o.cls==="wizard"?"wizard":"fighter";
+  c.st=Math.max(R.st,+o.st||R.st); c.dx=Math.max(R.dx,+o.dx||R.dx); c.iq=Math.max(R.iq,+o.iq||R.iq);
+  c.total=Math.max(c.st+c.dx+c.iq,+o.total||R.st+R.dx+R.iq+R.extra); c.silver=!!o.silver;
+  const cp=o.camp&&typeof o.camp==="object"?o.camp:null;
+  if(cp){ c.langs=Math.max(0,Math.min(20,+cp.langs||0)); c.tal=Array.isArray(cp.tal)?cp.tal.filter(x=>typeof x==="string").slice(0,80):[]; c.purse=Math.max(0,+cp.purse||0);
+    if(cp.inv&&typeof cp.inv==="object") for(const [k,v] of Object.entries(cp.inv)) if(typeof v==="number"&&v>0&&v<100) c.inv[k]=Math.floor(v); c.s2=typeof cp.s2==="string"?cp.s2:"none"; c.d2=typeof cp.d2==="string"?cp.d2:"none"; c.s1=o.s1||"none"; c.d1=o.d1||"none"; }
+  else { c.s1=o.s1||"none"; c.d1=o.d1||"none"; }
+  c.armor=ARMOR[o.armor]?o.armor:"none"; c.a=o.a||"none"; c.b=o.b||"none";
+  /* what the character already carries is owned (a character from the regular builder arrives with its gear, and the money is its to spend) */
+  for(const k of [c.armor,c.a,c.b,c.s1,c.d1,c.d2,c.s2]) if(k&&k!=="none"&&k!=="staff"&&!(cp&&cp.inv)) c.inv[k]=(c.inv[k]||0)+1;
+  return c; }
+const spellsOf=c=>Array.isArray(c.base.spells)?c.base.spells:[];
+const hasStaff=c=>c.cls==="wizard"&&spellsOf(c).includes("Staff");
+
+/* ---- talents ---- */
+const T=id=>D.talents.find(t=>t.id===id);
+const has=(id)=>C.tal.includes(id);
+function costOf(t){
+  const w=C.cls==="wizard", base=w?(t.wc!=null?t.wc:t.c*2):t.c; let c=base;
+  for(const [x,v] of t.cIf||[]) if(has(x)) c=Math.min(c,w?(t.wc!=null?Math.min(t.wc,v):v*2):v);
+  return c; }
+function reasons(t){   /* why this talent cannot be taken now (empty = it can) */
+  const r=[]; if(t.iq>C.iq) r.push("needs IQ "+t.iq);
+  if(t.dx&&C.dx<t.dx) r.push("needs DX "+t.dx); if(t.st&&C.st<t.st) r.push("needs ST "+t.st);
+  for(const x of t.pre||[]) if(!has(x)) r.push("needs "+T(x).n);
+  if(t.preAny&&!t.preAny.some(has)) r.push("needs "+t.preAny.map(x=>T(x).n).join(" or "));
+  return r; }
+function iqUsed(){ let u=C.langs|0; if(C.cls==="wizard") u+=spellsOf(C).length; for(const id of C.tal){ const t=T(id); if(t) u+=costOf(t); } return u; }
+function cleanTalents(){   /* drop what the character can no longer have (unknown ids, lost prerequisites, attributes lowered) */
+  const notes=[]; let again=true;
+  C.tal=C.tal.filter((x,i,a)=>T(x)&&a.indexOf(x)===i);
+  while(again){ again=false; for(const id of [...C.tal]){ const t=T(id), r=reasons(t); if(r.length){ C.tal=C.tal.filter(x=>x!==id); notes.push(t.n+" removed ("+r.join(", ")+")."); again=true; } } }
+  return notes; }
+
+/* ---- gear ---- */
+const itemName=k=>k==="none"?"nothing":W[k]?W[k].n:ARMOR[k]?ARMOR[k].n:SHIELDS[k]?SHIELDS[k].n:(D&&(D.misc||[]).find(m=>m.id===k)||{n:k}).n;
+const isArmor=k=>!!ARMOR[k]&&k!=="none", isShield=k=>!!SHIELDS[k], isWeap=k=>!!W[k]&&k!=="staff";
+const priceOf=k=>{ const p=D.prices[k]; if(p==null){ const m=(D.misc||[]).find(x=>x.id===k); return m?m.p:null; } return p*(C.silver&&(isWeap(k)||isArmor(k)||isShield(k))?10:1); };
+const own=k=>C.inv[k]||0;
+const spent=()=>Object.entries(C.inv).reduce((t,[k,n])=>t+(priceOf(k)||0)*n,0);
+const left=()=>C.purse-spent();
+function talentFor(k){ const id=D.talentFor&&D.talentFor[k]; return id?T(id):null; }
+
+function fightList(slot){   /* what can go in a slot: owned things that fit it */
+  const ok=k=>{
+    if(slot==="a") return isWeap(k)&&!W[k].left;
+    if(slot==="b") return isShield(k)||(isWeap(k)&&!W[k].two);
+    if(slot==="s1"||slot==="s2") return isShield(k)||isWeap(k);
+    return k==="dagger"||k==="mg"; };
+  return Object.keys(C.inv).filter(k=>own(k)>0&&ok(k)); }
+function used(k,except){ return ["a","b","s1","s2","d1","d2"].filter(s=>s!==except&&C[s]===k).length; }
+
+
+/* The talent list and the shop are built once and then only updated in place. Rebuilding them on every change would replace the button under a finger
+   (a number box loses focus, its change redraws the page, and the tap on Buy or a talent is lost). */
+let BUILT=null;
+const SHOPKEYS=()=>[["Weapons",Object.keys(W).filter(k=>isWeap(k)&&D.prices[k]!=null)],["Armor",Object.keys(ARMOR).filter(k=>isArmor(k)&&D.prices[k]!=null)],["Shields",Object.keys(SHIELDS).filter(k=>D.prices[k]!=null)],["Other",(D.misc||[]).map(m=>m.id)]];
+function buildStatic(){
+  if(BUILT===D) return; BUILT=D;
+  const levels=[...new Set(D.talents.map(t=>t.iq))].sort((a,b)=>a-b); let h="";
+  for(const L of levels){ h+=`<h3>IQ ${L} talents</h3><div class="grid2">`; for(const t of D.talents.filter(x=>x.iq===L)) h+=`<div class="tal"><input type="checkbox" id="tal_${t.id}" data-t="${t.id}"><label for="tal_${t.id}">${esc(t.n)}</label><span class="c" id="talc_${t.id}"></span></div>`; h+="</div>"; }
+  $("talents").innerHTML=h;
+  let s=""; for(const [gn,ks] of SHOPKEYS()){ if(!ks.length) continue; s+=`<h3>${gn}</h3><table><tr><th>Item</th><th>Needs</th><th>Price</th><th>Talent</th><th></th></tr>`;
+    for(const k of ks) s+=`<tr><td>${esc(itemName(k))} <span class="ok" id="own_${k}"></span></td><td>${W[k]&&W[k].st?"ST "+W[k].st:""}</td><td id="pr_${k}"></td><td id="tf_${k}"></td><td><button data-buy="${k}" id="buy_${k}">Buy</button></td></tr>`;
+    s+="</table>"; }
+  $("shop").innerHTML=s; }
+function updateTalents(used0){
+  for(const t of D.talents){ const on=has(t.id), r=reasons(t), cost=costOf(t), can=on||(!r.length&&used0+cost<=C.iq), cb=$("tal_"+t.id);
+    const why=on?"":r.length?r.join(", "):(used0+cost>C.iq?"not enough IQ left":"");
+    cb.checked=on; cb.disabled=!can; cb.nextElementSibling.className=can?"":"mut"; $("talc_"+t.id).textContent=cost+" IQ"+(why?" · "+why:""); } }
+function updateShop(){
+  for(const [,ks] of SHOPKEYS()) for(const k of ks){ const p=priceOf(k), tf=talentFor(k);
+    $("own_"+k).textContent=own(k)?"(own "+own(k)+")":""; $("pr_"+k).textContent="$"+p;
+    const c=$("tf_"+k); c.textContent=tf?tf.n+(has(tf.id)?"":" (you lack it)"):""; c.className=tf&&!has(tf.id)?"warn":"mut"; $("buy_"+k).disabled=p>left(); } }
+
+/* ---- screen ---- */
+function fillSelect(sel,opts,val){ sel.innerHTML=opts.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join(""); sel.value=opts.some(o=>o[0]===val)?val:opts[0][0]; return sel.value; }
+function render(keepFocus){
+  if(!D||!C){ $("work").style.display="none"; return; } $("work").style.display="";
+  const notes=cleanTalents();
+  /* attributes and class */
+  $("chName").value=C.name; fillSelect($("chRace"),Object.keys(RACES).map(k=>[k,RACES[k].n]),C.race); $("chCls").value=C.cls;
+  for(const [id,k] of [["chSt","st"],["chDx","dx"],["chIq","iq"],["chTotal","total"],["chLangs","langs"],["purse","purse"]]) if(document.activeElement!==$(id)) $(id).value=C[k];
+  $("silver").checked=C.silver;
+  const sum=C.st+C.dx+C.iq, R=RACES[C.race]; $("ptsNote").textContent=sum>C.total?"Too many points: "+(sum-C.total)+" over.":sum<C.total?(C.total-sum)+" points still to spend.":"All points spent."; $("ptsNote").className=sum>C.total?"bad":"mut";
+  $("spellNote").textContent=C.cls==="wizard"?`Wizards keep their spells from the regular builder (${spellsOf(C).length} spell${spellsOf(C).length===1?"":"s"}, 1 IQ each). A wizard pays double for talents.`:"A hero's talents cost what the data says. Spells for heroes (3 IQ each) are not handled here yet.";
+  /* talents */
+  const used0=iqUsed(), over=used0>C.iq;
+  $("iqUsed").textContent="IQ used "+used0+" of "+C.iq; $("iqUsed").className=over?"bad":""; $("iqNote").textContent=notes.join(" ");
+  $("iqBar").style.width=Math.min(100,C.iq?used0/C.iq*100:0)+"%"; $("iqBar").className=over?"over":"";
+  buildStatic(); updateTalents(used0);
+  /* shop */
+  updateShop();
+  $("moneyLeft").textContent="Left: $"+left(); $("moneyLeft").className=left()<0?"bad":"ok";
+  const ow=Object.keys(C.inv).filter(k=>own(k)>0);
+  $("owned").innerHTML=ow.length?`<table>${ow.map(k=>`<tr><td>${esc(itemName(k))}</td><td>× ${own(k)}</td><td>$${(priceOf(k)||0)*own(k)}</td><td><button data-sell="${k}">Sell one (full price back)</button></td></tr>`).join("")}</table>`:"Nothing yet.";
+  /* fight loadout */
+  fixLoadout();
+  fillSelect($("ldArmor"),[["none","No armor"],...Object.keys(C.inv).filter(k=>isArmor(k)&&own(k)>0).map(k=>[k,ARMOR[k].n])],C.armor);
+  for(const sl of ["a","b","s1","s2","d1","d2"]) fillSelect($("ld_"+sl),[["none","nothing"],...fightList(sl).filter(k=>k===C[sl]||own(k)>used(k,sl)).map(k=>[k,itemName(k)+(W[k]&&W[k].st>C.st?" (needs ST "+W[k].st+")":"")])],C[sl]);
+  $("ld_a").disabled=hasStaff(C);
+  fightNotes();
+  /* output */
+  const probs=problems(); $("problems").innerHTML=probs.map(esc).join("<br>"); $("copyBtn").disabled=$("setBuilder").disabled=probs.length>0;
+  $("outBox").value=probs.length?"":JSON.stringify(exportChar());
+  fillRoster();
+  store.set(CKEY,JSON.stringify(exportChar(true)));
+}
+function fixLoadout(){   /* nothing may be in a slot unless owned, fitting, and not over its count or the character's ST */
+  if(!ARMOR[C.armor]||(C.armor!=="none"&&own(C.armor)<1)) C.armor="none";
+  const ORDER=["a","b","s1","s2","d1","d2"];
+  for(const sl of ORDER){ const k=C[sl]; if(k==="none") continue;
+    const before=ORDER.slice(0,ORDER.indexOf(sl)).filter(x=>C[x]===k).length;   /* earlier slots keep the item, later ones give it up */
+    if(!fightList(sl).includes(k)||own(k)<before+1||(W[k]&&W[k].st>C.st)) C[sl]="none"; }
+  if(hasStaff(C)) C.a="none";
+  if(C.a!=="none"&&W[C.a].two&&C.b!=="none"&&!isShield(C.b)) C.b="none";   /* a two-hander fills both hands (a shield goes on the back) */
+}
+function adjDX(){
+  let a=C.dx-ARMOR[C.armor].pen.m; const hands=[hasStaff(C)?"staff":C.a,C.b].filter(k=>k!=="none");
+  for(const k of hands) if(isShield(k)) a-=SHIELDS[k].pen;
+  if(C.cls==="wizard"&&!C.silver&&(["chain","halfplate","plate"].includes(C.armor)||hands.some(k=>k!=="staff"&&isWeap(k)))) a-=4;   /* iron spoils a wizard's magic */
+  return a; }
+function fightNotes(){
+  const n=[]; n.push("Adjusted DX in this gear: "+adjDX()+".");
+  for(const sl of ["a","b","s1","d1"]){ const k=C[sl]; if(k==="none") continue; const t=talentFor(k); if(t&&!has(t.id)) n.push(itemName(k)+": you lack "+t.n+" (DX −4 with it).");
+    if(W[k]&&W[k].two&&sl==="a"&&C.b!=="none"&&!isShield(C.b)) n.push("A two-handed weapon fills both hands."); }
+  if(C.s2!=="none"||C.d2!=="none") n.push("The second slung and second sheathed items are kept on the character but the Colosseum does not use them yet.");
+  $("fightNote").innerHTML=n.map(esc).join("<br>"); }
+function problems(){
+  const p=[]; const sum=C.st+C.dx+C.iq; if(!C.name.trim()) p.push("Give the character a name.");
+  if(sum>C.total) p.push("More attribute points than the total ("+sum+" of "+C.total+").");
+  if(iqUsed()>C.iq) p.push("Talents, languages and spells use more IQ than the character has.");
+  if(left()<0) p.push("The gear costs more than the money.");
+  return p; }
+function exportChar(forSave){
+  const o=JSON.parse(JSON.stringify(C.base)); Object.assign(o,{name:C.name.trim(),race:C.race,cls:C.cls,total:C.total,st:C.st,dx:C.dx,iq:C.iq,silver:C.silver,armor:C.armor,a:C.a,b:C.b,s1:C.s1,d1:C.d1,d2:"none"});
+  o.camp={v:1,langs:C.langs,tal:C.tal.slice(),purse:C.purse,inv:Object.assign({},C.inv),s2:C.s2,d2:C.d2};
+  if(forSave) o.name=C.name;
+  return o; }
+
+/* ---- saved list ---- */
+function roster(){ try{ const r=JSON.parse(store.get(RKEY)||"{}"); return r&&typeof r==="object"?r:{}; }catch(e){ return {}; } }
+function fillRoster(){ const r=roster(), ks=Object.keys(r); fillSelect($("rosterSel"),ks.length?ks.map(k=>[k,k]):[["","(none saved)"]],$("rosterSel").value); }
+
+/* ---- events ---- */
+function setC(o){ C=o; render(); }
+$("dataSave").onclick=()=>{ let o; try{ o=JSON.parse($("dataBox").value); }catch(e){ $("dataMsg").textContent="That is not valid text: "+e.message; return; } const bad=checkData(o); if(bad){ $("dataMsg").textContent=bad; return; } store.set(DKEY,JSON.stringify(o)); D=o; $("dataBox").value=""; showData(); if(!C) setC(BLANKC()); else render(); $("dataMsg").textContent="Saved."; };
+$("dataClear").onclick=()=>{ store.del(DKEY); D=null; showData(); render(); };
+function showData(){ $("dataState").textContent=D?"(loaded: "+D.talents.length+" talents, "+Object.keys(D.prices).length+" priced items)":"(none yet: paste it here first)"; $("dataCard").open=!D; }
+$("fromBuilder").onclick=()=>{ let o=null; try{ o=JSON.parse(store.get(BKEY)||"null"); }catch(e){} if(!o||typeof o!=="object"){ $("outMsg").textContent="The regular builder has no open character in this browser."; return; } if(C&&!confirm("Replace the character on screen?")) return; setC(fromBuilderJson(o)); };
+$("newChar").onclick=()=>{ if(C&&!confirm("Replace the character on screen?")) return; setC(BLANKC()); };
+$("chName").oninput=()=>{ C.name=$("chName").value; render(); };
+$("chRace").onchange=()=>{ C.race=$("chRace").value; const R=RACES[C.race]; C.st=Math.max(R.st,C.st); C.dx=Math.max(R.dx,C.dx); C.iq=Math.max(R.iq,C.iq); render(); };
+$("chCls").onchange=()=>{ C.cls=$("chCls").value; if(C.cls==="fighter") C.base.spells=[]; render(); };
+for(const [id,k,lo] of [["chSt","st",1],["chDx","dx",1],["chIq","iq",1],["chTotal","total",1],["chLangs","langs",0],["purse","purse",0]]) $(id).onchange=()=>{ let v=Math.round(+$(id).value); if(!(v>=lo)) v=lo; if(["st","dx","iq"].includes(k)){ const m=RACES[C.race][k]; if(v<m) v=m; } C[k]=v; render(); };
+$("silver").onchange=()=>{ C.silver=$("silver").checked; render(); };
+$("talents").onchange=e=>{ const t=e.target.dataset&&e.target.dataset.t; if(!t) return; if(e.target.checked){ if(!has(t)) C.tal.push(t); } else C.tal=C.tal.filter(x=>x!==t); render(); };
+$("shop").onclick=e=>{ const k=e.target.dataset&&e.target.dataset.buy; if(!k) return; const p=priceOf(k); if(p>left()) return; C.inv[k]=own(k)+1; render(); };
+$("owned").onclick=e=>{ const k=e.target.dataset&&e.target.dataset.sell; if(!k) return; C.inv[k]=own(k)-1; if(C.inv[k]<=0) delete C.inv[k]; render(); };
+$("ldArmor").onchange=()=>{ C.armor=$("ldArmor").value; render(); };
+for(const sl of ["a","b","s1","s2","d1","d2"]) $("ld_"+sl).onchange=()=>{ C[sl]=$("ld_"+sl).value; render(); };
+$("copyBtn").onclick=()=>{ const t=$("outBox").value; try{ navigator.clipboard.writeText(t).then(()=>{ $("outMsg").textContent="Copied."; },()=>{ $("outBox").select(); $("outMsg").textContent="Select the text and copy it."; }); }catch(e){ $("outBox").select(); $("outMsg").textContent="Select the text and copy it."; } };
+$("setBuilder").onclick=()=>{ if(!confirm("This replaces the regular builder's open character in this browser. Go on?")) return; store.set(BKEY,JSON.stringify(exportChar())); $("outMsg").textContent="Done: it is now the regular builder's open character (and the one a phone offers as 'From the builder')."; };
+$("rosterSave").onclick=()=>{ if(!C.name.trim()){ $("outMsg").textContent="Give the character a name first."; return; } const r=roster(); r[C.name.trim()]=exportChar(true); store.set(RKEY,JSON.stringify(r)); fillRoster(); $("rosterSel").value=C.name.trim(); $("outMsg").textContent="Saved in this browser's list."; };
+$("rosterLoad").onclick=()=>{ const o=roster()[$("rosterSel").value]; if(!o) return; if(!confirm("Replace the character on screen?")) return; setC(fromBuilderJson(o)); };
+$("rosterDel").onclick=()=>{ const k=$("rosterSel").value, r=roster(); if(!r[k]||!confirm("Delete "+k+" from the list?")) return; delete r[k]; store.set(RKEY,JSON.stringify(r)); fillRoster(); };
+
+loadData(); showData();
+if(D){ let o=null; try{ o=JSON.parse(store.get(CKEY)||"null"); }catch(e){} C=o&&typeof o==="object"?fromBuilderJson(o):BLANKC(); }
+render();
+</script>
+</body></html>
