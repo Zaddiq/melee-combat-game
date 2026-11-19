@@ -499,3 +499,9 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - bell.js: master gain with three levels (Quiet .1, Medium .25 default, Loud 1 = the old level), stored per device under `<pref>-vol`. Buttons "Volume: ..." on the host card (#onVol) and the phone (#vol).
 - colosseum.html: resolveTurn sets G.rStart; nextTurn copies the lines logged since then into G.last. ui() prints them as #lastRound under the choices and above the log. online-host.js sends them to phones as `lr`; phone.html shows a #lastRound block under the buttons (the "What just happened" bar stays).
 - tests/lastround_test.py
+
+## Campaign talents in the fight engine
+- campaign-builder.html exports `camp.fx = {pen:[carried items the hero lacks the talent for], ms:1 if Missile Weapons, th:1 if Thrown Weapons}`.
+- colosseum.html fromBuilder: only when the character has a `camp` block, keeps up to 3 extra carried weapons in `dag` (ready-able in a fight) and sets `f.camp`. wxu(u,wid,kind) gives -4 for a weapon without its talent, +3 missile, +2 thrown; used in doAttack, shotDX and the jab label. Regular fighters have no `camp`, so nothing changes for them.
+- Not done: Two Weapons, Fencing, Warrior, Veteran, Running, Shield effects; the 2018 extra weapons (hatchet, war ax, bastard sword, great sword, great hammer, trident, pike, cavalry lance) need their damage/ST numbers.
+- tests/campaign_talents_test.py

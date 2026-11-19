@@ -249,7 +249,9 @@ function problems(){
   return p; }
 function exportChar(forSave){
   const o=JSON.parse(JSON.stringify(C.base)); Object.assign(o,{name:C.name.trim(),race:C.race,cls:C.cls,total:C.total,st:C.st,dx:C.dx,iq:C.iq,silver:C.silver,armor:C.armor,a:C.a,b:C.b,s1:C.s1,d1:C.d1,d2:"none"});
-  o.camp={v:1,langs:C.langs,tal:C.tal.slice(),purse:C.purse,inv:Object.assign({},C.inv),s2:C.s2,d2:C.d2};
+  /* fx: what the fight engine needs to know (it has no talent list): carried items the hero lacks the talent for, and the two bonus talents */
+  const pen=[...new Set([C.a,C.b,C.s1,C.d1,C.s2,C.d2].filter(k=>k&&k!=="none"&&k!=="staff").filter(k=>{ const t=talentFor(k); return t&&!has(t.id); }))];
+  o.camp={v:1,langs:C.langs,tal:C.tal.slice(),purse:C.purse,inv:Object.assign({},C.inv),s2:C.s2,d2:C.d2,fx:{pen,ms:has("missile")?1:0,th:has("thrown")?1:0}};
   if(forSave) o.name=C.name;
   return o; }
 

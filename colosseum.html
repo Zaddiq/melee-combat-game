@@ -88,6 +88,13 @@ function fromBuilder(o){
   f.slung=(SHIELDS[o.s1]||(W[o.s1]&&o.s1!=="mg"))?o.s1:"none";
   if(f.left==="none"&&SHIELDS[lf]&&f.slung==="none") f.slung=lf;   /* a two-handed weapon: the shield goes on the back */
   f.dag=[o.d1,o.d2].filter(k=>k==="dagger"||k==="mg").slice(0,1);   /* 3E: one dagger or main-gauche only */
+  const cp=o.camp&&typeof o.camp==="object"?o.camp:null;
+  if(cp){   /* campaign hero: the two-weapon limit does not apply. Every other carried weapon is kept ready-able, and the talents count. */
+    const fx=cp.fx&&typeof cp.fx==="object"?cp.fx:{}, wk=k=>typeof k==="string"&&W[k]&&k!=="staff"&&!(W[k].hid);
+    f.dag=[o.d1,cp.d2,cp.s2].filter(wk).filter((k,i,a)=>a.indexOf(k)===i).slice(0,3);
+    if(SHIELDS[cp.s2]&&f.slung==="none") f.slung=cp.s2;
+    f.camp={pen:Array.isArray(fx.pen)?fx.pen.filter(k=>typeof k==="string").slice(0,12):[],ms:fx.ms?1:0,th:fx.th?1:0};
+  }
   return f;
 }
 function adjDX(f){ /* starting gear, old Melee/Wizard penalties as the builder computes them */
@@ -424,7 +431,8 @@ const mhPen=n=>n<=2?0:-Math.ceil((n-2)/2);   /* 3-4 MH: -1, 5-6 MH: -2 */
 function inFront(a,b){ if(a.down||blocked(a,b)) return false; const A=cenXY(a),B=cenXY(b),f=(a.size>1?vang(a.f):SCR[a.f])*Math.PI/180; return (B[0]-A[0])*Math.cos(f)+(B[1]-A[1])*Math.sin(f)>-0.85; }
 const isMW=id=>!!(W[id]&&W[id].miss), isBow=id=>id==="sbow"||id==="hbow"||id==="lbow";
 const xb=(u,w)=>u.low==="prone"&&(w==="lxbow"||w==="hxbow")?1:0;   /* crossbowman lying prone +1 DX */
-const shotDX=(u,o,wid,kind)=>adjDXu(u,"single",null)-(shadowAt(o)?4:0)-(shadowAt(u)?6:0)-(u.air&&!u.natFly?4:0)-(o.air?4:0)+(kind==="thrown"?-dist(u,o):mhPen(mhDist(u,o))+xb(u,wid));
+const wxu=(u,wid,kind)=>{ const c=u.p&&u.p.camp; if(!c||!wid) return 0; let m=0; if(c.pen.includes(wid)) m-=4; if(kind==="missile"&&c.ms) m+=3; if(kind==="thrown"&&c.th) m+=2; return m; };   /* campaign talents: -4 DX with a weapon the hero lacks the talent for, +3 missile, +2 thrown */
+const shotDX=(u,o,wid,kind)=>wxu(u,wid,kind)+adjDXu(u,"single",null)-(shadowAt(o)?4:0)-(shadowAt(u)?6:0)-(u.air&&!u.natFly?4:0)-(o.air?4:0)+(kind==="thrown"?-dist(u,o):mhPen(mhDist(u,o))+xb(u,wid));
 const MWid=u=>isMW(u.right)?u.right:(isMW(u.left)&&!SHIELDS[u.left]?u.left:null);
 const isEngaged=(a,b)=>!!a.air===!!b.air&&relOf(b,a)==="front";   /* a stands in one of b's front hexes */
 function faceToward(a,b){ const A=cenXY(a),B=cenXY(b); const ang=Math.atan2(B[1]-A[1],B[0]-A[0])*180/Math.PI;
@@ -987,8 +995,8 @@ function options(u,o){
   const eng=u.engStart, half=u.moved<=MAu(u)/2, inF=relOf(u,o)==="front"&&!u.down;
   const wR=isW(u.right)?u.right:null, wL=(isW(u.left)&&!SHIELDS[u.left])?u.left:null;
   const pw=poleOf(u), chg=!eng&&u.moved>0&&dist(u,o)===1;
-  if(!eng&&half&&pw&&pw!=="javelin"&&inJab(u,o)) L.push({t:"jab",wid:pw,label:`Jab with ${iname(pw)} at the target two hexes away (needs ${adjDXu(u,"single",null)} or less)`});
-  if(inF&&(eng||half)&&(wR||wL)){ L.push({t:"attack",label:"Attack with "+iname(wR||wL)+(chg?(pw&&straight3(u)?" (pole-weapon charge: one extra die of damage)":pw?" (pole-weapon charge: strikes first)":" (charge)"):"")}); if(wR&&u.left==="mg") L.push({t:"dual",label:"Attack with "+iname(wR)+" and also with the main-gauche (−4 DX on that attack)"}); }
+  if(!eng&&half&&pw&&pw!=="javelin"&&inJab(u,o)) L.push({t:"jab",wid:pw,label:`Jab with ${iname(pw)} at the target two hexes away (needs ${adjDXu(u,"single",null)+wxu(u,pw,"melee")} or less)`});
+  if(inF&&(eng||half)&&(wR||wL)){ L.push({t:"attack",label:"Attack with "+iname(wR||wL)+(wxu(u,wR||wL,"melee")?` (${wxu(u,wR||wL,"melee")>0?"+":"−"}${Math.abs(wxu(u,wR||wL,"melee"))} DX, talent)`:"")+(chg?(pw&&straight3(u)?" (pole-weapon charge: one extra die of damage)":pw?" (pole-weapon charge: strikes first)":" (charge)"):"")}); if(wR&&u.left==="mg") L.push({t:"dual",label:"Attack with "+iname(wR)+" and also with the main-gauche (−4 DX on that attack)"}); }
   /* missile and thrown weapons: the target must be in front of you (Melee p. 9-10, 15-16) */
   if(!u.down&&inFront(u,o)){
     const mw=MWid(u), mh=mhDist(u,o), hx=dist(u,o);
@@ -1073,7 +1081,7 @@ function showPick(){
 }
 function takePick(act){ G.picks[G.pi]=act; G.pi++; if(G.pi>=G.pq.length) resolveTurn(G.picks); else startPick(); }
 function doAttack(a,d,wid,mode,kind){
-  let dx=adjDXu(a,mode,kind?null:d);
+  let dx=adjDXu(a,mode,kind?null:d)+wxu(a,wid,kind);
   if(kind==="thrown") dx-=dist(a,d); else if(kind==="missile") dx+=mhPen(mhDist(a,d))+xb(a,wid);
   if(kind&&!a.sight&&shadowAt(d)&&!d.inv) dx-=4; if(kind&&shadowAt(a)) dx-=6; if(kind&&a.air&&!a.natFly) dx-=4; if(kind&&d.air) dx-=4;
   if(kind&&!a.sight&&d.inv) dx-=6; else if(kind&&!a.sight&&d.blur){ dx-=4; if(a.daz>0) dx+=3; }
