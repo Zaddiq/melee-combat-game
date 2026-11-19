@@ -29,11 +29,12 @@ function render(){
    <div id="onList" style="margin-top:8px">${ids.length?ids.map(u=>`<div class="row" data-u="${esc(u)}"><span title="${joins[u].on?"connected":"not connected"}" style="color:${joins[u].on?"var(--me)":"var(--mut)"}">●</span> <b>${esc(joins[u].name)}</b>
      <select data-seat="${esc(u)}"><option value="-1">watching only</option>${[...Array(NP)].map((_,i)=>`<option value="${i}"${seat[u]===i?" selected":""}>${esc(pname(i))}</option>`).join("")}</select>
      <button data-test="${esc(u)}" title="play this player's bell">Test bell</button><button data-kick="${esc(u)}">Remove</button></div>`).join(""):`<div class="mut">Nobody has joined yet.</div>`}</div>
-   <div class="row"><button id="onBell">Bell: ${Bell.on?"on":"off"}</button><span class="mut">${awakeOk===true?"The tablet screen is kept awake.":awakeOk===false?"This browser cannot keep the screen awake: turn off auto-lock.":""}</span></div>
+   <div class="row"><button id="onBell">Bell: ${Bell.on?"on":"off"}</button><button id="onVol" title="how loud the bell is">Volume: ${Bell.volName()}</button><span class="mut">${awakeOk===true?"The tablet screen is kept awake.":awakeOk===false?"This browser cannot keep the screen awake: turn off auto-lock.":""}</span></div>
    <div class="row"><button id="onLock">${locked?"Unlock the table":"Lock the table (no new phones)"}</button><button id="onClose">Close the table (and change the name)</button></div>`;
   body.querySelectorAll("[data-seat]").forEach(s=>s.onchange=()=>{ const u=s.dataset.seat, p=+s.value; if(p>=0) for(const o of Object.keys(seat)) if(o!==u&&seat[o]===p) seat[o]=-1; seat[u]=p; render(); sync(); });
   body.querySelectorAll("[data-kick]").forEach(b=>b.onclick=()=>Net.kick(code,b.dataset.kick).catch(fail));
   $("onBell").onclick=()=>{ Bell.setOn(!Bell.on); Bell.unlock(); if(Bell.on) Bell.ring(0); render(); };
+  $("onVol").onclick=()=>{ Bell.nextVol(); Bell.unlock(); if(Bell.on) Bell.ring(0); render(); };
   body.querySelectorAll("[data-test]").forEach(b=>b.onclick=()=>{ Bell.unlock(); Bell.ring(Math.max(0,seat[b.dataset.test])); });
   $("onLock").onclick=()=>{ locked=!locked; render(); sync(); };
   $("onClose").onclick=close;
@@ -169,8 +170,9 @@ function sessKill(uid){ const x=sess[uid]; if(x){ x.dead=true; delete lastJ[uid]
 
 const uidOfPlayer=p=>Object.keys(seat).find(u=>seat[u]===p&&joins[u]);
 /* every message also carries the last lines of the fight log (lg) and whether a fight is on (lv), so the phone can show what just happened */
+const lastRound=()=>G&&G.last?G.last.slice(-40).map(x=>new DOMParser().parseFromString(String(x),"text/html").body.textContent.replace(/\s+/g," ").trim()):[];
 const logTail=()=>G&&G.log?G.log.slice(-8).map(x=>new DOMParser().parseFromString(String(x),"text/html").body.textContent.replace(/\s+/g," ").trim()):[];
-function sendTo(u,payload){ payload=Object.assign({lg:logTail(),lv:G&&G.phase!=="over"?1:0},payload); const j=JSON.stringify(payload); if(lastJ[u]===j) return seq[u]; lastJ[u]=j; seq[u]=(seq[u]||Date.now())+1; Net.sendPriv(code,u,Object.assign({seq:seq[u]},payload)).catch(fail); return seq[u]; }
+function sendTo(u,payload){ payload=Object.assign({lg:logTail(),lr:lastRound(),lv:G&&G.phase!=="over"?1:0},payload); const j=JSON.stringify(payload); if(lastJ[u]===j) return seq[u]; lastJ[u]=j; seq[u]=(seq[u]||Date.now())+1; Net.sendPriv(code,u,Object.assign({seq:seq[u]},payload)).catch(fail); return seq[u]; }
 function waitText(){ if(!G) return "Waiting for the fight to start."; if(G.phase==="over") return (G.winner?(G.winners&&G.winners.length>1?G.winners:[G.winner]).map(u=>u.p.name).join(" and ")+" won the fight.":"The fight is over.")+" Watch the tablet."; if(SECRET.includes(G.phase)&&G.cur) return "Waiting for "+G.cur.p.name+" to pick."; if(G.phase==="move"&&G.cur) return G.cur.p.name+" is moving. Watch the tablet."; return "The table is playing. Watch the tablet."; }
 function sendWaits(except){ for(const u of Object.keys(Online.lastKey)) if(u!==except&&!(G&&PHONE.includes(G.phase))) delete Online.lastKey[u]; for(const u of Object.keys(seat)) if(u!==except&&joins[u]&&!activeSess(u)){ if(startSend(u)) continue; delete pending[u]; sendTo(u,{mode:"wait",text:waitText(),turn:G?G.turn:0,ring:Online.ring,sc:scene(null)}); } }
 function onCmds(v){ v=v||{}; for(const u of Object.keys(v)){ const m=v[u], pd=pending[u]; if(!m||!pd||m.seq!==pd.seq||done[u]===m.seq) continue; done[u]=m.seq; const f=({b:pd.acts,t:pd.tacts,h:pd.hacts,f:pd.facts}[m.k]||{})[m.i]; lastJ[u]=null; if(typeof f==="function") f(); } }

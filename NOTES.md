@@ -494,3 +494,8 @@ IQ 12, 2 ST + 1/turn, on yourself only. While it runs, your melee, missile and s
 - The page needs its data to show anything. The owner got a PLACEHOLDER data file made from the 1980 Metagaming PDF (not committed; the 1980 numbers differ from the 2018 edition in places, e.g. plate DX). It must be checked against the 2018 book; the owner can send photos of the paper pages to correct it.
 - Tests: `tests/campaign_builder_test.py` (37, uses an invented mini data set, not book numbers).
 - Not done: the Colosseum applying talents (weapon talent DX -4, Missile Weapons +3, Thrown Weapons +2, Two Weapons, Fencing, Warrior/Veteran hits, Running +2 MA, Shield without the talent, Unarmed Combat) and the extra slots; weapons that are not in rules.js (bastard sword, great sword, quarterstaff, hatchet, military pick, trident, ...) need adding to the engine before they can be bought; hero spells (3 IQ each); weight carried and DX penalties for load; armor/shield numbers (the engine uses the 2018 Melee DX penalties).
+
+## Playtest feedback: bell volume and "Last round"
+- bell.js: master gain with three levels (Quiet .1, Medium .25 default, Loud 1 = the old level), stored per device under `<pref>-vol`. Buttons "Volume: ..." on the host card (#onVol) and the phone (#vol).
+- colosseum.html: resolveTurn sets G.rStart; nextTurn copies the lines logged since then into G.last. ui() prints them as #lastRound under the choices and above the log. online-host.js sends them to phones as `lr`; phone.html shows a #lastRound block under the buttons (the "What just happened" bar stays).
+- tests/lastround_test.py

@@ -42,7 +42,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
   <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="mut"><span class="dot" id="dot"></span><span id="conn">Connecting…</span> · table <b id="tcode"></b></div><button id="leave" style="margin-top:0;padding:8px 12px">Switch table</button></div>
   <div class="big" id="seat" style="margin-top:6px"></div>
   <div class="mut" id="seatNote" style="display:none"></div>
-  <div class="row" style="display:flex;gap:8px;align-items:center;margin-top:6px"><button id="snd" style="margin-top:0;padding:8px 12px">Sound: on</button><span class="mut" id="awk"></span></div>
+  <div class="row" style="display:flex;gap:8px;align-items:center;margin-top:6px"><button id="snd" style="margin-top:0;padding:8px 12px">Sound: on</button><button id="vol" style="margin-top:0;padding:8px 12px">Volume: medium</button><span class="mut" id="awk"></span></div>
   <div id="vcPhone" style="margin-top:10px"></div>
 </div>
 <div id="play"></div>
@@ -92,12 +92,13 @@ function showPlay(p){
   const mapHtml=sc?`<div id="stick"><svg id="pmap" viewBox="0 0 10 10"></svg><div class="mrow"><button id="zoom" style="display:none"></button>${sc.fc&&!wait?`<button id="tl"${sent?" disabled":""}>↺ Left</button><button id="tr"${sent?" disabled":""}>↻ Right</button>`:""}<button id="mega">${mapMega?"Numbers":"Outlines"}</button></div></div>`:"";
   const infoHtml=sc&&sc.info?`<details class="mut" style="margin-top:10px"><summary>Everyone's ST</summary>${esc(sc.info)}</details>`:"";
   const lg=p.lg||[], resHtml=lg.length?`<div id="resBar"${logOpen?"":' class="c"'}><b>What just happened</b>${(logOpen?lg:lg.slice(-1)).map((x,i,a)=>`<div${i===a.length-1?' class="nw"':''}>${esc(x)}</div>`).join("")}${lg.length>1?`<button id="lgTg" class="mut" style="margin-top:6px;padding:6px 10px;font-size:14px">${logOpen?"Hide earlier results":"Earlier results"}</button>`:""}</div>`:"";
+  const lr=p.lr||[], lrHtml=lr.length?`<div id="lastRound" style="margin-top:12px;padding:8px 10px;border:1px solid var(--line,#ccc);border-radius:10px;font-size:14px"><b>Last round</b>${lr.map(x=>`<div>${esc(x)}</div>`).join("")}</div>`:"";
   const confirmHtml=!wait&&selHex&&sc&&sc.hk&&sc.hk!=="go"?`<button class="opt pri" id="cfm"${sent?" disabled":""}>${sc.hk==="ret"?"Push them back to the hex I marked":"Go to the hex I marked"}</button>`:"";
   const sp=(p.btns||[]).map(b=>splitLabel(b.l)), anyDet=sp.some(x=>x[1]);
   const btnHtml=!wait?(p.btns||[]).map((b,i)=>`<button class="opt${b.p?" pri":""}" data-b="${i}"${sent?" disabled":""}>${esc(sp[i][0])}${showDet&&sp[i][1]?`<span class="det">${esc(sp[i][1])}</span>`:""}</button>`).join("")+(anyDet?`<button id="detTg" class="mut" style="margin-top:8px;padding:8px 12px;font-size:14px">${showDet?"Hide the details":"Show what each choice does"}</button>`:""):"";
   const tgHtml=!wait&&(p.tg||[]).length?`<div class="tgs mut">Target:<br>${p.tg.map((x,i)=>`<button class="tg${x.on?" on":""}" data-t="${i}"${sent?" disabled":""}>${esc(x.l)}</button>`).join("")}</div>`:"";
   el.innerHTML=(ringUp?`<div class="ring">The table is waiting for you.</div>`:"")+(mapFirst?(()=>{ const t=String(p.text||""), i=t.indexOf(". "); return i<0||i>90?`<div style="margin-top:6px">${esc(t)}</div>`:`<div style="margin-top:6px"><b>${esc(t.slice(0,i+1))}</b></div><details class="mut" style="margin-top:4px"><summary>Reminder</summary>${esc(t.slice(i+2))}</details>`; })():`<div style="margin-top:6px">${esc(p.text||"")}</div>`)
-    +(mapFirst?mapHtml+confirmHtml+btnHtml+tgHtml:tgHtml+btnHtml)+infoHtml+resHtml
+    +(mapFirst?mapHtml+confirmHtml+btnHtml+tgHtml:tgHtml+btnHtml)+lrHtml+infoHtml+resHtml
     +(sent?`<div class="mut" style="margin-top:10px">Sent.</div>`:"");
   const send=(k,i)=>{ if(wait||sentSeq===p.seq) return; sentSeq=p.seq; Net.sendCmd(room,{seq:p.seq,k,i,t:Date.now()}).catch(e=>{ sentSeq=null; $("err").textContent=e.message; }); showPlay(p); };
   el.querySelectorAll("[data-b]").forEach(e=>e.onclick=()=>{ const b=p.btns[+e.dataset.b]; if(b&&b.cf&&!confirm(b.cf)) return; send("b",+e.dataset.b); });
@@ -189,7 +190,8 @@ async function enter(c,name){
   offMe=Net.watchMe(c,v=>{ if(v===null&&room&&!closed){ removed=true; $("play").innerHTML=""; $("dot").className="dot"; $("conn").textContent="Not at the table"; $("seat").textContent="You were removed from the table."; $("seatNote").textContent="Leave and join again if that was a mistake."; $("seatNote").style.display=""; } else if(v&&v.on===false) Net.setOn(c,true).catch(()=>{}); });
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&room) Net.setOn(room,true).catch(()=>{}); });
 }
-function showSnd(){ $("snd").textContent="Sound: "+(Bell.on?"on":"off"); }
+function showSnd(){ $("snd").textContent="Sound: "+(Bell.on?"on":"off"); $("vol").textContent="Volume: "+Bell.volName(); }
+$("vol").onclick=()=>{ Bell.nextVol(); Bell.unlock(); if(Bell.on) Bell.ring(myP); showSnd(); };
 $("snd").onclick=()=>{ Bell.setOn(!Bell.on); Bell.unlock(); if(Bell.on) Bell.ring(myP); showSnd(); };
 async function keepAwake(on){ const v=await Bell.awake(on); $("awk").textContent=on?(v?"Screen stays on.":"Turn off auto-lock so you do not miss your turn."):""; }
 function leave(){ keepAwake(false); try{ Voice.stop(); }catch(e){} const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); if(offRes) offRes(); offPub=offMe=offPriv=offRes=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); $("code").value=""; $("err").textContent=""; $("code").focus(); }
