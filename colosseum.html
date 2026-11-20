@@ -1019,6 +1019,10 @@ function options(u,o){
   if(eng||u.moved<=2){
     if(u.slung!=="none") L.push({t:"ready",it:{id:u.slung,src:"slung"},label:`Ready ${iname(u.slung)} (slung)`});
     u.dag.forEach(k=>L.push({t:"ready",it:{id:k,src:"dag"},label:`Ready ${iname(k)} (${k==="dagger"||k==="mg"?"sheathed":"carried"})`}));
+    if(u.p.camp&&u.right==="none"&&u.left==="none"){   /* campaign heroes: with both hands empty, a one-handed weapon and a shield (or main-gauche) can be readied together */
+      const src=[]; if(u.slung!=="none") src.push({id:u.slung,src:"slung"}); u.dag.forEach(k=>src.push({id:k,src:"dag"})); G.floor.filter(f=>dist(f,u)<=1).forEach(f=>src.push({id:f.id,src:"floor",obj:f}));
+      const ws=src.filter(x=>W[x.id]&&!W[x.id].two&&!SHIELDS[x.id]&&x.id!=="mg"&&x.id!=="staff"), hs=src.filter(x=>SHIELDS[x.id]||x.id==="mg");
+      ws.forEach(a=>hs.forEach(b=>{ if(a!==b) L.push({t:"ready2",it:a,it2:b,label:`Ready ${iname(a.id)} and ${iname(b.id)} together (both hands are free)`}); })); }
     G.floor.filter(f=>dist(f,u)<=1).forEach(f=>L.push({t:"ready",it:{id:f.id,src:"floor",obj:f},label:`Pick up and ready ${iname(f.id)} (on the floor ${f.q===u.q&&f.r===u.r?"here":"next to you"})`}));
   }
   if(inF&&(eng||half)&&SHIELDS[u.left]&&u.p.cls!=="wizard") L.push({t:"rush",label:`Shield-rush with the ${iname(u.left).toLowerCase()} (no weapon attack; if it hits, the target saves vs DX on ${u.p.st>=o.p.st?3:2} dice or falls)`});
@@ -1217,6 +1221,7 @@ function resolveTurn(acts){ if(!Array.isArray(acts)) acts=Array.from(arguments);
         } else lg(`${sub(u)} ${vb(u,"have","has")} no shot.`); } }
       else if(t==="throw"){ const wid=u.act.wid; if((u.right===wid||u.left===wid)&&inFront(u,o)) doAttack(u,o,wid,"single","thrown"); else lg(`${sub(u)} ${vb(u,"have","has")} no throw.`); }
       else if(t==="disengage"){ const dest=u.act.dest; if(dest&&!same(dest,o)&&dist(dest,u)===1){ u.q=dest.q; u.r=dest.r; lg(`${sub(u)} ${vb(u,"disengage","disengages")}.`);} }
+      else if(t==="ready2"){ applyReady(u,u.act.it); applyReady(u,u.act.it2); lg(`${sub(u)} ${vb(u,"ready","readies")} ${iname(u.act.it.id).toLowerCase()} and ${iname(u.act.it2.id).toLowerCase()} (usable next turn).`); u.justReady=true; }
       else if(t==="ready"){ applyReady(u,u.act.it); lg(`${sub(u)} ${vb(u,"ready","readies")} ${iname(u.act.it.id).toLowerCase()} (usable next turn).`); u.justReady=true; }
     } else if(t==="attack"&&u.size>1){ const T=enemiesOf(u).filter(x=>x.hp>0&&relOf(u,x)==="front"); if(T.length&&u.hp>0){ const x=T.includes(o)&&Math.random()<.6?o:pick(T); doAttack(u,x,u.right,"single"); } }   /* a dragon strikes twice with its claws, at the same or another target */
     else if(t==="dual"){ if(u.left==="mg"&&relOf(u,o)==="front") doAttack(u,o,u.left,"mg"); }
