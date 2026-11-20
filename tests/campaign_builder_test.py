@@ -68,6 +68,8 @@ with sync_playwright() as p:
     pg.fill("#purse", "1000"); pg.dispatch_event("#purse", "change")
     pg.check("#silver")
     ok("B17 silver costs ten times as much (a broadsword $800)", "$800" in pg.inner_text("#shop"))
+    ok("B17b silver leaves leather armor and shields at the normal price (no iron in them), chain costs ten times",
+       pg.evaluate("()=>[priceOf('leather'),priceOf('small'),priceOf('chain'),priceOf('broad')]")==[100,30,2000,800])
     pg.uncheck("#silver")
     # loadout
     pg.select_option("#ld_a", "broad"); pg.select_option("#ld_b", "small"); pg.select_option("#ld_d1", "dagger"); pg.select_option("#ld_d2", "dagger")

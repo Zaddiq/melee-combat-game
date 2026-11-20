@@ -54,7 +54,7 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
 </div>
 
 <div class="card"><h2>3. Money and gear</h2>
- <div class="row"><label>Money to spend <input type="number" id="purse" min="0" step="10" style="width:7em"></label><label><input type="checkbox" id="silver"> Silver weapons and armor (cost ten times as much)</label><b id="moneyLeft"></b></div>
+ <div class="row"><label>Money to spend <input type="number" id="purse" min="0" step="10" style="width:7em"></label><label><input type="checkbox" id="silver"> Silver weapons and chain-or-better armor (cost ten times as much; cloth, leather and shields have no iron, so they cost the same)</label><b id="moneyLeft"></b></div>
  <h3>Shop</h3><div id="shop"></div>
  <h3>What you own</h3><div id="owned" class="mut">Nothing yet.</div>
 </div>
@@ -151,7 +151,8 @@ function cleanTalents(){   /* drop what the character can no longer have (unknow
 /* ---- gear ---- */
 const itemName=k=>k==="none"?"nothing":W[k]?W[k].n:ARMOR[k]?ARMOR[k].n:SHIELDS[k]?SHIELDS[k].n:(D&&(D.misc||[]).find(m=>m.id===k)||{n:k}).n;
 const isArmor=k=>!!ARMOR[k]&&k!=="none", isShield=k=>!!SHIELDS[k], isWeap=k=>!!W[k]&&k!=="staff";
-const priceOf=k=>{ const p=D.prices[k]; if(p==null){ const m=(D.misc||[]).find(x=>x.id===k); return m?m.p:null; } return p*(C.silver&&(isWeap(k)||isArmor(k)||isShield(k))?10:1); };
+const hasIron=k=>isWeap(k)||["chain","halfplate","plate"].includes(k);   /* the same iron the fight engine and the wizard DX rule count */
+const priceOf=k=>{ const p=D.prices[k]; if(p==null){ const m=(D.misc||[]).find(x=>x.id===k); return m?m.p:null; } return p*(C.silver&&hasIron(k)?10:1); };
 const own=k=>C.inv[k]||0;
 const spent=()=>Object.entries(C.inv).reduce((t,[k,n])=>t+(priceOf(k)||0)*n,0);
 const left=()=>C.purse-spent();
