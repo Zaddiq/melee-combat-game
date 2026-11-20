@@ -93,7 +93,7 @@ function fromBuilder(o){
   if(cp){   /* campaign hero: the two-weapon limit does not apply. Every other carried weapon is kept ready-able, and the talents count. */
     const fx=cp.fx&&typeof cp.fx==="object"?cp.fx:{}, wk=k=>typeof k==="string"&&W[k]&&k!=="staff"&&!(W[k].hid);
     f.dag=[o.d1,cp.d2,cp.s2].filter(wk).filter((k,i,a)=>a.indexOf(k)===i).slice(0,3);
-    if(SHIELDS[cp.s2]&&f.slung==="none") f.slung=cp.s2;
+    if(SHIELDS[cp.s2]){ if(f.slung==="none"&&f.left!==cp.s2) f.slung=cp.s2; else if(f.left!==cp.s2&&f.slung!==cp.s2) f.dag.push(cp.s2); }   /* a second slung shield goes in the pack when the first slung place is taken: ready it like anything else */
     f.camp={pen:Array.isArray(fx.pen)?fx.pen.filter(k=>typeof k==="string").slice(0,12):[],ms:fx.ms?1:0,th:fx.th?1:0};
   }
   return f;
@@ -1018,7 +1018,7 @@ function options(u,o){
   if(isEngaged(u,o)) L.push({t:"disengage",label:"Disengage (move 1 hex, no attack)"});
   if(eng||u.moved<=2){
     if(u.slung!=="none") L.push({t:"ready",it:{id:u.slung,src:"slung"},label:`Ready ${iname(u.slung)} (slung)`});
-    u.dag.forEach(k=>L.push({t:"ready",it:{id:k,src:"dag"},label:`Ready ${iname(k)} (sheathed)`}));
+    u.dag.forEach(k=>L.push({t:"ready",it:{id:k,src:"dag"},label:`Ready ${iname(k)} (${k==="dagger"||k==="mg"?"sheathed":"carried"})`}));
     G.floor.filter(f=>dist(f,u)<=1).forEach(f=>L.push({t:"ready",it:{id:f.id,src:"floor",obj:f},label:`Pick up and ready ${iname(f.id)} (on the floor ${f.q===u.q&&f.r===u.r?"here":"next to you"})`}));
   }
   if(inF&&(eng||half)&&SHIELDS[u.left]&&u.p.cls!=="wizard") L.push({t:"rush",label:`Shield-rush with the ${iname(u.left).toLowerCase()} (no weapon attack; if it hits, the target saves vs DX on ${u.p.st>=o.p.st?3:2} dice or falls)`});
