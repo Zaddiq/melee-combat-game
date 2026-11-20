@@ -23,6 +23,7 @@ with sync_playwright() as p:
         elif pg.locator("#ctl [data-opt]").count(): pg.locator("#ctl [data-opt]").first.click()
         elif pg.locator("#ctl button:has-text('Next')").count(): pg.locator("#ctl button:has-text('Next')").first.click()
         else: pg.evaluate("()=>{ if(G.phase==='choose') choose(true); else if(G.phase==='move') confirmMove(); }")
+    pg.evaluate("()=>ui()")
     ok("V4 a round was recorded", pg.evaluate("()=>!!(G.last&&G.last.length)"))
     pg.evaluate("()=>ui()")
     ok("V5 the Last round block is on screen under the choices and above the log",
