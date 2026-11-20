@@ -511,3 +511,4 @@ rules.js keeps it in CAMP_SHIELDS (stops 3, DX -2, from the 1980 book as the own
 
 ## Shaman AI (playtest Nov 19: "shaman too easy, never cast")
 Cause: the old shaman code only cast Magic Fist when the spell's DX was 8+, which a DX 9 hobgoblin never has at range. Now every computer wizard in the Colosseum uses aiCast (copied from wizard-arena.html: scores every spell). For monsters (side "mob") the threshold is 0.15 instead of 1.1 and ST floor 5, because their DX is middling. aiMove: the shaman stops and casts once some spell is DX 9+ from where he stands, otherwise walks closer. tests/campaign_test.py C17 counts casts (63 in 24 random fights).
+Sample shaman now knows Staff, Magic Fist, Clumsiness, Dazzle, Blur, Summon Wolf (IQ 11 keeps all within reach). aiCast no longer recasts Blur while it is on. In 24 random fights he casts Blur, Dazzle, Clumsiness, a wolf now and then, and rarely Magic Fist (DX 8 makes Fist a poor bet).

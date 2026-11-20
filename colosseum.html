@@ -195,7 +195,7 @@ const creMax=()=>!mobOn()?1:CREK==="enc"?1:CRE[CREK].size===7?1:CRE[CREK].size==
    foes: which creature stands where; at = [across, down] as fractions of the room (0,0 = north-west corner as drawn, 1,1 = south-east). room = [feet across, feet deep]. */
 const SAMPLE_ENC={name:"Sample room fight",foe:"monsters",room:[50,60],
   creatures:{orc:{name:"Orc",race:"orc",st:12,dx:10,iq:8,w:"broad",armor:"leather",sh:"small"},
-    shaman:{name:"Hobgoblin Shaman",race:"hobgoblin",st:10,dx:9,iq:11,cls:"wizard",spells:["Staff","Magic Fist","Clumsiness"],armor:"cloth"},
+    shaman:{name:"Hobgoblin Shaman",race:"hobgoblin",st:10,dx:9,iq:11,cls:"wizard",spells:["Staff","Magic Fist","Clumsiness","Dazzle","Blur","Summon Wolf"],armor:"cloth"},
     kobold:{name:"Kobold Archer",race:"goblin",st:8,dx:12,iq:8,w:"sbow",armor:"none",d:"dagger"}},
   foes:[{c:"orc",at:[.3,.22]},{c:"orc",at:[.7,.22]},{c:"shaman",at:[.5,.08]},{c:"kobold",at:[.85,.16]}]};
 let ENC=null;
@@ -1048,7 +1048,7 @@ function aiCast(u,o){
       case "Invisibility": v=armed&&u.hp>=9&&!u.inv?3.4:0; break;
       case "Mage Sight": v=!u.sight&&u.hp>=7&&(o.inv||o.blur||shadowAt(o))?p*2.5+1.5:0; break;
       case "Slippery Floor": v=!engagedAny(u)&&dist(u,o)>=2&&!G.objs.some(ob=>ob.t==="slick"&&sideOf(ob.owner)===sideOf(u))?p*2.2:0; break;
-      case "Blur": v=armed&&u.hp>=8?2.6:0; break;
+      case "Blur": v=armed&&u.hp>=8&&!u.blur?2.6:0; break;
       case "Stone Flesh": v=armed&&u.hp>=9?3:0; break;
       case "Iron Flesh": v=armed&&u.hp>=11?3.8:0; break;
       case "Trip": v=o.down?0:p*3; break;
