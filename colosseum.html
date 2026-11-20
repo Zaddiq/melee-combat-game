@@ -622,7 +622,7 @@ function aiMove(a){
   if(MWid(a)&&!eng){ for(const h of R.values()){ if(h.c>1)continue; const s=Math.min(dist(h,b),4)*2-(relOf(b,h)==="front"?9:0)+(h.c===0?0.4:0)+Math.random()*0.3; if(!best||s>best.s) best={h,s}; } }
   else if(MWid(a)&&eng){ best={h:R.get(key(a.q,a.r))||a,s:0}; }
   else if(poleOf(a)&&!eng&&dist(a,b)<=MAu(a)+3&&Math.random()<.75){ best={h:R.get(key(a.q,a.r))||a,s:0}; }
-  else if(a.caster&&!eng&&a.hp>=6&&dist(a,b)<=8){ best={h:R.get(key(a.q,a.r))||a,s:0}; }   /* a shaman with ST to spare stands off and casts instead of charging */
+  else if(a.caster&&!eng&&a.hp>=6&&dist(a,b)<=8&&Math.max(-9,...castList(a,b).map(x=>x.dx))>=9){ best={h:R.get(key(a.q,a.r))||a,s:0}; }   /* a shaman with ST to spare stops and casts once a spell is a good bet from where he stands (to hit 9+); until then he walks closer */
   else for(const h of R.values()){
     const d=dist(h,b); let s=d*10;
     if(d===1){ const r=relOf(b,h); s=r==="rear"?0:r==="side"?2:5; if(!eng&&h.c>MAu(a)/2) s+=6; }
@@ -1036,6 +1036,51 @@ function applyReady(u,it){
   if(SHIELDS[id]||id==="mg"){ put(u.left); u.left=id; if(W[u.right]&&W[u.right].two){ put(u.right); u.right="none"; } }
   else { put(u.right); u.right=id; if(W[id].two){ put(u.left); u.left="none"; } }
 }
+/* ---- computer wizards: the same spell choice the Unlimited Arena's wizards use (copied from wizard-arena.html) ---- */
+const pHit=dx=>{ let n=0; for(let a=1;a<=6;a++)for(let b=1;b<=6;b++)for(let c=1;c<=6;c++){ const r=a+b+c; if(r<=5||(r<16&&r<=dx)) n++; } return n/216; };
+function aiCast(u,o){
+  const mob=u.side==="mob", L=castList(u,o).filter(x=>u.hp-x.cost>=(mob?5:3)); if(!L.length||Math.random()<(mob?.05:.12)) return null;   /* a monster caster has few spells and a middling DX: it casts on much poorer odds than a player-built wizard would */
+  const armed=isW(o.right)||isW(o.left)&&!SHIELDS[o.left], stp=ARMOR[o.p.armor].stops+(o.iron?6:o.stone?4:0);
+  let best=null;
+  for(const x of L){ const d=SP[x.sp], p=pHit(x.dx); let v=0;
+    if(d.k==="M") v=p*Math.max(x.n,x.n*(3.5-d.sub)-stp)-0.55*x.cost;
+    else switch(x.sp){
+      case "Invisibility": v=armed&&u.hp>=9&&!u.inv?3.4:0; break;
+      case "Mage Sight": v=!u.sight&&u.hp>=7&&(o.inv||o.blur||shadowAt(o))?p*2.5+1.5:0; break;
+      case "Slippery Floor": v=!engagedAny(u)&&dist(u,o)>=2&&!G.objs.some(ob=>ob.t==="slick"&&sideOf(ob.owner)===sideOf(u))?p*2.2:0; break;
+      case "Blur": v=armed&&u.hp>=8?2.6:0; break;
+      case "Stone Flesh": v=armed&&u.hp>=9?3:0; break;
+      case "Iron Flesh": v=armed&&u.hp>=11?3.8:0; break;
+      case "Trip": v=o.down?0:p*3; break;
+      case "Drop Weapon": v=armed?p*3.2:0; break;
+      case "Slow Movement": v=dist(u,o)>=3&&o.slow<2?p*1.8:0; break;
+      case "Stop": v=dist(u,o)>=4&&!o.stop?p*2.2:0; break;
+      case "Sleep": v=o.sleep?0:p*7; break;
+      case "Freeze": v=o.frozen>0?0:p*8; break;
+      case "Clumsiness": v=o.clum>0?0:p*x.n*1.8-0.3*x.n; break;
+      case "Aid": v=x.n===2&&u.aid<=0?1.8:0; break;
+      case "Speed Movement": v=dist(u,o)>=4&&!(u.spd>0)?1.6:0; break;
+      case "Dazzle": v=o.daz>0?0:p*(armed?3.6:2.4); break;
+      case "Blast": v=p*Math.max(0,3.5-stp); break;
+      case "Break Weapon": { const bw=brkItem(o); v=bw&&!SHIELDS[bw]&&W[bw]?p*(W[bw].d>=2?3.4:1.4):bw?p*1.6:0; break; }
+      case "Remove Thrown Spell": v=x.on==="foe"?p*((o.iron?3.8:0)+(o.stone?3:0)+(o.blur?2.6:0)+(o.spd>0?1:0)+(o.aid>0?1.5:0)+(o.sleep?0:0)):p*((u.clum>0?2.2:0)+(u.slow>0&&dist(u,o)>=2?1:0)+(u.stop>0?1.5:0)); break;
+      case "Summon Wolf": case "Summon Myrmidon": case "Summon Bear": case "Summon Gargoyle": case "Summon Giant": { const own=allU().filter(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(u)).length; v=own===0&&u.hp>=x.cost+6?({wolf:2.6,myrmidon:3.1,bear:4.4,gargoyle:3.8,giant:4.8})[SP[x.sp].summon]:0; break; }
+      case "Summon Small Dragon": case "Summon Dragon": { const own=allU().filter(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(u)).length; const dr=SP[x.sp].summon==="bdragon"; v=own===0&&u.hp>=x.cost+(dr?14:10)?(dr?7.2:5.6):0; break; }
+      case "Illusion": case "4-Hex Illusion": case "7-Hex Illusion": { const own=allU().filter(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(u)).length; v=own===0&&u.hp>=x.cost+5?({wolf:2.2,myrmidon:2.6,bear:3.6,gargoyle:3.2,giant:4.0,bsdragon:4.8,bdragon:6.0})[x.form]||0:0; break; }
+      case "Image": { const own=allU().filter(m=>m.minion&&m.hp>0&&sideOf(m)===sideOf(u)).length; v=own===0&&u.hp>=6&&x.form==="giant"?1.5:0; break; }
+      case "Dispel Illusions": v=enemiesOf(u).some(e=>e.fake)?0:0; break;
+      case "Control Person": case "Control Animal": v=o.minion&&!o.fake&&o.hp>3?p*(o.p.st>=20?3.6:2.2):o===G.me?0:0; break;
+      case "Avert": v=!o.avert&&!(o.p.cls==="wizard")&&dist(u,o)<=4?p*2.4:0; break;
+      case "Confusion": v=o.p.cls==="wizard"&&!(o.conf>0)?p*x.n*1.7:0; break;
+      case "Rope": v=p*(armed?3.4:2.4); break;
+      case "Giant Rope": v=o.rope?0:p*(o.p.st>=20?3.8:(armed?4.2:3)); break;
+      case "Reverse Missiles": v=(MWid(o)||o.p.cls==="wizard")&&u.hp>=7?2.4:0; break;
+      case "Spell Shield": v=o.p.cls==="wizard"&&!u.shield&&u.hp>=9?3.4:0; break;
+      case "Death Spell": v=0; break;
+    }
+    v+=Math.random()*.6; if(!best||v>best.v) best={x,v}; }
+  if(!best||best.v<=(mob?.15:1.1)) return null; const pk={t:"cast",sp:best.x.sp,n:best.x.n}; if(best.x.form) pk.form=best.x.form; if(best.x.hexsel){ const H=creaHexes(u,o,best.x.hexsel,best.x.sp,best.x.form).sort((a,b)=>dist(a,o)-dist(b,o)); if(!H.length) return null; pk.dest=H[Math.min(1,H.length-1)]; } return pk;
+}
 function aiAct(u,o){
   if(!enemiesOf(u).length) return {t:"none"};
   if(u.ctl&&u.ctl.hp>0&&o&&o.p.st>2*u.p.st){ const sv=sum(rollN(3)), iq=effIQ(u); if(sv<=iq){ releaseCtl(u,"it refused to attack a far stronger foe"); return {t:"none"}; } }
@@ -1045,10 +1090,7 @@ function aiAct(u,o){
   if(u.low){ if(dist(u,o)<=2&&has("rise")) return has("rise"); const sh=has("fire")||has("last"); return sh||(u.cool>0?{t:"none"}:has("rise"));}
   if(!u.low&&dist(u,o)>=5){ const pf=L.find(x=>x.t==="fire"&&x.pos==="prone"); if(pf&&Math.random()<.5) return pf; }
   if(u.hth){ if(!hthWeap(u)&&has("hdraw")&&Math.random()<.6) return has("hdraw"); if(u.hp<=3&&Math.random()<.35){ const fr=freeNeighbors(u).sort(()=>Math.random()-.5)[0]; if(fr) return {t:"hesc",dest:fr}; } return has("hattack"); }
-  if(u.caster&&u.hp>=6&&has("cast")){   /* a computer shaman: mostly Magic Fist with 1 or 2 ST, now and then Clumsiness; never below 6 ST, then it fights with its staff */
-    const cl=castList(u,o), fist=cl.filter(x=>x.sp==="Magic Fist"&&x.n<=2&&x.dx>=8).sort((a,b)=>b.n-a.n)[0], clum=cl.find(x=>x.sp==="Clumsiness"&&x.n===1&&x.dx>=8);
-    if(clum&&!o.clum&&Math.random()<.3) return {t:"cast",sp:clum.sp,n:clum.n};
-    if(fist&&Math.random()<.75) return {t:"cast",sp:fist.sp,n:fist.n}; }
+  if(u.p.cls==="wizard"&&has("cast")){ const c=aiCast(u,o); if(c) return c; }   /* a computer wizard or shaman picks spells with the Unlimited Arena's scoring */
   const shot=has("fire")||has("last"); if(shot) return shot;
   if(has("jab")) return has("jab");
   if(MWid(u)&&!u.engStart) return {t:"none"};   /* an archer waiting for its crossbow, or with no target in front */
