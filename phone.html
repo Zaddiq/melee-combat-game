@@ -125,7 +125,7 @@ const builderChar=()=>{ try{ const o=JSON.parse(ST.getItem(BKEY)||"null"); retur
 const rk=n=>String(n||"").trim().toLowerCase();
 function charOptions(){ const out=[["none","No character (the host chooses one for me)"]], R=recs(), b=builderChar();
   if(b) out.push(["builder","From the builder: "+b.name+(R[rk(b.name)]?" ("+R[rk(b.name)].ep+" EP)":" (new)")]);
-  for(const k of Object.keys(R)) if(R[k]&&R[k].src&&!R[k].dead) out.push(["r:"+k,R[k].name+" · ST "+R[k].st+" DX "+R[k].dx+" · "+R[k].ep+"/100 EP"]);
+  for(const k of Object.keys(R)) if(R[k]&&R[k].src&&!R[k].dead) out.push(["r:"+k,R[k].name+" · ST "+R[k].st+" DX "+R[k].dx+" · "+R[k].ep+"/"+(R[k].itl?R[k].need:100)+" EP"]);
   return out; }
 function fjFor(id){
   let o,rec=null, R=recs();
@@ -168,7 +168,7 @@ function applyResult(c,v){
   if(!v||!v.rec||!v.key) return; const id=c+":"+v.id; let last=null; try{ last=ST.getItem(XKEY); }catch(e){} if(last===id) return;
   const R=recs(); R[v.key]=v.rec; try{ ST.setItem(RKEY,JSON.stringify(R)); ST.setItem(XKEY,id); }catch(e){ return; }
   const r=v.rec; Roster.syncBuilder(ST,BKEY,Object.assign({},r,{src:r.src||(R[v.key]&&R[v.key].src)}));   /* the builder on this phone shows the new EP and stats if it holds this character */
-  $("xp").textContent=r.name+": "+r.ep+"/100 EP saved to your roster"+(r.pend>0?" · an attribute point is waiting (spend it below)":"")+".";
+  $("xp").textContent=r.name+": "+r.ep+"/"+(r.itl?r.need:100)+" EP saved to your roster"+(r.pend>0?" · an attribute point is waiting (spend it below)":"")+".";
   fillChars(chosen()); if(room) Net.setFighter(room,fjFor(chosen())).catch(()=>{});
 }
 async function enter(c,name){

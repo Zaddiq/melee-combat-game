@@ -241,9 +241,9 @@ function applyMode(){ for(let i=0;i<MAXP;i++) team[i]=mobOn()?0:teamsOn()?tmAB[i
 const starts=[null,null,null,null];    /* each player's chosen start hex (a key) */
 function showSlot(i){ $("pf"+i).innerHTML=slot[i]?card(slot[i],PCLS[i]):""; showStats(); }
 function epLine(f,i){
-  if(f.phone){ const r=f.phone.rec; return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/100 EP${r&&r.pend>0?" · attribute point waiting (spend it on that phone)":""}</div>`; }
+  if(f.phone){ const r=f.phone.rec; return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/${r&&r.itl?r.need:100} EP${r&&r.pend>0?" · attribute point waiting (spend it on that phone)":""}</div>`; }
   const r=loadRec()[rkey(f)], o=Roster.options(r);
-  return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/100 EP${r&&r.pend>0?" · <b>attribute point to spend</b>"+(r.must?" (you hold a banked point too, so you must spend both)":""):""}</div>`
+  return `<div class="mut" style="margin-top:4px">Experience: ${r?r.ep:0}/${r&&r.itl?r.need:100} EP${r&&r.pend>0?" · <b>attribute point to spend</b>"+(r.must?" (you hold a banked point too, so you must spend both)":""):""}</div>`
     +(o.length?`<div class="row">${o.map(k=>`<button data-spend="${i}:${k}">${k==="bank"?"Bank it for later":"+1 "+k.toUpperCase()}</button>`).join("")}</div>`:"")
     +(r?(builderHolds(r)?`<div class="mut">The builder already holds ${esc(r.name)}, up to date.</div>`:`<div class="row"><button data-send="${i}">Send to builder</button></div>`):"");
 }
@@ -314,18 +314,24 @@ const RKEY="melee-arena-v1";
 const loadRec=()=>{ try{ return JSON.parse(localStorage.getItem(RKEY)||"{}")||{}; }catch(e){ return {}; } };
 let REC=loadRec();
 const rkey=f=>(f.rname||f.name).trim().toLowerCase();
-function applyXp(r,x){
+/* In the Labyrinth (1980): the EP an attribute point costs depends on the attribute total it takes you to: up to 36 125, 37-40 250, 41-45 1,000, 46-50 3,000, 51-55 5,000, then 10,000 for 56-60 and double for every 5 more */
+const itlCost=n=>n<=36?125:n<=40?250:n<=45?1000:n<=50?3000:n<=55?5000:10000*Math.pow(2,Math.floor((n-56)/5));
+function applyXp(r,x,itl){
+  if(itl){ r.itl=1; r.ep=Math.max(0,r.ep+x); const tot=()=>(+r.total0||0)+(r.pts||0);
+    while(r.pend===0){ const c=itlCost(tot()+1); if(r.ep<c) break; r.ep-=c; r.pend=1; r.must=false; }
+    r.need=itlCost(tot()+(r.pend>0?2:1)); return; }
+  r.itl=0; r.need=100;
   r.ep=Math.max(0,r.ep+x);
   while(r.ep>=100&&r.pend===0&&r.pts<8&&!r.retired){ r.ep-=100; if(r.banked){ r.pend=2; r.must=true; r.banked=false; } else { r.pend=1; r.must=false; } }
   if(r.pts>=8||r.retired) r.ep=Math.min(r.ep,99);
 }
-function awardXp(f,x){   /* friendly duel: XP only, never a death or a win/loss mark */
+function awardXp(f,x,itl){   /* friendly duel: XP only, never a death or a win/loss mark */
   if(f.phone){   /* a character that came from a phone keeps its record on that phone: update the copy it sent and send it back */
     const r=Object.assign({name:f.phone.name,st:f.st,dx:f.dx,iq:f.iq,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false},f.phone.rec||{});
-    applyXp(r,x); f.phone.rec=r; if(window.Online) Online.result(f); return r; }
+    applyXp(r,x,itl); f.phone.rec=r; if(window.Online) Online.result(f); return r; }
   const R=loadRec(), k=rkey(f); let r=R[k];
   if(!r) r={name:f.rname||f.name,st:f.st,dx:f.dx,iq:f.iq,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false,src:f.src||null};
-  applyXp(r,x);
+  applyXp(r,x,itl);
   R[k]=r; try{ localStorage.setItem(RKEY,JSON.stringify(R)); }catch(e){} REC=R; Roster.syncBuilder(localStorage,KEY,r); return r;   /* the builder shows the new EP at once if it holds this character */
 }
 for(const i of [0,1,2,3]){ const ks=Object.keys(REC).filter(k=>REC[k]&&REC[k].src&&!REC[k].dead);
@@ -464,6 +470,11 @@ function settle(){
   if(G.settled) return; G.settled=true;
   if(G.mobs.length){   /* a fight against the computer's creatures: each human on the winning side gets 50 XP, nobody else gets any */
     const win=new Set(G.winners||[]);
+    if(CAMP.on&&CREK==="enc"){   /* campaign: In the Labyrinth experience (damage dealt, killing blows, ST spent on spells) instead of a flat 50 */
+      G.itl=true; G.xpWin=G.players.filter(u=>win.has(u));
+      G.xp=G.players.map(u=>{ if(!win.has(u)) return `${u.p.name}: no experience${u.esc?" (left the fight)":""}.`; const d=u.xd||0, k=u.xk||0, s=u.xs||0, x=d+k+s, r=awardXp(u.p,x,true);
+        return `${u.p.name}: +${x} XP (${d} for damage, ${k} for killing blows, ${s} for spells; now ${r.ep}/${r.need})${r.pend>0?", attribute point earned (spend it in the Fighters box below)":""}`; });
+      lg(win.size?`The ${mobName()} ${CREN>1?"are":"is"} beaten.`:"No experience this time."); G.xp.forEach(x=>lg(x)); campSave(win); showStats(); return; }
     G.xp=G.players.map(u=>{ if(!win.has(u)) return `${u.p.name}: no experience${u.esc?" (left the fight)":""}.`; const r=awardXp(u.p,50); return `${u.p.name}: +50 XP (now ${r.ep}/100)${r.pend>0?", attribute point earned (spend it in the Fighters box below)":""}`; });
     lg(win.size?`The ${mobName()} ${CREN>1?"are":"is"} beaten: every player on the winning side gets 50 XP.`:"No experience this time."); G.xp.forEach(x=>lg(x)); campSave(win); showStats(); return; }
   const PL=G.players, sums=PL.map(u=>u.p.st+u.p.dx), win=new Set(G.winners||[]);
@@ -899,7 +910,10 @@ function castList(u,o){
   }
   return L;
 }
-function payST(u,c){ u.hp-=c; }
+const xpHuman=u=>!!(G&&G.players&&G.players.includes(u)&&!u.minion);
+/* In the Labyrinth experience, tallied per hero for the fight: xd = hits of damage dealt to monsters, xk = basic DX of foes whose death blow he struck (not ST 1-3 nuisances), xs = ST spent casting */
+function credit(a,d,h){ if(!a||!d||!(h>0)||!xpHuman(a)||xpHuman(d)||d.fake||!(d.hp>0)) return; a.xd=(a.xd||0)+Math.min(h,d.hp); if(d.hp-h<=0&&!d.xpDone&&d.p.st>3){ d.xpDone=1; a.xk=(a.xk||0)+(+d.p.dx||0); } }
+function payST(u,c){ u.hp-=c; if(xpHuman(u)&&c>0) u.xs=(u.xs||0)+c; }
 /* a known big summon, image or illusion that has no legal place right now is named in the menu instead of silently missing */
 const noRoomList=(u,o)=>{ if(!u||!o||u.p.cls!=="wizard"||u.hp<=0) return []; const have=new Set(castList(u,o).map(x=>x.sp)); return (u.p.spells||[]).filter(n=>{ const d=SP[n]; if(!d||d.k!=="C"||have.has(n)||d.cost(o)>u.hp) return false; return !!((d.summon&&CRE[d.summon].size)||(d.fake&&d.mh>1)); }); };
 const nrNote=(u,o)=>{ const n=noRoomList(u,o); return n.length?` No room right now for ${n.join(", ")}: a multi-hex creature needs free hexes on the board for all of it, with its tail hex in your megahex or the ones next to it.`:""; };
@@ -935,7 +949,7 @@ function doCast(u,o,pa){
     if(O.fake==="image"){ O.hp=0; lg(`${head}: HIT, but it was only an image: it vanishes and the missile flies on.`); endCheck(); return; }
     const dice2=rollN(c.n), raw=Math.max(c.n,sum(dice2)-d.sub*c.n), full=raw*mult, st=stopsFor(O,U,null,"missile"), hits=Math.max(0,full-st);
     lg(`${head}: HIT. ${c.n} ${c.n>1?"dice":"die"} (${dice2.join("+")}${d.sub?" −"+d.sub*c.n:""} = ${raw})${mult>1?" ×"+mult+" = "+full:""}; armor and protection stop ${Math.min(st,full)}. ${hits?sub(O)+" "+vb(O,"take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
-    if(hits>0){ O.hp-=hits; O.hits+=hits; O.tookHit=true; O.sleep=false; lg(`${O.p.name}'s ST is now ${Math.max(O.hp,0)}.`);
+    if(hits>0){ credit(U,O,hits); O.hp-=hits; O.hits+=hits; O.tookHit=true; O.sleep=false; lg(`${O.p.name}'s ST is now ${Math.max(O.hp,0)}.`);
       if(O.hits>=8&&O.hp>0&&!O.down){ O.down=true; O.low=null; lg(`${sub(O)} ${vb(O,"are","is")} knocked down by ${O.hits} hits!`); }
       else if(c.sp==="Magic Fist"&&full>=6&&O.hp>0&&!O.down){ const sv=sum(rollN(3)), lim=Math.max(O.hp,adjDXu(O,"single",null)); if(sv>lim){ O.down=true; O.low=null; lg(`The blow trips ${sub(O)} (rolled ${sv} against ${lim}).`); } else lg(`${sub(O)} ${vb(O,"keep","keeps")} ${vb(O,"your","their")} feet (rolled ${sv} against ${lim}).`); } }
     endCheck(); return; }
@@ -952,7 +966,7 @@ function doCast(u,o,pa){
   if(d.dispel){ let n=0; for(const x of allU()) if(x.fake&&x.hp>0&&mhDist(u,x)<=5){ x.hp=0; n++; } lg(`${head}: it works (5 ST). ${n?n+" unreal thing"+(n>1?"s vanish":" vanishes")+".":"Nothing happens."}`); endCheck(); return; }
   if(d.k==="S"&&c.sp==="Blast"){ if(o.fake==="image"){ o.hp=0; lg(`${head}: it works (2 ST), but it was only an image and vanishes.`); endCheck(); return; } const dr=rollN(1), full=sum(dr)*m, st=stopsFor(o,u,null,"missile"), hits=Math.max(0,full-st);
     lg(`${head}: it works (2 ST). 1 die (${dr.join("")})${m>1?" ×"+m+" = "+full:""}; armor and protection stop ${Math.min(st,full)}. ${hits?sub(o)+" "+vb(o,"take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
-    if(hits>0){ o.hp-=hits; o.hits+=hits; o.tookHit=true; o.sleep=false; lg(`${o.p.name}'s ST is now ${Math.max(o.hp,0)}.`); if(o.hits>=8&&o.hp>0&&!o.down){ o.down=true; o.low=null; lg(`${sub(o)} ${vb(o,"are","is")} knocked down by ${o.hits} hits!`); } }
+    if(hits>0){ credit(u,o,hits); o.hp-=hits; o.hits+=hits; o.tookHit=true; o.sleep=false; lg(`${o.p.name}'s ST is now ${Math.max(o.hp,0)}.`); if(o.hits>=8&&o.hp>0&&!o.down){ o.down=true; o.low=null; lg(`${sub(o)} ${vb(o,"are","is")} knocked down by ${o.hits} hits!`); } }
     endCheck(); return; }
   switch(c.sp){
     case "Invisibility": u.inv=true; msg=`${sub(u)} ${vb(u,"vanish","vanishes")} from sight: attacks and spells against ${vb(u,"you","it")} are at −6 DX (not added to Blur, Dazzle or Shadow).`; break;
@@ -1152,7 +1166,7 @@ function doAttack(a,d,wid,mode,kind){
   const r=dmgRoll(a,wid), full=r.total*mult, st=stopsFor(d,a,wid,kind), hits=Math.max(0,full-st);
   lg(`${head}: HIT. ${iname(wid)} ${dice_txt(r)}${mult>1?" ×"+mult+" = "+full:""}; armor and shield stop ${Math.min(st,full)}. ${hits?vb(d,"You take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
   if(hits>0){
-    d.hp-=hits; d.hits+=hits; d.tookHit=true; d.sleep=false; if(!kind||kind==="jab"){ a.dealt=true; a.lastTgt=d; }   /* missile and thrown hits do not allow a forced retreat */
+    credit(a,d,hits); d.hp-=hits; d.hits+=hits; d.tookHit=true; d.sleep=false; if(!kind||kind==="jab"){ a.dealt=true; a.lastTgt=d; }   /* missile and thrown hits do not allow a forced retreat */
     lg(`${d.p.name}'s ST is now ${Math.max(d.hp,0)}.`);
     if(d.hits>=8&&d.hp>0&&!d.down){ d.down=true; lg(`${sub(d)} ${vb(d,"are","is")} knocked down by ${d.hits} hits!`); }
   }
@@ -1275,7 +1289,7 @@ function ui(){
   else if(G.phase==="dest"){ t=`${nm(cur)}: click the highlighted hex on the map that you want to move or teleport into (on a phone, scroll to the map).`; b=`<button id="bBack">Back</button>`; }
   else if(G.phase==="retreat"){ const d=G.rd; t=`${nm(G.rdec)} hit ${esc(d.p.name)} and took no hits, so may force a retreat: click a highlighted hex on the map to push ${esc(d.p.name)} there (on a phone, scroll to the map). Or skip it.`; b=`<button id="bSkip">Skip the retreat</button>`; }
   else if(G.phase==="advance"){ t=`${nm(G.rdec)}: move into the hex they left, or hold your ground?`; b=`<button class="pri" id="bAdv">Advance</button><button id="bStay">Stay</button>`; }
-  else if(G.phase==="over"){ t=(G.winner?`<b>${(G.winners&&G.winners.length>1?G.winners:[G.winner]).map(u=>esc(u.p.name)).join(" and ")} win${G.winners&&G.winners.length>1?"":"s"} the fight!</b>`:"Nobody wins.")+`<br><span class="mut">${(G.xp||[]).map(esc).join("<br>")}</span>`; b=`<button class="pri" id="bNew">Rematch</button> <button id="bHome">Return to Colosseum</button>`+(CAMP.on&&CREK==="enc"?` <button id="bRest">Rest (everyone to full ST)</button>`:""); }
+  else if(G.phase==="over"){ t=(G.winner?`<b>${(G.winners&&G.winners.length>1?G.winners:[G.winner]).map(u=>esc(u.p.name)).join(" and ")} win${G.winners&&G.winners.length>1?"":"s"} the fight!</b>`:"Nobody wins.")+`<br><span class="mut">${(G.xp||[]).map(esc).join("<br>")}</span>`; b=`<button class="pri" id="bNew">Rematch</button> <button id="bHome">Return to Colosseum</button>`+(CAMP.on&&CREK==="enc"?` <button id="bRest">Rest (everyone to full ST)</button>`:"")+(G.itl&&(G.xpWin||[]).length?`<div style="margin-top:8px">GM bonus XP for each winner: <input type="number" id="gmN" value="10" step="5" style="width:5em"> <button id="gmGive">Give</button></div>`:""); }
   if(G.phase==="over"&&G.rStart!=null){ G.last=G.log.slice(G.rStart); G.rStart=null; }   /* a fight that ends in a round: that round is the last one to show */
   c.innerHTML=`<div class="mut" style="margin-bottom:4px">Turn ${G.turn}</div><div>${t}</div><div class="mut" style="margin:4px 0">${st}</div><div>${b}</div>${G.qb||""}${G.last&&G.last.length?`<div id="lastRound" style="margin:6px 0;padding:6px 8px;border:1px solid var(--line,#ccc);border-radius:8px;font-size:13px"><b>Last round</b>${G.last.map(x=>`<div>${x}</div>`).join("")}</div>`:""}<div id="log">${(G.phase==="cover"||G.phase==="pick"?G.log.slice(-60):G.log.slice(-60)).map(esc).join("<br>")}</div>`;
   const lgE=$("log"); if(lgE) lgE.scrollTop=lgE.scrollHeight;
@@ -1283,6 +1297,7 @@ function ui(){
   on("b1",()=>choose(true)); on("b2",()=>choose(false)); on("bOk",confirmMove); on("bTl",()=>{ G.cur.f=(G.cur.f+1)%6; ui(); drawMap(); }); on("bTr",()=>{ G.cur.f=(G.cur.f+5)%6; ui(); drawMap(); }); on("bUn",undoMove); on("bShow",showPick);
   on("bSkip",()=>{lg(`${G.rdec.p.name} does not force a retreat.`);endTurn();ui();drawMap();}); on("bBack",()=>{G.destX=null;G.phase="pick";ui();drawMap();}); on("bAdv",()=>doAdvance(true)); on("bStay",()=>doAdvance(false));
   on("bEsc",()=>{ if(confirm(cur.p.name+" leaves through the door?"+(new Set([...G.players.filter(x=>x!==cur&&x.hp>0&&!x.esc),...G.mobs.filter(m=>m.hp>0)].map(sideOf)).size<2?" This ends the fight.":" They are out of the fight."))) quitDuel(cur,"escape"); });
+  on("gmGive",()=>{ const n=Math.round(+$("gmN").value); if(!n) return; G.xp=G.xp||[]; for(const u of G.xpWin){ const r=awardXp(u.p,n,true); const m=`${u.p.name}: GM bonus ${n>0?"+":""}${n} XP (now ${r.ep}/${r.need})${r.pend>0?", attribute point earned":""}`; G.xp.push(m); lg(m); } showStats(); ui(); drawMap(); });
   on("bRest",()=>{ campRest(); lg("The party rests: everyone is back to full ST."); const b=$("bRest"); if(b) b.textContent="Rested"; });
   on("bNew",()=>{ G=null; placeStep=0; $("setup").open=true; showStats(); ui(); drawMap(); });
   on("bHome",()=>{ G=null; placeStep=0; $("setup").open=true; slot.forEach((_,j)=>showSlot(j)); showStats(); ui(); drawMap(); const s=$("stats"); if(s&&s.scrollIntoView) s.scrollIntoView({behavior:"smooth",block:"start"}); });   /* back to the Fighters box with the same characters loaded, so XP can be spent; XP is already saved to the roster and the builder */

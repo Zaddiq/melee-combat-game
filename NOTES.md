@@ -515,3 +515,8 @@ Sample shaman now knows Staff, Magic Fist, Clumsiness, Dazzle, Blur, Summon Wolf
 Campaign builder: the "silver" x10 price now applies only to iron (every weapon but the staff, and chain/half-plate/plate), matching the engine's iron rule; cloth, leather and shields cost the same for a wizard (owner's correction).
 Campaign hero's second slung place (s2): a shield there is no longer lost when the first slung place (s1) is taken; it goes in the pack and shows as "Ready <shield> (carried)". Pack items other than daggers say "carried", not "sheathed".
 Campaign heroes only: with both hands empty, the pick screen offers "Ready <one-handed weapon> and <shield or main-gauche> together" (act ready2, one turn). Regular fighters keep one item per turn.
+
+## Campaign experience (In the Labyrinth, 1980)
+Only when the campaign carry-over box is on and the encounter option is chosen (everything else keeps the flat 50 XP and 100 EP per point).
+Per hero per fight: xd = hits of damage dealt to monsters (credit() at the melee/missile hit, the two spell-damage places), xk = the foe's basic DX for the killing blow (not for ST 1-3 nuisances; the book's 5 EP slime rule is not done), xs = ST spent casting (payST). Winners are awarded xd+xk+xs; the GM can add a bonus for each winner with the box on the fight-over panel. itlCost(n): the attribute total the point takes you to: <=36 125, 37-40 250, 41-45 1000, 46-50 3000, 51-55 5000, then 10000 doubling each 5. The record gets itl:1 and need:<cost> so "ep/need" shows. Not done: EP for losers or the 20 EP per four hours of play (use the GM box), renewal-spell ST, fire and hand-to-hand damage credit.
+tests/itl_xp_test.py
