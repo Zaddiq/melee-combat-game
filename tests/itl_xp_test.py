@@ -25,6 +25,9 @@ with sync_playwright() as p:
       const rat={hp:1,p:{st:2,dx:10}}; const b=a.xk; credit(a,rat,1); return [s1,s2,s3,a.xk===b,(()=>{ a.hp=10; payST(a,3); return a.xs; })()]; }""")
     ok("X5 damage counts per hit (3, then only the 2 ST that were left), the killing blow adds the foe's DX once", t[0] == [3, 0] and t[1] == [5, 10] and t[2] == [5, 10])
     ok("X6 killing a ST 1-3 nuisance gives no DX, and ST spent on spells counts", t[3] is True and t[4] == 3)
+    t = pg.evaluate("""()=>{ const a=G.players[0], m=G.mobs.find(x=>x.p.st>3); m.hp=9; m.p.armor='none'; m.iron=false; m.stone=false; a.xd=0; a.xk=0;
+      fireHits(m,3,a); const s1=[a.xd,a.xk]; const w={minion:true,owner:a,p:{st:9,dx:9},hp:9}; credit(w,m,4); return [s1,a.xd,a.xk]; }""")
+    ok("X5b fire damage counts for the caster (3), and a summoned creature's damage counts for its master (+4 = 7, no kill yet)", t[0] == [3, 0] and t[1] == 7 and t[2] == 0)
     # a campaign fight ends with the ITL award and a GM bonus box
     pg.reload(); pg.evaluate("localStorage.clear()"); pg.reload()
     pg.select_option("#npSel", "1"); pg.select_option("#creSel", "enc"); pg.evaluate("()=>{ CAMP.on=true; }"); pg.click("#ex0"); pg.click("#bGo")

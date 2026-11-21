@@ -409,7 +409,7 @@ function doBreath(u,o){ if(u.fake==="image"){ lg(`${u.p.name} breathes, but it i
   const t=sum(rollN(3)), hit=t===3||t===4||(t<=dx&&t<16), tn=o.p.name;
   lg(`${u.p.name} breathes fire at ${tn} (${rng} hex${rng>1?"es":""} away, needs ${dx} or less, rolled ${t}; it costs ${B.cost} ST).`);
   if(hit&&o.fake==="image"){ o.hp=0; lg(`The flames pass through ${o.p.name}: it was only an image and vanishes.`); endCheck(); return; }
-  if(hit) fireHits(o,sum(rollN(B.dice))); else lg("The flames miss."); endCheck(); }
+  if(hit) fireHits(o,sum(rollN(B.dice)),u); else lg("The flames miss."); endCheck(); }
 function tailLash(u){ if(u.fake==="image") return; for(const x of enemiesOf(u).filter(x=>x.hp>0&&!(x.size>1)&&!x.air&&!x.down&&relOf(u,x)==="rear")){
     const dx=adjDXu(u,"single",null), t=sum(rollN(3)), hit=t===3||t===4||(t<=dx&&t<16), tn=x.p.name;
     if(!hit){ lg(`${u.p.name}'s tail lashes at ${tn} and misses (rolled ${t}, needed ${dx} or less).`); continue; }
@@ -806,10 +806,10 @@ function summonMinion(u,kind,h){ const C=CRE[kind], n=allU().filter(x=>x.minion&
       const ang=Math.atan2(cenXY(tw)[1]-cenXY({q:h.q,r:h.r,f,size:C.size})[1],cenXY(tw)[0]-cenXY({q:h.q,r:h.r,f,size:C.size})[0])*180/Math.PI, sc=Math.abs((ang-vang(f)+540)%360-180); if(sc<bs){ bs=sc; bf=f; } }
     if(bf>=0) m.f=bf; }
   if(!G.units) G.units=[G.me,G.foe]; G.units.push(m); return m; }
-function fireHits(u,total){ const prot=ARMOR[u.p.armor].stops+(u.iron?6:u.stone?4:0), h=Math.max(0,total-prot);
+function fireHits(u,total,src){ const prot=ARMOR[u.p.armor].stops+(u.iron?6:u.stone?4:0), h=Math.max(0,total-prot);
   lg(`${sub(u)} ${vb(u,"take","takes")} ${total} hits of fire; protection stops ${Math.min(prot,total)}. ${h?sub(u)+" "+vb(u,"take","takes")+" "+h+" hit"+(h>1?"s":""):"No damage gets through"}.`);
-  if(h>0){ u.hp-=h; u.hits+=h; u.tookHit=true; u.sleep=false; lg(`${vb(u,"Your","Its")} ST is now ${Math.max(u.hp,0)}.`); } endCheck(); }
-function fireMove(u,ent){ const f=ent&&ent.fire||0; if(!f) return; const fin=!!objAt(u,"fire"); if(fin) u.fireT=true; fireHits(u,(f-(fin?1:0))*2+(fin?4:0)); }
+  if(h>0){ credit(src,u,h); u.hp-=h; u.hits+=h; u.tookHit=true; u.sleep=false; lg(`${vb(u,"Your","Its")} ST is now ${Math.max(u.hp,0)}.`); } endCheck(); }
+function fireMove(u,ent){ const f=ent&&ent.fire||0; if(!f) return; const fin=!!objAt(u,"fire"); if(fin) u.fireT=true; fireHits(u,(f-(fin?1:0))*2+(fin?4:0),((objAt(u,"fire")||G.objs.find(o=>o.t==="fire"&&o.owner)||{}).owner)); }
 function doDisbelieve(u,o){ lg(`${sub(u)} ${vb(u,"try","tries")} to disbelieve ${o.p.name}.`); const r=sum(rollN(3)); if(o.fake&&r<=effIQ(u)){ o.hp=0; lg(`${o.p.name} unravels and vanishes!`); endCheck(); } }
 function doUnrope(u){ const dx=adjDXu(u,"single",null), t=sum(rollN(3)), n=ropeNum(u);
   if(t<=dx){ if(n>1){ u.ropeN=n-1; lg(`${sub(u)} ${vb(u,"stand","stands")} still and ${vb(u,"work","works")} one of the two ropes free; it vanishes, but the other still holds (needed ${dx} or less, rolled ${t}).`); }
@@ -912,7 +912,8 @@ function castList(u,o){
 }
 const xpHuman=u=>!!(G&&G.players&&G.players.includes(u)&&!u.minion);
 /* In the Labyrinth experience, tallied per hero for the fight: xd = hits of damage dealt to monsters, xk = basic DX of foes whose death blow he struck (not ST 1-3 nuisances), xs = ST spent casting */
-function credit(a,d,h){ if(!a||!d||!(h>0)||!xpHuman(a)||xpHuman(d)||d.fake||!(d.hp>0)) return; a.xd=(a.xd||0)+Math.min(h,d.hp); if(d.hp-h<=0&&!d.xpDone&&d.p.st>3){ d.xpDone=1; a.xk=(a.xk||0)+(+d.p.dx||0); } }
+function credit(a,d,h){ if(a&&a.minion&&a.owner) a=a.owner;   /* a wizard's summoned creature earns for its master */
+  if(!a||!d||!(h>0)||!xpHuman(a)||xpHuman(d)||d.fake||!(d.hp>0)) return; a.xd=(a.xd||0)+Math.min(h,d.hp); if(d.hp-h<=0&&!d.xpDone&&d.p.st>3){ d.xpDone=1; a.xk=(a.xk||0)+(+d.p.dx||0); } }
 function payST(u,c){ u.hp-=c; if(xpHuman(u)&&c>0) u.xs=(u.xs||0)+c; }
 /* a known big summon, image or illusion that has no legal place right now is named in the menu instead of silently missing */
 const noRoomList=(u,o)=>{ if(!u||!o||u.p.cls!=="wizard"||u.hp<=0) return []; const have=new Set(castList(u,o).map(x=>x.sp)); return (u.p.spells||[]).filter(n=>{ const d=SP[n]; if(!d||d.k!=="C"||have.has(n)||d.cost(o)>u.hp) return false; return !!((d.summon&&CRE[d.summon].size)||(d.fake&&d.mh>1)); }); };
@@ -936,11 +937,11 @@ function doCast(u,o,pa){
   { const T0=(d.self||c.on==="self")?u:o;
     if(T0.shield&&T0!==u&&!c.tele&&d.k!=="C"&&!d.destroy&&!d.dispel&&!d.reveal&&!d.slick&&c.on!=="mh"&&c.sp!=="Spell Shield"){ const x=c.sp==="Death Spell"?1:0; if(x) payST(u,1); lg(`${head}: it works, but ${sub(o)} ${vb(o,"are","is")} protected by a Spell Shield, so nothing happens. ${sub(u)} ${vb(u,"lose","loses")} ${c.cost+x} ST.`); endCheck(); return; } }
   if(d.k==="C"&&!d.rope){ if(d.summon||d.fake){ const m=summonMinion(u,d.fake?c.form:d.summon,c.dest); if(d.fake) m.fake=d.fake; lg(`${head}: it works. ${m.p.name} appears (it cannot move or fight this turn).`); endCheck(); return; }
-  if(d.n){ const cs=multiCells(u,o,d.obj,d.n,c.dest); cs.forEach(x=>G.objs.push({t:d.obj,q:x.q,r:x.r,age:0})); syncWalls();
+  if(d.n){ const cs=multiCells(u,o,d.obj,d.n,c.dest); cs.forEach(x=>G.objs.push({t:d.obj,q:x.q,r:x.r,age:0,owner:u})); syncWalls();
     lg(`${head}: it works (${c.cost} ST). ${cs.length} hexes of ${d.obj==="wall"?"wall":d.obj==="fire"?"flame":"black shadow"} appear.`);
-    if(d.obj==="fire"){ const hit=allU().filter(x=>x.hp>0&&cells(x).some(y=>cs.some(z=>same(z,y)))); hit.forEach(f=>fireHits(f,2)); if(!hit.length) endCheck(); } else endCheck(); return; }
-  const ob={t:d.obj,q:c.dest.q,r:c.dest.r,age:0}; G.objs.push(ob); syncWalls(); lg(`${head}: it works (${c.cost} ST). A ${d.obj==="wall"?"wall":d.obj==="fire"?"hex of flame":"hex of black shadow"} appears.`);
-    if(d.obj==="fire"){ const f=allU().find(x=>x.hp>0&&same(x,ob)); if(f) fireHits(f,2); } else endCheck(); return; }
+    if(d.obj==="fire"){ const hit=allU().filter(x=>x.hp>0&&cells(x).some(y=>cs.some(z=>same(z,y)))); hit.forEach(f=>fireHits(f,2,u)); if(!hit.length) endCheck(); } else endCheck(); return; }
+  const ob={t:d.obj,q:c.dest.q,r:c.dest.r,age:0,owner:u}; G.objs.push(ob); syncWalls(); lg(`${head}: it works (${c.cost} ST). A ${d.obj==="wall"?"wall":d.obj==="fire"?"hex of flame":"hex of black shadow"} appears.`);
+    if(d.obj==="fire"){ const f=allU().find(x=>x.hp>0&&same(x,ob)); if(f) fireHits(f,2,u); } else endCheck(); return; }
   if(d.rope){ const two=!!d.giant&&o.p.st<20; o.rope=1; o.ropeN=two?2:1;
     lg(two?`${head}: it works (${c.cost} ST). Two magic ropes tie up ${sub(o)}: MA quartered, DX −4, and two worse each turn; ${vb(o,"you","it")} must stand still and ${vb(o,"roll","rolls")} free of them one at a time.`:`${head}: it works (${c.cost} ST). A magic rope ties up ${sub(o)}: MA halved, DX −2, and one worse each turn until ${vb(o,"you stand","it stands")} still and break${vb(o,"","s")} free.`); if(adjDXu(o,"single",null)<=2) o.down=true; endCheck(); return; }
   if(d.destroy){ const ob=(G.objs||[])[c.objId]; if(ob){ G.objs.splice(c.objId,1); syncWalls(); lg(`${head}: it works (1 ST). The ${ob.t} vanishes.`); } else lg(`${head}: it works, but nothing is left to destroy.`); endCheck(); return; }
