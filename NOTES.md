@@ -523,3 +523,4 @@ tests/itl_xp_test.py
 
 ## Module list (Nov 21)
 Colosseum encounter card: paste {"module":"Name","encounters":[enc,...]} (1-60 rooms, each checked by checkEnc) and Save; kept in localStorage `colosseum-module` {module,i,encounters}. Previous/Next in the card step through the rooms (saveEnc each), and after a win the fight-over panel has "Next room: <name>" (returns to the setup screen with the same heroes). Reset/"Back to the sample"/pasting a single encounter drops the module. tests/module_test.py. Module data stays in the browser, never in the repo.
+Encounter foes may carry "min" and/or "max" (1-4 players): the foe only appears when the party is that size, so one room fits 1 to 4 heroes (owner has 2 kids, up to 4 may play). If no foe matches, all appear.

@@ -36,6 +36,18 @@ with sync_playwright() as p:
     ok("M9 on the last room there is no Next", pg.is_disabled("#modNext"))
     pg.click("#modDrop")
     ok("M10 stopping the module hides the bar and forgets it", not pg.is_visible("#modBar") and pg.evaluate("()=>MOD===null&&!localStorage.getItem('colosseum-module')"))
+    e = json.loads(json.dumps(base)); e["foes"][0]["min"] = 3; e["foes"][1]["max"] = 2
+    pg.reload(); pg.evaluate("(e)=>{ saveEnc(e,true); }", e)
+    counts = []
+    for n in ("1", "3"):
+        pg.reload(); pg.select_option("#npSel", n); pg.select_option("#creSel", "enc")
+        for i in range(int(n)): pg.click(f"#ex{i}")
+        for _ in range(int(n) - 1): pg.click("#bNext")
+        pg.click("#bGo"); counts.append(pg.evaluate("()=>G.mobs.length"))
+    ok("M12 a foe with min 3 only comes for 3+ players and one with max 2 only for 1-2 (4 foes: 3 for one player, 3 for three)", counts == [3, 3])
+    pg.reload(); pg.evaluate("()=>{ localStorage.clear(); }"); pg.reload()
+    bad = json.loads(json.dumps(base)); bad["foes"][0]["min"] = 7
+    ok("M13 min/max outside 1-4 are refused", "players, 1 to 4" in pg.evaluate("(e)=>checkEnc(e,true)", bad))
     ok("M11 no script errors", not errs)
     br.close()
 print(sum(c for _, c in R), "/", len(R), "passed"); raise SystemExit(0 if all(c for _, c in R) else 1)

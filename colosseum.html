@@ -216,6 +216,7 @@ function checkEnc(o,spells){   /* returns "" when the encounter is usable, else 
     if(c.spells!=null&&(!Array.isArray(c.spells)||(spells&&c.spells.some(n=>n!=="Staff"&&!SP[n])))) return `Creature "${id}": spells must be a list of spell names from the builder.`; }
   if(!Array.isArray(o.foes)||o.foes.length<1||o.foes.length>8) return "foes must list 1 to 8 monsters.";
   for(const f of o.foes) if(!f||!o.creatures[f.c]||!Array.isArray(f.at)||!num(f.at[0],0,1)||!num(f.at[1],0,1)) return "Each foe needs c (a creature id) and at: [across, down] from 0 to 1.";
+  for(const f of o.foes) for(const k of ["min","max"]) if(f[k]!=null&&!(Number.isInteger(f[k])&&f[k]>=1&&f[k]<=4)) return "A foe's "+k+" is the number of players, 1 to 4.";
   return ""; }
 function applyEnc(o){   /* make the encounter's creatures available to the same code that runs beasts */
   for(const k of Object.keys(CRE)) if(k.startsWith("e_")) delete CRE[k];
@@ -571,7 +572,9 @@ function newMob(kind,h,n){ const C=CRE[kind];
   if(C.size>1){ m.size=C.size; p.breath=C.breath; m.natFly=C.fly||false; } return m; }
 /* an encounter: each monster goes to the free hex nearest its spot in the room, facing the nearest player */
 function spawnEnc(){ const hum=G.players, near=u=>[...hum].sort((a,b)=>hdist(u,a)-hdist(u,b))[0], xs=P.map(h=>h.p[0]), ys=P.map(h=>h.p[1]), x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys), seen={};
-  for(const f of ENC.foes){ const tx=x0+f.at[0]*(x1-x0), ty=y0+f.at[1]*(y1-y0), id="e_"+f.c, n=seen[id]||0; seen[id]=n+1;
+  /* a foe may carry "min" and/or "max" (number of players): it only appears for parties that size, so one module fits a party of 1 to 4 */
+  const roster=ENC.foes.filter(f=>hum.length>=(f.min||1)&&hum.length<=(f.max||99)); 
+  for(const f of (roster.length?roster:ENC.foes)){ const tx=x0+f.at[0]*(x1-x0), ty=y0+f.at[1]*(y1-y0), id="e_"+f.c, n=seen[id]||0; seen[id]=n+1;
     const h=[...P].filter(x=>!allU().some(y=>y.hp>0&&same(y,x))).sort((a,b)=>Math.hypot(a.p[0]-tx,a.p[1]-ty)-Math.hypot(b.p[0]-tx,b.p[1]-ty))[0];
     const m=newMob(id,h,n); m.f=faceToward(m,near(m)); m.caster=CRE[id].cls==="wizard"; G.units.push(m); G.mobs.push(m); } }
 function spawnMobs(){ if(CREK==="enc"){ spawnEnc(); return; } const north=zones()[1].hexes, hum=G.players, near=u=>[...hum].sort((a,b)=>hdist(u,a)-hdist(u,b))[0];
