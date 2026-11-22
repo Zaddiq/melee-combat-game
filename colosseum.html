@@ -127,6 +127,7 @@ function bestGear(f,hands){   /* f has race/st/dx and a right-hand weapon; retur
     if(!best||sc>best.sc) best={sc,ar,l,a,stp}; }
   return best;
 }
+const sizeOf=p=>p.st+p.dx+(p.cls==="wizard"?Math.max(0,(+p.iq||8)-8):0);
 function makeOpponent(total){
   const me=(G&&G.players&&G.players[0]&&G.players[0].p)||slot[0]||window.me;   /* the first human, to keep the match fair */
   const races=Object.keys(RACES).filter(k=>RACES[k].st+RACES[k].dx<=total&&k!=="orc").sort(()=>Math.random()-.5);
@@ -565,7 +566,7 @@ const mk=(h,p)=>({q:h.q,r:h.r,f:0,p,hp:p.st,right:p.right,left:p.left,slung:p.sl
   engStart:false,moved:0,defending:false,dealt:false,tookHit:false,act:null});
 /* a side run by the computer: creatures at book stats that enter from the north end. They are ordinary minions with no owner (side "mob"), so the creature rules, the dragon rules and the computer's moves and actions all apply as they do for summons. */
 function newMob(kind,h,n){ const C=CRE[kind];
-  let p; if(C.man){ const f=makeOpponent(Math.max(16,Math.round(G.players.reduce((t,u)=>t+u.p.st+u.p.dx,0)/G.players.length)));   /* an even match: the same ST+DX as the average player, like the arena */
+  let p; if(C.man){ const f=makeOpponent(Math.max(16,Math.round(G.players.reduce((t,u)=>t+sizeOf(u.p),0)/G.players.length)));   /* an even match: the same ST+DX as the average player, like the arena; a wizard's IQ above 8 counts as points too, since it buys his spells */
     p=fromBuilder({name:f.name+(n>0?" "+ROM[Math.min(n+1,4)]:""),race:f.race,cls:"fighter",st:f.st,dx:f.dx,iq:f.iq,a:f.right,b:f.left,s1:f.slung,armor:f.armor,d1:f.dag[0]||"none"}); }
   else p=fromBuilder({name:C.name+(n>0?" "+(n+1):""),race:C.race||"human",cls:C.cls==="wizard"?"wizard":"fighter",st:C.st,dx:C.dx,iq:C.iq,a:C.w,b:C.sh||"none",armor:C.armor||"none",d1:C.d||"none",spells:C.spells});
   const m=mk(h,p); m.minion=true; m.kind=kind; m.side="mob"; m.owner=null; m.fresh=false; if(kind==="gargoyle") m.natFly=true; if(C.up) m.up=C.up;
