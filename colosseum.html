@@ -224,7 +224,7 @@ function checkEnc(o,spells){   /* returns "" when the encounter is usable, else 
     if(c.sh!=null&&!SHIELDS[c.sh]) return `Creature "${id}": shield must be small or large.`;
     if(c.race!=null&&!RACES[c.race]) return `Creature "${id}": race "${c.race}" is not a race.`;
     if(c.spells!=null&&(!Array.isArray(c.spells)||(spells&&c.spells.some(n=>n!=="Staff"&&!SP[n])))) return `Creature "${id}": spells must be a list of spell names from the builder.`; }
-  if(!Array.isArray(o.foes)||o.foes.length<1||o.foes.length>8) return "foes must list 1 to 8 monsters.";
+  if(!Array.isArray(o.foes)||o.foes.length<1||o.foes.length>20) return "foes must list 1 to 20 monsters.";
   for(const f of o.foes){ if(!f||!o.creatures[f.c]) return "Each foe needs c (a creature id) and a place."; if(o.map&&f.hex!=null){ const h=f.hex; if(!Array.isArray(h)||!Number.isInteger(h[0])||!Number.isInteger(h[1])||!mapRoomHex(o.map,h[0],h[1])) return `A foe's hex [${h}] is not an open hex of the room.`; } else if(!Array.isArray(f.at)||!num(f.at[0],0,1)||!num(f.at[1],0,1)) return "Each foe needs c (a creature id) and at: [across, down] from 0 to 1 (or hex: [column,row] when the room has a hex map)."; }
   for(const f of o.foes) for(const k of ["min","max"]) if(f[k]!=null&&!(Number.isInteger(f[k])&&f[k]>=1&&f[k]<=4)) return "A foe's "+k+" is the number of players, 1 to 4.";
   return ""; }
@@ -566,7 +566,9 @@ function zones(){
   const my=ys.reduce((a,b)=>a+b,0)/ys.length, midY=(Math.min(...ys)+Math.max(...ys))/2;
   const edge=h=>[0,1,2,3,4,5].some(d=>!M.get(key(h.q+DIRS[d][0],h.r+DIRS[d][1]))), side=P.filter(h=>edge(h)&&!h.e);
   const near=(tx,ty)=>[...side].sort((a,b)=>Math.hypot(a.p[0]-tx,a.p[1]-ty)-Math.hypot(b.p[0]-tx,b.p[1]-ty)).slice(0,4);
-  return [{name:"south",hexes:ends.filter(h=>h.p[1]>my),end:1},{name:"north",hexes:ends.filter(h=>h.p[1]<=my),end:-1},{name:"west",hexes:near(Math.min(...xs),midY),mid:midY},{name:"east",hexes:near(Math.max(...xs),midY),mid:midY}];
+  let S=ends.filter(h=>h.p[1]>my), N=ends.filter(h=>h.p[1]<=my);
+  if(CREK==="enc"&&ENC&&ENC.map){ const inL=(L,h)=>Array.isArray(L)&&L.some(x=>h.q===x[1]&&h.r===x[0]-Math.floor(x[1]/2)); S=ends.filter(h=>inL(ENC.map.south,h)); N=ends.filter(h=>inL(ENC.map.north,h)); }   /* a drawn room says itself which hexes are its south and north entrances (a module's map may lie sideways) */
+  return [{name:"south",hexes:S,end:1},{name:"north",hexes:N,end:-1},{name:"west",hexes:near(Math.min(...xs),midY),mid:midY},{name:"east",hexes:near(Math.max(...xs),midY),mid:midY}];
 }
 function startHexes(){
   const Z=zones(), xs=P.map(h=>h.p[0]), mx=xs.reduce((a,b)=>a+b,0)/xs.length;

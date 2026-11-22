@@ -529,3 +529,8 @@ Colosseum computer wizard (owner's request, Nov 21): CRE.wizard / makeWizardOpp(
 
 ## Hex rooms (Nov 22)
 An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40), off:[[col,row]..] hexes outside the room, wall:[[col,row]..] obstacles, north:[..] and south:[..] entrance hexes (required, open hexes)}. col 0.. across, row 0.. from north to south. Foes use hex:[col,row] (instead of at:[x,y]). Obstacles become permanent walls (G.objs t:"wall", perm:1): they stop movement, missiles and spells like created walls, never fade, and Destroy Creation skips them; the phone is sent them in sc.ob and the same board in sc.bd. Heroes start at the south entrance, monsters on the north side. mapHexes/checkMap/mapRoomHex in colosseum.html. Old feet rooms and the sample are unchanged. tests/hexroom_test.py (invented map).
+
+## Sideways rooms and bigger fights (module support)
+- A drawn room says itself which hexes are its south and north entrances (`map.south`, `map.north`): `zones()` uses them instead of guessing by height. Book maps are drawn with flat-top hexes and the engine's are pointy-top, so a module map is turned on its side when it is converted (book column becomes engine row); the entrances then lie left and right. Players start on the south list, so give it at least 4 hexes.
+- An encounter may list up to 20 foes (was 8). Foes do not stack, so a swarm needs a hex each.
+- Test: tests/sideways_room_test.py (4).
