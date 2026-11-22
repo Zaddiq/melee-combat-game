@@ -212,7 +212,8 @@ const ENCKEY="colosseum-encounter";
 function checkEnc(o,spells){   /* returns "" when the encounter is usable, else what is wrong with it */
   if(!o||typeof o!=="object") return "That is not an encounter.";
   const num=(v,a,b)=>typeof v==="number"&&v>=a&&v<=b;
-  if(!Array.isArray(o.room)||!num(o.room[0],15,150)||!num(o.room[1],15,150)) return "room must be [feet across, feet deep], each from 15 to 150.";
+  if(o.map!=null){ const bad=checkMap(o.map); if(bad) return bad; }
+  else if(!Array.isArray(o.room)||!num(o.room[0],15,150)||!num(o.room[1],15,150)) return "room must be [feet across, feet deep], each from 15 to 150 (or give a hex map instead).";
   if(!o.creatures||typeof o.creatures!=="object"||!Object.keys(o.creatures).length) return "creatures is empty.";
   for(const [id,c] of Object.entries(o.creatures)){
     if(!/^[a-z0-9_]{1,20}$/.test(id)) return `Creature id "${id}": use 1 to 20 lowercase letters, digits or _.`;
@@ -224,7 +225,7 @@ function checkEnc(o,spells){   /* returns "" when the encounter is usable, else 
     if(c.race!=null&&!RACES[c.race]) return `Creature "${id}": race "${c.race}" is not a race.`;
     if(c.spells!=null&&(!Array.isArray(c.spells)||(spells&&c.spells.some(n=>n!=="Staff"&&!SP[n])))) return `Creature "${id}": spells must be a list of spell names from the builder.`; }
   if(!Array.isArray(o.foes)||o.foes.length<1||o.foes.length>8) return "foes must list 1 to 8 monsters.";
-  for(const f of o.foes) if(!f||!o.creatures[f.c]||!Array.isArray(f.at)||!num(f.at[0],0,1)||!num(f.at[1],0,1)) return "Each foe needs c (a creature id) and at: [across, down] from 0 to 1.";
+  for(const f of o.foes){ if(!f||!o.creatures[f.c]) return "Each foe needs c (a creature id) and a place."; if(o.map&&f.hex!=null){ const h=f.hex; if(!Array.isArray(h)||!Number.isInteger(h[0])||!Number.isInteger(h[1])||!mapRoomHex(o.map,h[0],h[1])) return `A foe's hex [${h}] is not an open hex of the room.`; } else if(!Array.isArray(f.at)||!num(f.at[0],0,1)||!num(f.at[1],0,1)) return "Each foe needs c (a creature id) and at: [across, down] from 0 to 1 (or hex: [column,row] when the room has a hex map)."; }
   for(const f of o.foes) for(const k of ["min","max"]) if(f[k]!=null&&!(Number.isInteger(f[k])&&f[k]>=1&&f[k]<=4)) return "A foe's "+k+" is the number of players, 1 to 4.";
   return ""; }
 function applyEnc(o){   /* make the encounter's creatures available to the same code that runs beasts */
@@ -233,6 +234,19 @@ function applyEnc(o){   /* make the encounter's creatures available to the same 
   for(const [id,c] of Object.entries(o.creatures)) CRE["e_"+id]=Object.assign({},c,{enc:1});
   CRE.enc={name:o.name||"Encounter",enc:1}; }
 /* a rectangular room as a hex map: [q, r, megahex, entrance]. Rows run north to south (q); the hexes are 1 yard across, so 50 ft is about 17 hexes. The south and north entrances are four hexes in the middle of the end rows. */
+/* A room drawn hex by hex (from a module's map): map = {cols, rows, off:[[col,row]..] hexes that are not part of the room (the shaded outside), wall:[[col,row]..] obstacles that stop movement, shots and spells,
+   north:[[col,row]..] and south:[[col,row]..] entrance hexes}. col runs 0..cols-1 across, row 0..rows-1 from north to south. Foes use hex:[col,row]. */
+const ptIn=(L,c,r)=>Array.isArray(L)&&L.some(x=>x&&x[0]===c&&x[1]===r);
+const mapRoomHex=(m,c,r)=>Number.isInteger(c)&&Number.isInteger(r)&&c>=0&&r>=0&&c<m.cols&&r<m.rows&&!ptIn(m.off,c,r)&&!ptIn(m.wall,c,r);
+function checkMap(m){
+  const int=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b;
+  if(!m||typeof m!=="object"||!int(m.cols,5,30)||!int(m.rows,5,40)) return "map needs cols (5 to 30) and rows (5 to 40).";
+  for(const k of ["off","wall","north","south"]){ const L=m[k]; if(L==null) continue; if(!Array.isArray(L)||L.length>600||L.some(x=>!Array.isArray(x)||!int(x[0],0,m.cols-1)||!int(x[1],0,m.rows-1))) return `map.${k} must be a list of [column,row] hexes inside the map.`; }
+  for(const k of ["north","south"]) if(!Array.isArray(m[k])||!m[k].length||m[k].some(x=>!mapRoomHex(m,x[0],x[1]))) return `map.${k} must list the entrance hexes, and they must be open hexes of the room.`;
+  return ""; }
+function mapHexes(m){
+  const out=[]; for(let q=0;q<m.rows;q++) for(let c=0;c<m.cols;c++){ if(ptIn(m.off,c,q)) continue; out.push([q,c-Math.floor(q/2),0,(ptIn(m.north,c,q)||ptIn(m.south,c,q))?1:0]); }
+  return out; }
 function roomHexes(wft,hft){
   const C=Math.max(5,Math.round(wft/3)), R=Math.max(5,Math.round(hft/2.6)), mid=Math.floor(C/2), out=[];
   for(let q=0;q<R;q++) for(let c=0;c<C;c++) out.push([q,c-Math.floor(q/2),0,(q<2||q>=R-2)&&(c===mid-1||c===mid)?1:0]);
@@ -291,11 +305,12 @@ for(const i of [0,1,2,3]){
   $("pg"+i).onclick=()=>{ try{ setP(i,fromBuilder(JSON.parse($("paste"+i).value)),"Loaded pasted fighter."); }catch(e){ $("msg"+i).textContent="That does not look like a builder fighter."; } };
   $("rg"+i).onclick=()=>{ const r=REC[$("rs"+i).value]; if(r&&r.src) setP(i,fromBuilder(Object.assign({},r.src,{st:r.st,dx:r.dx,name:r.name})),"Loaded from your arena roster (its own record is not touched)."); };
 }
-const noteText=()=>CREK==="enc"&&mobOn()?`${NP===1?"You fight":"All "+NP+" players fight together"} against ${ENC.foes.length} ${mobName()} placed in a ${ENC.room[0]}' × ${ENC.room[1]}' room, run by the computer. The players come in at the south end. If you win, each of you gets 50 XP.`:mobOn()&&NP===1?`You fight alone against ${CREN>1?CREN+" "+mobName():"a "+mobName()}, run by the computer. It comes in from the north end, you from the south. If you win you get 50 XP.`:mobOn()?`All ${NP} players fight together against ${CREN>1?CREN+" "+mobName():"a "+mobName()} run by the computer. The creatures come in from the north end, the players from the south. If you win, each of you gets 50 XP.`:NP===2?"Two players: one against the other.":teamsOn()?"Two teams fight each other: pick Team A or Team B for each player. Teammates start at the same end and can never hurt each other.":"Free for all: everyone fights for themselves and starts from their own entrance (bottom, top, west, east).";
+const roomText=e=>e.map?`${e.map.cols} × ${e.map.rows} hex room`:`${e.room[0]}' × ${e.room[1]}' room`;
+const noteText=()=>CREK==="enc"&&mobOn()?`${NP===1?"You fight":"All "+NP+" players fight together"} against ${ENC.foes.length} ${mobName()} placed in a ${roomText(ENC)}, run by the computer. The players come in at the south end. If you win, each of you gets 50 XP.`:mobOn()&&NP===1?`You fight alone against ${CREN>1?CREN+" "+mobName():"a "+mobName()}, run by the computer. It comes in from the north end, you from the south. If you win you get 50 XP.`:mobOn()?`All ${NP} players fight together against ${CREN>1?CREN+" "+mobName():"a "+mobName()} run by the computer. The creatures come in from the north end, the players from the south. If you win, each of you gets 50 XP.`:NP===2?"Two players: one against the other.":teamsOn()?"Two teams fight each other: pick Team A or Team B for each player. Teammates start at the same end and can never hurt each other.":"Free for all: everyone fights for themselves and starts from their own entrance (bottom, top, west, east).";
 function refreshPlayers(){ $("npSel").value=String(NP); for(let i=0;i<MAXP;i++){ const t=$("tm"+i); if(t) t.value=String(tmAB[i]); }   /* the boxes show what the game really has, whatever the browser restored */
   for(let i=0;i<MAXP;i++){ const c=$("pcard"+i); if(c) c.style.display=i<NP?"":"none"; const r=$("tm"+i); if(r&&r.closest) r.closest(".tmrow").style.display=teamsOn()?"":"none"; }
   $("modeSel").style.display=NP>2&&!mobOn()?"":"none"; $("modeSel").value=MODE;
-  $("creSel").innerHTML=(NP===1?"":`<option value="none">No computer side</option>`)+["man",...Object.keys(CRE).filter(k=>k!=="man"&&k!=="enc"&&!k.startsWith("e_")),...(ENC?["enc"]:[])].map(k=>`<option value="${k}">${k==="man"?"Gladiator (a computer fighter, like the arena's)":k==="wizard"?"Computer wizard (like the Unlimited Arena's)":k==="enc"?"Encounter: "+esc(ENC.name)+" ("+ENC.foes.length+" monsters, "+ENC.room[0]+"' × "+ENC.room[1]+"' room)":CRE[k].name}</option>`).join(""); $("creSel").value=mobOn()?CREK:"none";
+  $("creSel").innerHTML=(NP===1?"":`<option value="none">No computer side</option>`)+["man",...Object.keys(CRE).filter(k=>k!=="man"&&k!=="enc"&&!k.startsWith("e_")),...(ENC?["enc"]:[])].map(k=>`<option value="${k}">${k==="man"?"Gladiator (a computer fighter, like the arena's)":k==="wizard"?"Computer wizard (like the Unlimited Arena's)":k==="enc"?"Encounter: "+esc(ENC.name)+" ("+ENC.foes.length+" monsters, "+roomText(ENC)+")":CRE[k].name}</option>`).join(""); $("creSel").value=mobOn()?CREK:"none";
   CREN=CREK==="enc"&&ENC?ENC.foes.length:Math.max(1,Math.min(CREN,creMax())); $("creN").innerHTML=[...Array(creMax())].map((_,i)=>`<option value="${i+1}">${i+1}</option>`).join(""); $("creN").value=String(CREN); $("creN").style.display=mobOn()&&creMax()>1?"":"none";
   $("npNote").textContent=noteText(); }
 const resetSetup=()=>{ try{ localStorage.setItem("colosseum-setup",JSON.stringify({NP,MODE,CREK,CREN})); }catch(e){} applyMode(); syncMap(); G=null; placeStep=0; starts.fill(null); $("setup").open=true; refreshPlayers(); showStats(); ui(); drawMap(); };
@@ -584,7 +599,7 @@ function newMob(kind,h,n){ const C=CRE[kind];
 function spawnEnc(){ const hum=G.players, near=u=>[...hum].sort((a,b)=>hdist(u,a)-hdist(u,b))[0], xs=P.map(h=>h.p[0]), ys=P.map(h=>h.p[1]), x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys), seen={};
   /* a foe may carry "min" and/or "max" (number of players): it only appears for parties that size, so one module fits a party of 1 to 4 */
   const roster=ENC.foes.filter(f=>hum.length>=(f.min||1)&&hum.length<=(f.max||99)); 
-  for(const f of (roster.length?roster:ENC.foes)){ const tx=x0+f.at[0]*(x1-x0), ty=y0+f.at[1]*(y1-y0), id="e_"+f.c, n=seen[id]||0; seen[id]=n+1;
+  for(const f of (roster.length?roster:ENC.foes)){ const hx=f.hex&&ENC.map?M.get(key(f.hex[1],f.hex[0]-Math.floor(f.hex[1]/2))):null, tx=hx?hx.p[0]:x0+(f.at?f.at[0]:.5)*(x1-x0), ty=hx?hx.p[1]:y0+(f.at?f.at[1]:.5)*(y1-y0), id="e_"+f.c, n=seen[id]||0; seen[id]=n+1;
     const h=[...P].filter(x=>!allU().some(y=>y.hp>0&&same(y,x))).sort((a,b)=>Math.hypot(a.p[0]-tx,a.p[1]-ty)-Math.hypot(b.p[0]-tx,b.p[1]-ty))[0];
     const m=newMob(id,h,n); m.f=faceToward(m,near(m)); m.caster=CRE[id].cls==="wizard"; G.units.push(m); G.mobs.push(m); } }
 function spawnMobs(){ if(CREK==="enc"){ spawnEnc(); return; } const north=zones()[1].hexes, hum=G.players, near=u=>[...hum].sort((a,b)=>hdist(u,a)-hdist(u,b))[0];
@@ -599,6 +614,7 @@ function startFight(){
   G={turn:0,phase:"",log:[],order:[],idx:0,start:null,reach:null,eng:false,moved:0,floor:[],objs:[],exhib:true,settled:false,cur:null,mobs:[]};
   G.players=pl.map((p,i)=>{ const u=mk(s.pick[i],p); u.side=SIDEIDS[team[i]]; return u; }); G.me=G.players[0]; G.foe=G.players[1];
   G.units=[...G.players]; WALLS=new Set();
+  if(CREK==="enc"&&ENC&&ENC.map&&ENC.map.wall){ for(const [c,r] of ENC.map.wall) G.objs.push({t:"wall",q:r,r:c-Math.floor(r/2),age:0,perm:1}); syncWalls(); }   /* the book's obstacles: permanent walls */
   if(CAMP.on&&CREK==="enc") for(const u of G.players){ const v=CAMP.hp[u.p.name]; if(v!=null&&v<u.p.st){ u.hp=Math.max(1,v); G.log.push(`Campaign: ${u.p.name} starts hurt, at ST ${u.hp} of ${u.p.st}.`); } }
   if(mobOn()) spawnMobs();
   G.players.forEach((u,i)=>{ const sf=window.Online&&Online.startFace&&Online.startFace[i]; u.f=(sf!=null&&sf>=0&&sf<6)?sf:faceToward(u,other(u)); });   /* everyone starts facing their nearest enemy, unless a phone player turned to face another way */
@@ -611,7 +627,7 @@ function nextTurn(){
   for(const u of allU()){ u.fresh=false; if(u.hits>=5)u.wound2=true; u.hits=0; if(u.cool>0)u.cool--; u.dodging=false; if(!engagedAny(u))u.usedLast=false; u.from={q:u.q,r:u.r}; u.extra=0; u.poleVs=false; u.pri=false; u.dealt=u.tookHit=u.defending=false; u.act=null; u.standUp=false; u.moved=0; u.engStart=false; if(u.fly){ u.air=true; u.airN++; }
     u.fireT=false; if(u.rope>0){ u.rope++; if(adjDXu(u,"single",null)<=2&&!u.down){ u.down=true; lg(`${sub(u)} ${vb(u,"are","is")} so tangled in rope that ${vb(u,"you fall","it falls")} helpless.`); } }
     for(const k of ["slow","stop","spd","daz","clum","aid","frozen","conf"]) if(u[k]>0) u[k]--; if(!u.conf) u.confN=0; if(!u.aid) u.aidN=0; if(!u.clum) u.clumN=0; u.pn=[]; u.rvl=u.rvlNew||""; u.rvlNew=""; u.revHit=false; }
-  if(G.objs&&G.objs.length){ G.objs.forEach(o=>o.age++); const n0=G.objs.length; G.objs=G.objs.filter(o=>o.age<=12); if(G.objs.length<n0){ syncWalls(); lg("Some created things fade away (they last 12 turns)."); } }
+  if(G.objs&&G.objs.length){ G.objs.forEach(o=>o.age++); const n0=G.objs.length; G.objs=G.objs.filter(o=>o.perm||o.age<=12); if(G.objs.length<n0){ syncWalls(); lg("Some created things fade away (they last 12 turns)."); } }
   if(G.rStart!=null){ G.last=G.log.slice(G.rStart); G.rStart=null; }
   G.turn++; const act=G.players.filter(u=>u.hp>0&&!u.esc), movers=[...act,...(G.mobs.some(m=>m.hp>0&&ownerOf(m)===m)?["mob"]:[])]; let R; do{ R=movers.map(()=>d6()); }while(new Set(R).size<R.length);   /* every player still in rolls, and the computer's creatures roll as one more side; no ties */
   G.rolls=movers.map((u,i)=>({u,r:R[i]})).sort((x,y)=>y.r-x.r);
@@ -912,7 +928,7 @@ function castList(u,o){
       if(d.rope){ const big=!!d.giant, two=big&&o.p.st<20; if(mhDist(u,o)<=1&&(big||o.p.st<20)&&!o.rope&&!blocked(u,o)) L.push({sp:name,cost:cc,dx:base,label:big?`Giant Rope (${cc} ST; needs ${base} or less): ${two?"two ropes at once on this weaker creature, each removed separately: MA quartered, DX −4 and two worse each turn":"one rope on this big creature: halves its MA, −2 DX and one worse each turn"}; it must stand still and roll to get free`:`Rope (${cc} ST; needs ${base} or less): halves the enemy's MA, −2 DX and one worse each turn; it must stand still and roll to get free`}); continue; }
       if(d.fake){ for(const fk of formsFor(d)) if(creaHexes(u,o,"summon",name,fk).length) L.push({sp:name,form:fk,cost:cc,dx:base,hexsel:"summon",label:`${name} of a ${CRE[fk].name} (${cc} ST; needs ${base} or less; you choose the hex${CRE[fk].size?" for its tail; the rest of it may stick out":""})`}); continue; }
       if(creaHexes(u,o,d.obj,name).length) L.push({sp:name,cost:cc,dx:base,hexsel:d.obj,label:`${name} (${cc} ST${d.summon&&CRE[d.summon].up>1?", then "+CRE[d.summon].up+" a turn":""}; needs ${base} or less; you choose the hex${d.summon&&CRE[d.summon].size?" for its tail (the rest of it may stick out)":""}${d.n?"; it fills up to "+d.n+" connected hexes from there":""}, in your megahex or next to it)`}); continue; }
-    if(d.destroy){ if(mx<1) continue; (G.objs||[]).forEach((ob,i)=>{ if(ob.t==="slick") return; const dd=dist(u,ob), dx=base-dd; L.push({sp:name,cost:1,dx,objId:i,label:`Destroy Creation: the ${ob.t} ${dd} hex${dd===1?"":"es"} away (1 ST; needs ${dx} or less)`}); }); continue; }
+    if(d.destroy){ if(mx<1) continue; (G.objs||[]).forEach((ob,i)=>{ if(ob.t==="slick"||ob.perm) return; const dd=dist(u,ob), dx=base-dd; L.push({sp:name,cost:1,dx,objId:i,label:`Destroy Creation: the ${ob.t} ${dd} hex${dd===1?"":"es"} away (1 ST; needs ${dx} or less)`}); }); continue; }
   if(d.dispel){ if(mx>=5) L.push({sp:name,cost:5,dx:base,label:`Dispel Illusions (5 ST; needs ${base} or less): every illusion and image within 5 megahexes vanishes, yours too`}); continue; }
   if(d.reveal){ if(mx>=1) L.push({sp:name,cost:1,dx:base,label:`Reveal Magic (1 ST; needs ${base} or less): you learn which enemy figures within 5 megahexes are protected by Reverse Missiles, a Spell Shield, Stone Flesh, Iron Flesh or a Shock Shield, and where slippery floors lie`}); continue; }
     if(d.k==="S"&&d.tele){ L.push({sp:name,cost:1,dx:base,tele:1,label:`Teleport (1 ST per megahex moved, at least 1; needs ${base} or less; you choose the hex next and face the enemy there)`}); continue; }
@@ -1432,7 +1448,7 @@ function setMap(name){
 }
 /* an encounter plays in its own room; any other setup goes back to the board saved in the Map box */
 function syncMap(){
-  if(CREK==="enc"&&ENC&&mobOn()){ ROOMH=roomHexes(ENC.room[0],ENC.room[1]); setMap("room"); $("mapSel").disabled=true; $("mapNote").textContent="The encounter sets the room."; }
+  if(CREK==="enc"&&ENC&&mobOn()){ ROOMH=ENC.map?mapHexes(ENC.map):roomHexes(ENC.room[0],ENC.room[1]); setMap("room"); $("mapSel").disabled=true; $("mapNote").textContent="The encounter sets the room."; }
   else { let n="melee"; try{ n=localStorage.getItem("melee-map")==="wizard"?"wizard":"melee"; }catch(e){} if(HEXES!==(n==="wizard"?WIZARD_HEXES:MELEE_HEXES)) setMap(n); $("mapSel").disabled=false; if($("mapNote").textContent==="The encounter sets the room.") $("mapNote").textContent=""; $("mapSel").value=n; } }
 function initMap(){
   let n="melee"; try{ n=localStorage.getItem("melee-map")==="wizard"?"wizard":"melee"; }catch(e){}
