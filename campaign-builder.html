@@ -47,19 +47,13 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
  <div class="mut" id="spellNote"></div>
 </div>
 
-<div class="card"><h2>2. Talents</h2>
- <div class="row"><b id="iqUsed"></b><span class="mut" id="iqNote"></span></div><div class="bar"><i id="iqBar" style="width:0"></i></div>
- <div class="row"><label>Languages besides your own (1 IQ each) <input type="number" id="chLangs" min="0" max="20"></label></div>
- <div id="talents"></div>
-</div>
-
-<div class="card"><h2>3. Money and gear</h2>
+<div class="card"><h2>2. Money and gear</h2>
  <div class="row"><label>Money to spend <input type="number" id="purse" min="0" step="10" style="width:7em"></label><label><input type="checkbox" id="silver"> Silver weapons and chain-or-better armor (cost ten times as much; cloth, leather and shields have no iron, so they cost the same)</label><b id="moneyLeft"></b></div>
  <h3>Shop</h3><div id="shop"></div>
  <h3>What you own</h3><div id="owned" class="mut">Nothing yet.</div>
 </div>
 
-<div class="card"><h2>4. Ready for the fight</h2>
+<div class="card"><h2>3. Ready for the fight</h2>
  <div class="mut">Your gear has no count limit: money is the limit. For a fight you choose what is in your hands, slung on your back and sheathed. The Colosseum uses the right hand, the left hand, the first slung item and the first sheathed dagger for now (it does not know the other slots yet).</div>
  <div class="row"><label>Armor <select id="ldArmor"></select></label></div>
  <div class="row"><label>Right hand <select id="ld_a"></select></label><label>Left hand <select id="ld_b"></select></label></div>
@@ -68,11 +62,17 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
  <div id="fightNote" class="mut"></div>
 </div>
 
-<div class="card"><h2>5. Use the character</h2>
+<div class="card"><h2>4. Use the character</h2>
  <div id="problems" class="bad"></div>
  <div class="row"><button class="pri" id="copyBtn">Copy the character data</button><button id="setBuilder">Make it the regular builder's open character</button><span class="mut" id="outMsg"></span></div>
  <div class="mut">In the Colosseum, paste this text into a player's "paste" box. A phone can use it too if you make it the open character (second button) on that phone's browser.</div>
  <textarea id="outBox" rows="5" readonly></textarea>
+</div>
+
+<div class="card"><h2>5. Talents and languages (change these rarely)</h2>
+ <div class="row"><b id="iqUsed"></b><span class="mut" id="iqNote"></span></div><div class="bar"><i id="iqBar" style="width:0"></i></div>
+ <div class="row"><label>Languages besides your own (1 IQ each) <input type="number" id="chLangs" min="0" max="20"></label></div>
+ <div id="talents"></div>
 </div>
 </div>
 

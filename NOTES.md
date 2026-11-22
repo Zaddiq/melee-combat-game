@@ -534,3 +534,6 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - A drawn room says itself which hexes are its south and north entrances (`map.south`, `map.north`): `zones()` uses them instead of guessing by height. Book maps are drawn with flat-top hexes and the engine's are pointy-top, so a module map is turned on its side when it is converted (book column becomes engine row); the entrances then lie left and right. Players start on the south list, so give it at least 4 hexes.
 - An encounter may list up to 20 foes (was 8). Foes do not stack, so a swarm needs a hex each.
 - Test: tests/sideways_room_test.py (4).
+
+## Campaign builder order
+- The Talents card moved to the bottom (now section 5): character, money and gear, ready for the fight and the copy/save buttons come first, since talents are rarely changed.
