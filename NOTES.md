@@ -536,4 +536,4 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - Test: tests/sideways_room_test.py (4).
 
 ## Campaign builder order
-- The Talents card moved to the bottom (now section 5): character, money and gear, ready for the fight and the copy/save buttons come first, since talents are rarely changed.
+- The Talents card moved to the bottom (now section 5): character, ready for the fight, money and gear and the copy/save buttons come first, since talents are rarely changed.
