@@ -537,3 +537,11 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 
 ## Campaign builder order
 - The Talents card moved to the bottom (now section 5): character, ready for the fight, money and gear and the copy/save buttons come first, since talents are rarely changed.
+
+## Aid, the 1980 way (branch aid-spell, NOT merged to main yet)
+- 1980 Advanced Wizard p. 11: Aid adds 1 to ST, DX or IQ of any figure (the caster too) per ST spent, for 2 turns; ST given to another figure must be used within 2 turns or it is lost.
+- Human wizards in the Colosseum now get Aid menu items: on yourself (+DX, +IQ, 1 to 3) and on an adjacent friend (+ST, +DX, +IQ; ST up to 10, others up to 3). The computer's wizards still only use Aid for +DX on themselves.
+- ST is a pool on the target (`loan`, `loanT`): spending ST (`payST`) uses it first; whatever is left after 2 turns is lost (the ST drops by that much, never below 1; it is not paid back to the giver). IQ boost is `aidI`/`aidIN` (counted in `effIQ`).
+- Picks carry `att` (ST/DX/IQ) and `al` (the friend's index in the unit list) on the tablet and on phones (online-host.js).
+- Test: tests/aid_test.py (11). All suites pass.
+- Not done: the Arena, duel and other pages keep their old Aid; fighters' ST bar on the phone does not show the lent ST separately; Aid on a friend who is not adjacent is not allowed (thrown spells touch the next hex).

@@ -161,7 +161,7 @@ function sessSpell(uid,i){
   const S=sess[uid], u=S.u, o=S.oth, x=S.sopts[i]; if(!x) return;
   if(x.hexsel){ S.destT="cast"; S.destX={sp:x.sp,form:x.form,on:x.on}; S.dopts=new Map(creaHexes(u,o,x.hexsel,x.sp,x.form).map(h=>[key(h.q,h.r),h])); S.step="dest"; sessPush(uid); return; }
   if(x.tele){ S.destT="cast"; S.destX={sp:"Teleport"}; S.dopts=new Map(P.filter(h=>!same(h,u)&&!same(h,o)&&Math.max(1,mhDist(u,h))<=u.hp).map(h=>[key(h.q,h.r),h])); S.step="dest"; sessPush(uid); return; }
-  sessFinish(uid,{t:"cast",sp:x.sp,n:x.n,on:x.on,objId:x.objId,form:x.form});
+  sessFinish(uid,{t:"cast",sp:x.sp,n:x.n,on:x.on,objId:x.objId,form:x.form,att:x.att,al:x.al});
 }
 function sessFinish(uid,act){ const S=sess[uid]; if(!S) return; S.act=act; S.step="done"; sessPushAll(); sessCheck(); if(G&&G.pq&&G.phase==="cover"&&activeSess(uid)) ui(); }   /* the tablet's waiting line names who is still to pick */
 /* when the last phone is in and the game is waiting at one of them, let the game take the stored picks */
