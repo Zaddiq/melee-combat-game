@@ -73,16 +73,30 @@ function cleanCreature(c){
     w:W[c.w]&&!W[c.w].left&&c.w!=="staff"?c.w:"none",armor:ARMOR[c.armor]?c.armor:"none",sh:SHIELDS[c.sh]?c.sh:"none",
     d:c.d==="dagger"||c.d==="mg"?c.d:"none",race:RACES[c.race]?c.race:"human",cls:c.cls==="wizard"?"wizard":"fighter",
     spells:Array.isArray(c.spells)?c.spells.filter(x=>typeof x==="string").map(x=>x.slice(0,30)).slice(0,12):[],note:String(c.note||"").slice(0,300)}; }
-/* Magic weapons a hero carries: {id:"mg_1",n,base,dx,dm,note}. Each becomes a copy of its base weapon with a new name, a damage bonus and a DX bonus (dxb) that
-   counts whenever it is readied. Anything unchecked is dropped; returns the list that was accepted. */
+/* Magic items a hero carries (Advanced Wizard 1980, Weapon/Armor Enchantment): {id:"mg_N",kind,n,base,dx,dm,stops,flame,lit,note}.
+   kind "weapon": a copy of its base weapon with a DX bonus (dxb, counts whenever it is readied) and a damage bonus; DX + damage total at most 5.
+   A weapon that can flame (flame:1) does extra damage when lit:1 (a missile weapon: +1 for a bow, +2 for a crossbow): +2 if it does 1 die or less, +3 if more than 1 up to 2 dice, one more die above 2 dice.
+   kind "armor" or "shield": a copy of its base with 1 to 5 extra hits stopped. Anything unchecked is dropped; returns the list that was accepted. */
+function flameOf(b,k){ if(b.miss) return {d:b.d,m:b.m+(/xbow$/.test(k)?2:1)};   /* a flaming missile weapon: +1 from a bow, +2 from a crossbow */
+  return b.d<=1?{d:b.d,m:b.m+2}:b.d<=2?{d:b.d,m:b.m+3}:{d:b.d+1,m:b.m}; }
 function addMagic(list){
   const out=[]; if(!Array.isArray(list)) return out;
-  for(const m of list.slice(0,10)){
+  const num=(v,lo,hi)=>{ v=Math.round(+v); return v>=lo?Math.min(v,hi):0; };
+  for(const m of list.slice(0,20)){
     if(!m||typeof m!=="object"||!/^mg_\d{1,2}$/.test(m.id)||out.some(x=>x.id===m.id)) continue;
-    const b=W[m.base]; if(!b||b.miss||b.hid||m.base==="staff"||m.base==="mg"||/^mg_/.test(m.base)) continue;
-    const num=(v,lo,hi)=>{ v=Math.round(+v); return v>=lo&&v<=hi?v:0; };
-    const it={id:m.id,n:String(m.n||"Magic "+b.n).slice(0,40),base:m.base,dx:num(m.dx,-3,6),dm:num(m.dm,-3,6),note:String(m.note||"").slice(0,300)};
-    W[it.id]=Object.assign({},b,{n:it.n,m:b.m+it.dm,dxb:it.dx,mag:1,note:it.note}); out.push(it); }
+    const kind=m.kind==="armor"||m.kind==="shield"?m.kind:"weapon", note=String(m.note||"").slice(0,300);
+    if(kind==="weapon"){
+      const b=W[m.base]; if(!b||b.hid||m.base==="staff"||m.base==="mg"||/^mg_/.test(m.base)) continue;
+      let dx=num(m.dx,0,5), dm=num(m.dm,0,5); if(dx+dm>5){ dm=5-dx; }
+      const flame=m.flame?1:0, lit=flame&&m.lit?1:0, nm=String(m.n||"Magic "+b.n).slice(0,40), fl=lit?flameOf(b,m.base):{d:b.d,m:b.m};
+      W[m.id]=Object.assign({},b,{n:nm+(lit?" (flaming)":""),d:fl.d,m:fl.m+dm,dxb:dx,mag:1,base:m.base,note});
+      out.push({id:m.id,kind,n:nm,base:m.base,dx,dm,flame,lit,note});
+    } else {
+      const T=kind==="armor"?ARMOR:SHIELDS, b=T[m.base]; if(!b||b.hid||m.base==="none"||/^mg_/.test(m.base)) continue;
+      const stops=num(m.stops,1,5)||1, nm=String(m.n||"Magic "+b.n).slice(0,40);
+      T[m.id]=Object.assign({},b,{n:nm,stops:b.stops+stops,mag:1,base:m.base,note});
+      out.push({id:m.id,kind,n:nm,base:m.base,stops,note}); }
+  }
   return out; }
 return {EDITION:"Melee Third Edition (2018)",RACES,ARMOR,W,SHIELDS,RATE,CAMP_SHIELDS,addCampaign,addMagic,cleanCreature,addCreatureGear};
 })();

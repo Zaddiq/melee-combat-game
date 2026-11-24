@@ -83,7 +83,7 @@ const ri=n=>Math.floor(Math.random()*n), pick=a=>a[ri(a.length)];
 
 /* ---- fighter from builder data ---- */
 function fromBuilder(o){
-  if(o&&o.camp&&typeof o.camp==="object") RULES.addMagic(o.camp.magic);   /* the hero's magic weapons join the weapon table first */
+  if(o&&o.camp&&typeof o.camp==="object") for(const it of RULES.addMagic(o.camp.magic)) if(it.kind==="armor"){ const v=RULES.ARMOR[it.id]; ARMOR[it.id]={n:v.n,stops:v.stops,ma:v.ma,pen:v.pen.m,base:it.base}; }   /* the hero's magic items join the tables first (armor needs this page's own copy of the table) */
   const R=RACES[o&&o.race]||RACES.human, ok=k=>k&&k!=="none";
   const f={name:String(o.name||"Unnamed").slice(0,60),race:RACES[o.race]?o.race:"human",cls:o.cls==="wizard"?"wizard":"fighter",
     st:Math.max(R.st,+o.st||R.st),dx:Math.max(R.dx,+o.dx||R.dx),iq:+o.iq||R.iq,
@@ -924,7 +924,7 @@ const SP={
 const RMV=["avert","fly","blur","inv","sight","stone","iron","slow","stop","spd","clum","aid","sleep","frozen"];
 const rmCount=u=>RMV.filter(k=>u[k]).length;
 function brkItem(o){ const w=[o.right,o.left].find(k=>isW(k)&&!W[k].hid&&!SHIELDS[k]&&k!==o.brkW); if(w) return w; const sh=[o.left,o.right].find(k=>SHIELDS[k]); return sh||null; }
-const ironU=u=>u.p.cls==="wizard"&&!u.p.silver&&(["chain","halfplate","plate"].includes(u.p.armor)||[u.right,u.left].some(k=>isW(k)&&k!=="staff"));
+const ironU=u=>u.p.cls==="wizard"&&!u.p.silver&&(["chain","halfplate","plate"].includes(ARMOR[u.p.armor].base||u.p.armor)||[u.right,u.left].some(k=>isW(k)&&k!=="staff"));
 function castBase(u){ return adjDXu(u,"single",null)-(ironU(u)?4:0); }
 function castList(u,o){
   const L=[]; if(u.p.cls!=="wizard"||u.down||u.hp<=0) return L;

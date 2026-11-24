@@ -556,3 +556,10 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - RULES.cleanCreature(c) checks and normalizes a monster; RULES.addCreatureGear() adds the natural weapons and hides to W/ARMOR (the Colosseum already did this itself; the bestiary page needs it too).
 - Colosseum: loadBest() registers each as CRE["b_<id>"]; the computer-side menu lists them under "My bestiary"; they are not offered as summon forms. Up to 3 at once (creMax). Module monsters are kept in the owner's browser only, never in the repo.
 - Not enforced: special attacks, immunities, size. Dragons/multi-hex monsters are not bestiary entries. Test: tests/bestiary_test.py.
+
+## Magic items list (branch magic-page, campaign/ only)
+- Rules basis: 2018 Melee/Wizard, plus Advanced Melee/Advanced Wizard 1980 where 2018 is silent (owner's decision, Nov 24). Source for items: Advanced Wizard p. 25-26 (Weapon/Armor Enchantment, Rule of Five) and p. 34 (Flaming Weapons); Advanced Melee p. 23 (fine weapons).
+- campaign/magic.html: item list kept in localStorage `magic-items-v1` (stored as "campaign:magic-items-v1"). Kinds: weapon (base weapon, DX 0-5 + damage 0-5, total at most 5, can flame, note), armor and shield (1-5 extra hits stopped), notes for everything else.
+- RULES.addMagic(list) (campaign/rules.js) registers heroes' items as mg_N copies of the base weapon/armor/shield in W/ARMOR/SHIELDS (dxb = DX bonus, lit = flaming: +2 if 1 die or less, +3 if up to 2 dice, +1 die above 2; bow +1, crossbow +2). Clamps to the limits.
+- Campaign builder: "Magic items" card section picks from the list ("Add to this hero"); each hero has its own copy (camp.magic), a "Flame on" tick per flaming weapon, Remove. DX bonus is added to adjusted DX while readied (builder and Colosseum). Magic armor counts its base's iron for the wizard silver rule.
+- Not enforced: Rule of Five (5 items at once), command words and other powers (notes), enchanted bows plus arrows combining, price/creation costs. Tests: tests/magic_page_test.py, tests/campaign_fork_test.py (M-tests).

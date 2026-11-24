@@ -69,8 +69,8 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
  <h3>Shop</h3><div id="shop"></div>
  <h3>What you own</h3><div id="owned" class="mut">Nothing yet.</div>
  <h3>Magic items</h3>
- <p class="mut">A magic weapon found in an adventure. Its DX bonus is added to your adjusted DX whenever it is readied (it counts for every DX roll in a fight). The damage bonus adds to its hits. Put anything else it does (a command word, flaming) in the note: the fight does not enforce it, you do at the table. It is carried on the character to the phones.</p>
- <div id="magic"></div><button id="magicAdd">Add a magic weapon</button>
+ <p class="mut">Weapons, armor and shields with enchantments, taken from your <a href="magic.html">Magic items list</a> (make or change them there). A weapon's DX bonus is added to your adjusted DX whenever it is readied. A weapon that can flame does more damage while "Flame on" is ticked. Armor and shields stop extra hits. Other powers are in the item's note: the fight does not enforce them.</p>
+ <div id="magic"></div><div class="row"><select id="magicPick"></select><button id="magicAdd">Add to this hero</button></div>
 </div>
 
 <div class="card"><h2>5. Talents and languages (change these rarely)</h2>
@@ -130,7 +130,7 @@ function fromBuilderJson(o){
   /* what the character already carries is owned (a character from the regular builder arrives with its gear, and the money is its to spend) */
   for(const k of [c.armor,c.a,c.b,c.s1,c.d1,c.d2,c.s2]) if(k&&k!=="none"&&k!=="staff"&&!(cp&&cp.inv)) c.inv[k]=(c.inv[k]||0)+1;
   return c; }
-function syncMagic(list){ for(const k of Object.keys(W)) if(/^mg_/.test(k)&&!list.some(m=>m.id===k)) delete W[k]; return list; }
+function syncMagic(list){ for(const T of [W,ARMOR,SHIELDS]) for(const k of Object.keys(T)) if(/^mg_/.test(k)&&!list.some(m=>m.id===k)) delete T[k]; return list; }
 const spellsOf=c=>Array.isArray(c.base.spells)?c.base.spells:[];
 const hasStaff=c=>c.cls==="wizard"&&spellsOf(c).includes("Staff");
 
@@ -162,7 +162,7 @@ const priceOf=k=>{ if(/^mg_/.test(k)) return 0; const p=D.prices[k]; if(p==null)
 const own=k=>C.inv[k]||0;
 const spent=()=>Object.entries(C.inv).reduce((t,[k,n])=>t+(priceOf(k)||0)*n,0);
 const left=()=>C.purse-spent();
-function talentFor(k){ if(W[k]&&W[k].mag) k=W[k].base; const id=D.talentFor&&D.talentFor[k]; return id?T(id):null; }
+function talentFor(k){ const tt=W[k]||ARMOR[k]||SHIELDS[k]; if(tt&&tt.mag) k=tt.base; const id=D.talentFor&&D.talentFor[k]; return id?T(id):null; }
 
 function fightList(slot){   /* what can go in a slot: owned things that fit it */
   const ok=k=>{
@@ -229,19 +229,16 @@ function render(keepFocus){
   fillRoster();
   store.set(CKEY,JSON.stringify(exportChar(true)));
 }
-let MSIG="";
+function catalog(){ try{ const o=JSON.parse(store.get("magic-items-v1")||"[]"); return Array.isArray(o)?o.filter(x=>x&&typeof x.id==="string"):[]; }catch(e){ return []; } }
+const magicText=m=>m.kind==="weapon"?`${W[m.base]?W[m.base].n:m.base}, DX +${m.dx}, damage +${m.dm}`:`${(m.kind==="armor"?ARMOR:SHIELDS)[m.base]?(m.kind==="armor"?ARMOR:SHIELDS)[m.base].n:m.base}, stops ${m.stops} more`;
 function renderMagic(){
-  const sig=C.magic.map(m=>m.id).join(",")+"|"+(document.activeElement&&$("magic").contains(document.activeElement)?"f":"");
-  const wk=Object.keys(RULES.W).filter(k=>isWeap(k)&&!W[k].miss&&!W[k].hid&&k!=="mg"&&!/^mg_/.test(k));
-  if(MSIG.split("|")[0]!==C.magic.map(m=>m.id).join(",")||!$("magic").children.length&&C.magic.length){
-    $("magic").innerHTML=C.magic.map(m=>`<div class="row" data-m="${m.id}"><label>Name <input data-f="n" value="${esc(m.n)}" maxlength="40" style="width:11em"></label><label>Weapon <select data-f="base">${wk.map(k=>`<option value="${k}"${k===m.base?" selected":""}>${esc(W[k].n)}</option>`).join("")}</select></label><label>DX <input type="number" data-f="dx" value="${m.dx}" min="-3" max="6" style="width:4em"></label><label>Damage <input type="number" data-f="dm" value="${m.dm}" min="-3" max="6" style="width:4em"></label><label>Note <input data-f="note" value="${esc(m.note)}" maxlength="300" style="width:16em"></label><button data-mdel="${m.id}">Remove</button></div>`).join("");
-  }
-  MSIG=sig; $("magicAdd").disabled=C.magic.length>=10; }
-$("magic").onchange=e=>{ const r=e.target.closest("[data-m]"); if(!r||!e.target.dataset.f) return; const m=C.magic.find(x=>x.id===r.dataset.m); if(!m) return; const f=e.target.dataset.f;
-  m[f]=(f==="dx"||f==="dm")?Math.max(-3,Math.min(6,Math.round(+e.target.value)||0)):e.target.value;
-  RULES.addMagic(C.magic); syncMagic(C.magic); render(); };
-$("magic").onclick=e=>{ const id=e.target.dataset&&e.target.dataset.mdel; if(!id) return; C.magic=C.magic.filter(m=>m.id!==id); delete C.inv[id]; for(const sl of ["a","b","s1","s2","d1","d2"]) if(C[sl]===id) C[sl]="none"; syncMagic(C.magic); MSIG="x"; $("magic").innerHTML=""; render(); };
-$("magicAdd").onclick=()=>{ let i=1; while(C.magic.some(m=>m.id==="mg_"+i)) i++; if(i>10) return; const m={id:"mg_"+i,n:"Magic broadsword",base:"broad",dx:1,dm:0,note:""}; C.magic.push(m); C.inv[m.id]=1; RULES.addMagic(C.magic); render(); };
+  $("magic").innerHTML=C.magic.length?C.magic.map(m=>`<div class="row" data-m="${m.id}"><b>${esc(m.n)}</b><span class="mut">${esc(magicText(m))}${m.note?" · "+esc(m.note):""}</span>${m.flame?`<label><input type="checkbox" data-lit${m.lit?" checked":""}> Flame on</label>`:""}<button data-mdel="${m.id}">Remove</button></div>`).join(""):'<div class="mut">None.</div>';
+  const cat=catalog(); $("magicPick").innerHTML=cat.length?cat.map(x=>`<option value="${esc(x.id)}">${esc(x.n||"item")}</option>`).join(""):'<option value="">(the list is empty)</option>';
+  $("magicAdd").disabled=!cat.length||C.magic.length>=20; }
+$("magic").onchange=e=>{ const r=e.target.closest("[data-m]"); if(!r||e.target.dataset.lit===undefined) return; const m=C.magic.find(x=>x.id===r.dataset.m); if(!m) return; m.lit=e.target.checked?1:0; RULES.addMagic(C.magic); render(); };
+$("magic").onclick=e=>{ const id=e.target.dataset&&e.target.dataset.mdel; if(!id) return; C.magic=C.magic.filter(m=>m.id!==id); delete C.inv[id]; for(const sl of ["a","b","s1","s2","d1","d2"]) if(C[sl]===id) C[sl]="none"; if(C.armor===id) C.armor="none"; syncMagic(C.magic); render(); };
+$("magicAdd").onclick=()=>{ const x=catalog().find(y=>y.id===$("magicPick").value); if(!x||C.magic.length>=20) return; let i=1; while(C.magic.some(m=>m.id==="mg_"+i)) i++;
+  const got=RULES.addMagic([Object.assign({},x,{id:"mg_"+i,lit:0})]); if(!got.length){ $("magicPick").focus(); return; } C.magic.push(got[0]); C.inv[got[0].id]=1; render(); };
 function fixLoadout(){   /* nothing may be in a slot unless owned, fitting, and not over its count or the character's ST */
   if(!ARMOR[C.armor]||(C.armor!=="none"&&own(C.armor)<1)) C.armor="none";
   const ORDER=["a","b","s1","s2","d1","d2"];
@@ -255,7 +252,7 @@ function adjDX(){
   let a=C.dx-ARMOR[C.armor].pen.m; const hands=[hasStaff(C)?"staff":C.a,C.b].filter(k=>k!=="none");
   for(const k of hands) if(isShield(k)) a-=SHIELDS[k].pen;
   for(const k of hands) if(W[k]&&W[k].dxb) a+=W[k].dxb;
-  if(C.cls==="wizard"&&!C.silver&&(["chain","halfplate","plate"].includes(C.armor)||hands.some(k=>k!=="staff"&&isWeap(k)))) a-=4;   /* iron spoils a wizard's magic */
+  if(C.cls==="wizard"&&!C.silver&&(["chain","halfplate","plate"].includes((ARMOR[C.armor]||{}).base||C.armor)||hands.some(k=>k!=="staff"&&isWeap(k)))) a-=4;   /* iron spoils a wizard's magic */
   return a; }
 function fightNotes(){
   const n=[]; n.push("Adjusted DX in this gear: "+adjDX()+".");

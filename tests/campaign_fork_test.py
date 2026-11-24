@@ -12,7 +12,7 @@ def ok(n, c): R.append((n, bool(c))); print(("PASS " if c else "FAIL ") + n)
 HERO = {"name": "Sam", "cls": "fighter", "race": "human", "total": 36, "st": 14, "dx": 12, "iq": 10, "armor": "none", "a": "mg_1", "b": "none", "s1": "none", "d1": "none", "d2": "none", "spells": [],
         "camp": {"v": 1, "langs": 0, "tal": [], "purse": 0, "inv": {"mg_1": 1}, "s2": "none", "d2": "none", "fx": {"pen": [], "ms": 0, "th": 0},
                  "magic": [{"id": "mg_1", "n": "Dawnbringer", "base": "broad", "dx": 1, "dm": 1, "note": "flames on command"},
-                           {"id": "mg_2", "n": "Bad", "base": "hbow", "dx": 1, "dm": 0}, {"id": "x", "n": "Bad2", "base": "broad"}, {"id": "mg_3", "n": "Bad3", "base": "mg_1"}]}}
+                           {"id": "mg_2", "n": "Bad", "base": "bite", "dx": 1, "dm": 0}, {"id": "x", "n": "Bad2", "base": "broad"}, {"id": "mg_3", "n": "Bad3", "base": "mg_1"}]}}
 with sync_playwright() as p:
     br = p.chromium.launch(); pg = br.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(BASE + "campaign/colosseum.html"); pg.evaluate("localStorage.clear()"); pg.reload()
@@ -24,12 +24,13 @@ with sync_playwright() as p:
     pg.goto(BASE + "campaign/campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
     pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     pg.evaluate("(h)=>{ localStorage.setItem('campaign-char-v1',JSON.stringify(h)); }", HERO); pg.reload()
-    ok("M4 the builder shows the sword with its numbers", pg.evaluate("()=>document.querySelectorAll('#magic [data-m]').length")==1 and pg.input_value("#magic [data-f=n]") == "Dawnbringer")
+    ok("M4 the builder shows the sword with its numbers", pg.evaluate("()=>document.querySelectorAll('#magic [data-m]').length")==1 and "Dawnbringer" in pg.inner_text("#magic"))
     ex = pg.evaluate("()=>exportChar()")
     ok("M5 export carries only the good item", [m["id"] for m in ex["camp"]["magic"]] == ["mg_1"] and ex["a"] == "mg_1")
     ok("M6 the builder's adjusted DX counts the readied sword", pg.evaluate("()=>adjDX()") == 13)
-    pg.click("#magicAdd")
-    ok("M7 adding makes a second item with a new id", pg.evaluate("()=>C.magic.map(m=>m.id)") == ["mg_1", "mg_2"])
+    pg.evaluate("()=>localStorage.setItem('magic-items-v1',JSON.stringify([{id:'cat1',kind:'shield',n:'Warding Shield',base:'small',stops:2}]))"); pg.reload()
+    pg.select_option("#magicPick", "cat1"); pg.click("#magicAdd")
+    ok("M7 adding makes a second item with a new id", pg.evaluate("()=>C.magic.map(m=>m.id)") == ["mg_1", "mg_2"] and pg.evaluate("()=>SHIELDS.mg_2.stops") == 3)
     pg.click("[data-mdel=mg_1]")
     ok("M8 removing clears the slot and the gear", pg.evaluate("()=>[C.a,C.inv.mg_1,C.magic.length]") == ["none", None, 1])
     ok("M9 no page errors", not errs)
