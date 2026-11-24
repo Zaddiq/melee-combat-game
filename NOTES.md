@@ -545,3 +545,9 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - Picks carry `att` (ST/DX/IQ) and `al` (the friend's index in the unit list) on the tablet and on phones (online-host.js).
 - Test: tests/aid_test.py (11). All suites pass.
 - Not done: the Arena, duel and other pages keep their old Aid; fighters' ST bar on the phone does not show the lent ST separately; Aid on a friend who is not adjacent is not allowed (thrown spells touch the next hex).
+
+## Magic items (branch magic-items)
+- A campaign hero can carry named magic weapons: `camp.magic=[{id:"mg_N",n,base,dx,dm,note}]` (max 10). `RULES.addMagic(list)` validates and registers each as a copy of its base weapon in W (damage + dm, `dxb`=dx).
+- The DX bonus is simply added to adjusted DX while the item is readied (adjDXu in colosseum.html, adjDX in colosseum and campaign builder), so it affects every DX roll in a fight.
+- Campaign builder: "Magic items" in card 4 (name, base weapon, DX, damage, note). Items cost nothing and are not sold. Talent penalties follow the base weapon.
+- Not enforced: command words, flaming (+3), anything in the note. The regular builder does not know the custom ids. Test: tests/magic_items_test.py.

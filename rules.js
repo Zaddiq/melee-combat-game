@@ -59,5 +59,16 @@ const CAMP_SHIELDS = {
 const RATE = {sbow:15,hbow:16,lbow:18,lxbow:14,hxbow:14};
 
 function addCampaign(){ Object.assign(SHIELDS,CAMP_SHIELDS); return SHIELDS; }
-return {EDITION:"Melee Third Edition (2018)",RACES,ARMOR,W,SHIELDS,RATE,CAMP_SHIELDS,addCampaign};
+/* Magic weapons a hero carries: {id:"mg_1",n,base,dx,dm,note}. Each becomes a copy of its base weapon with a new name, a damage bonus and a DX bonus (dxb) that
+   counts whenever it is readied. Anything unchecked is dropped; returns the list that was accepted. */
+function addMagic(list){
+  const out=[]; if(!Array.isArray(list)) return out;
+  for(const m of list.slice(0,10)){
+    if(!m||typeof m!=="object"||!/^mg_\d{1,2}$/.test(m.id)||out.some(x=>x.id===m.id)) continue;
+    const b=W[m.base]; if(!b||b.miss||b.hid||m.base==="staff"||m.base==="mg"||/^mg_/.test(m.base)) continue;
+    const num=(v,lo,hi)=>{ v=Math.round(+v); return v>=lo&&v<=hi?v:0; };
+    const it={id:m.id,n:String(m.n||"Magic "+b.n).slice(0,40),base:m.base,dx:num(m.dx,-3,6),dm:num(m.dm,-3,6),note:String(m.note||"").slice(0,300)};
+    W[it.id]=Object.assign({},b,{n:it.n,m:b.m+it.dm,dxb:it.dx,mag:1,note:it.note}); out.push(it); }
+  return out; }
+return {EDITION:"Melee Third Edition (2018)",RACES,ARMOR,W,SHIELDS,RATE,CAMP_SHIELDS,addCampaign,addMagic};
 })();

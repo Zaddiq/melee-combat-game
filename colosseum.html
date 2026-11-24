@@ -76,6 +76,7 @@ const ri=n=>Math.floor(Math.random()*n), pick=a=>a[ri(a.length)];
 
 /* ---- fighter from builder data ---- */
 function fromBuilder(o){
+  if(o&&o.camp&&typeof o.camp==="object") RULES.addMagic(o.camp.magic);   /* the hero's magic weapons join the weapon table first */
   const R=RACES[o&&o.race]||RACES.human, ok=k=>k&&k!=="none";
   const f={name:String(o.name||"Unnamed").slice(0,60),race:RACES[o.race]?o.race:"human",cls:o.cls==="wizard"?"wizard":"fighter",
     st:Math.max(R.st,+o.st||R.st),dx:Math.max(R.dx,+o.dx||R.dx),iq:+o.iq||R.iq,
@@ -104,6 +105,7 @@ function adjDX(f){ /* starting gear, old Melee/Wizard penalties as the builder c
   const hands=[f.right,f.left].filter(k=>k!=="none");
   const sh=hands.filter(k=>SHIELDS[k]); sh.forEach(k=>a-=SHIELDS[k].pen);
   const wp=hands.filter(k=>W[k]);
+  for(const k of wp) if(W[k].dxb) a+=W[k].dxb;
   if(f.cls==="wizard"){
     if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4;
   }
@@ -694,6 +696,7 @@ function adjDXu(u,mode,tgt0){
   if(SHIELDS[u.left]) a-=SHIELDS[u.left].pen;
   if(mode==="mg") a-=4;   /* separate main-gauche attack */
   const wp=[u.right,u.left].filter(isW);
+  for(const k of wp) if(W[k].dxb) a+=W[k].dxb;   /* a magic weapon's DX bonus counts while it is readied */
   if(p.cls==="wizard"){ if(wp.some(k=>k!=="staff"&&k!=="dagger"&&k!=="mg")) a-=4 }
   if(u.wound2) a-=2;
   if(u.aid>0) a+=u.aidN; if(u.clum>0) a-=u.clumN; if(u.daz>0&&!(tgt&&(tgt.blur||tgt.inv))) a-=3; if(u.rope>0) a-=ropeNum(u)*(u.rope+1); if(u.fireT) a-=2; if(tgt&&shadowAt(tgt)&&!tgt.inv) a-=4; if(tgt&&shadowAt(u)) a-=6;   /* Dazzle -3, but not on top of Blur's -4 */
