@@ -36,6 +36,9 @@ svg{width:100%;height:auto;max-height:80vh}
  <details class="setup" id="setup" open><summary>The fighters</summary>
  <div class="card"><h2>Map</h2><div class="row"><select id="mapSel"><option value="melee">Melee map (two boards, 99 hexes)</option><option value="wizard">Wizard map (166 hexes, 21 megahexes)</option></select><span class="mut" id="mapNote"></span></div></div>
 
+ <details class="card" id="giveCard"><summary style="cursor:pointer;font-weight:600">Hand out a magic item (from this tablet's list)</summary>
+  <div class="mut" style="margin:8px 0 6px">The tablet keeps the whole <a href="magic.html">Magic items list</a>. Pick a player who came in from a phone with a campaign hero, pick an item (found or not), and it is sent to that phone and saved on that hero.</div>
+  <div class="row"><select id="gvWho" autocomplete="off"></select><select id="gvItem" autocomplete="off"></select><button id="gvGo">Give it</button></div><div id="gvMsg" class="mut"></div></details>
  <details class="card" id="encCard"><summary style="cursor:pointer;font-weight:600">Encounter (a room with monsters)</summary><div class="mut" style="margin:8px 0 6px">Pick it in the computer-side box under Players. The monsters, their gear and where they stand are plain text kept in this browser only; replace the sample with the monsters of your own module. Weapons and armor use the builder's names (broad, sbow, leather, small ...); a shaman is <code>"cls":"wizard"</code> with a short <code>spells</code> list (it casts Magic Fist and Clumsiness, and fights with its staff when its ST runs low).</div><div class="row"><label><input type="checkbox" id="campOn"> Campaign: fighters keep their ST from one fight to the next</label><button id="campRest">Rest (everyone to full ST)</button></div><div class="mut" id="campNote"></div><div id="modBar" class="row" style="display:none"><b id="modName"></b><button id="modPrev">◀ Previous</button><button id="modNext">Next ▶</button><button id="modDrop">Stop using the module</button></div><div class="mut">A whole module: paste <code>{"module":"Name","encounters":[ ...encounters... ]}</code> and press Save. Next and Previous then step through the rooms in order.</div><textarea id="encJson" rows="16" spellcheck="false"></textarea><div class="row"><button id="encApply">Save this encounter</button><button id="encReset">Back to the sample</button><span class="mut" id="encMsg"></span></div></details>
 
  <div class="card"><h2>Players</h2><div class="row"><select id="npSel" autocomplete="off"><option value="1">1 player (against the computer)</option><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><select id="modeSel" autocomplete="off"><option value="ffa">Free for all</option><option value="teams">Teams (two sides)</option></select><select id="creSel" autocomplete="off" title="A side run by the computer"></select><select id="creN" autocomplete="off" title="How many"></select></div><div class="mut" id="npNote"></div></div>
@@ -1483,5 +1486,21 @@ function initMap(){
 }
 initMap(); syncMap();
 ui(); drawMap();
+/* ---- hand out a magic item: the tablet's list -> a phone player's hero (sent back the same way experience is) ---- */
+function gvList(){ try{ const o=JSON.parse(localStorage.getItem("magic-items-v1")||"[]"); return Array.isArray(o)?o.filter(x=>x&&typeof x.id==="string"&&x.n):[]; }catch(e){ return []; } }
+function gvFill(){ const w=[]; for(let i=0;i<NP;i++){ const f=slot[i]; if(f&&f.phone) w.push(`<option value="${i}">Player ${i+1}: ${esc(f.name)}</option>`); }
+  $("gvWho").innerHTML=w.length?w.join(""):'<option value="">(no phone players seated)</option>'; const L=gvList();
+  $("gvItem").innerHTML=L.length?L.map(x=>`<option value="${esc(x.id)}">${esc(x.n)}${x.found?"":" (not found yet)"}</option>`).join(""):'<option value="">(the list is empty)</option>'; }
+function giveItem(i,itemId){
+  const f=slot[i], it=gvList().find(x=>x.id===itemId); if(!f||!f.phone) return "That seat is not a phone player.";
+  if(!it) return "Pick an item first."; const src=f.phone.src; if(!src||!src.camp||typeof src.camp!=="object") return f.name+" is not a campaign hero (no campaign builder data), so items cannot be added.";
+  const cur=Array.isArray(src.camp.magic)?src.camp.magic:[]; if(cur.some(m=>m.n===it.n&&m.base===it.base&&m.dx===it.dx&&m.dm===it.dm&&m.stops===it.stops)) return f.name+" already has "+it.n+".";
+  let n=1; while(cur.some(m=>m.id==="mg_"+n)) n++; const got=RULES.addMagic([Object.assign({},it,{id:"mg_"+n,lit:0})]); if(!got.length) return "That item cannot be made.";
+  if(!window.Online||!Online.isOn||!Online.isOn()) return "This tablet is not hosting an online table, so the phone cannot be reached.";
+  const ns=JSON.parse(JSON.stringify(src)); ns.camp.magic=[...cur,got[0]]; ns.camp.inv=Object.assign({},ns.camp.inv||{},{["mg_"+n]:1});
+  f.phone.src=ns; f.phone.rec=Object.assign({name:f.phone.name,st:f.st,dx:f.dx,iq:f.iq,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false},f.phone.rec||{});
+  Online.result(f); return "Sent "+it.n+" to "+f.name+"'s phone. It shows in their campaign builder gear once the phone saves it."; }
+$("gvGo").onclick=()=>{ $("gvMsg").textContent=giveItem(+$("gvWho").value,$("gvItem").value); };
+$("giveCard").addEventListener("toggle",gvFill);
 </script>
 <script src="online-host.js"></script></body></html>

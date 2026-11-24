@@ -185,6 +185,7 @@ const Online=window.Online={ override:null, ring:0, lastKey:{},
     return pq.filter(u=>!ph.includes(u)).concat(ph); },
   redo(){ for(const k of Object.keys(sess)){ const x=activeSess(k); if(x&&x.step==='pick') sessOpts(x); } sessPushAll(); },   /* recompute every open pick session (used by tests after moving figures by hand) */
   ready(u){ if(!code||!G||!u) return null; const i=G.players.indexOf(u), uid=i>=0&&uidOfPlayer(i), S=uid&&activeSess(uid); if(!S||S.step!=="done"||!allIn()) return null; return S.act; },
+  isOn(){ return !!code; },   /* is a table open? (the magic-item hand-out needs one) */
   result(f){ if(!code||!f.phone) return; Net.sendRes(code,f.phone.uid,{id:Date.now(),key:f.phone.key,rec:Object.assign({},f.phone.rec,{src:f.phone.src})}).catch(fail); },
   hook(c,t){
     if(!code) return;

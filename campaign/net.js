@@ -49,7 +49,7 @@ function memBackend(){
   const setIn=(t,ps,v)=>{ if(!ps.length) return v==null?{}:v; let o=t; for(let i=0;i<ps.length-1;i++){ if(o[ps[i]]==null||typeof o[ps[i]]!=="object") o[ps[i]]={}; o=o[ps[i]]; } if(v==null) delete o[ps[ps.length-1]]; else o[ps[ps.length-1]]=v; return t; };
   const clone=v=>v==null?null:JSON.parse(JSON.stringify(v));
   const fire=()=>{ const t=load(); for(const s of [...subs]){ const v=clone(getIn(t,s.ps)), j=JSON.stringify(v); if(j!==s.last){ s.last=j; s.cb(v); } } };
-  window.addEventListener("storage",e=>{ if(e.key===K) fire(); });
+  window.addEventListener("storage",e=>{ if(e.key===K||e.key==="campaign:"+K) fire(); });   /* (campaign pages keep a "campaign:" in front of every saved name, see ns.js) */
   window.addEventListener("pagehide",()=>{ for(const d of disc){ const t=load(); setIn(t,d.ps,d.v); save(t); } });
   return {
     kind:"mem", uid,
