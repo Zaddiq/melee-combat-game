@@ -1,4 +1,4 @@
-"""The weapons the 2018 table has that the campaign pages lacked (bastard sword and others, numbers from the 1980 table).
+"""The weapons the 2018 table has that the campaign pages lacked (bastard sword and others, numbers from the 2018 table).
 Run: python3 tests/more_weapons_test.py  (needs Playwright)."""
 import http.server, socketserver, threading, os, functools, json
 from playwright.sync_api import sync_playwright
@@ -16,7 +16,7 @@ with sync_playwright() as p:
     pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     pg.evaluate("(h)=>localStorage.setItem('campaign-char-v1',JSON.stringify(h))", HERO); pg.reload()
     shop = pg.inner_text("#shop")
-    ok("W1 the shop sells the bastard sword and the other added weapons at the 1980 prices", all(x in shop for x in ["Bastard sword (1 hand)", "Great sword", "Hatchet", "Trident", "Pike", "Quarterstaff"]) and pg.inner_text("#pr_bastard") == "$100")
+    ok("W1 the shop sells the bastard sword and the other added weapons at the 2018 prices", all(x in shop for x in ["Bastard sword (1 hand)", "Great sword", "Hatchet", "Trident", "Pike", "War ax"]) and pg.inner_text("#pr_bastard") == "$100")
     ok("W2 the 2-hands bastard sword is not sold separately", "2 hands" not in shop)
     pg.click("#buy_bastard")
     ok("W3 after buying the one sword it can be readied one-handed or two-handed", pg.evaluate("()=>[fightList('a').includes('bastard'),fightList('a').includes('bastard2'),own('bastard2'),spent()]") == [True, True, 1, 100])
