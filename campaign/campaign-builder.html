@@ -158,11 +158,12 @@ function cleanTalents(){   /* drop what the character can no longer have (unknow
 const itemName=k=>k==="none"?"nothing":W[k]?W[k].n:ARMOR[k]?ARMOR[k].n:SHIELDS[k]?SHIELDS[k].n:(D&&(D.misc||[]).find(m=>m.id===k)||{n:k}).n;
 const isArmor=k=>!!ARMOR[k]&&k!=="none", isShield=k=>!!SHIELDS[k], isWeap=k=>!!W[k]&&k!=="staff";
 const hasIron=k=>isWeap(k)||["chain","halfplate","plate"].includes(k);   /* the same iron the fight engine and the wizard DX rule count */
-const priceOf=k=>{ if(/^mg_/.test(k)) return 0; const p=D.prices[k]; if(p==null){ const m=(D.misc||[]).find(x=>x.id===k); return m?m.p:null; } return p*(C.silver&&hasIron(k)?10:1); };
-const own=k=>C.inv[k]||0;
+const basePrice=k=>D.prices[k]!=null?D.prices[k]:(RULES.EXTRA.price[k]!=null?RULES.EXTRA.price[k]:null);   /* the rules data first; the 1980 price for the added weapons when it has none */
+const priceOf=k=>{ if(/^mg_/.test(k)||k==="bastard2") return 0; const p=basePrice(k); if(p==null){ const m=(D.misc||[]).find(x=>x.id===k); return m?m.p:null; } return p*(C.silver&&hasIron(k)?10:1); };
+const own=k=>C.inv[k]||(k==="bastard2"?C.inv.bastard||0:0);   /* the bastard sword is one purchase, held in one hand or two */
 const spent=()=>Object.entries(C.inv).reduce((t,[k,n])=>t+(priceOf(k)||0)*n,0);
 const left=()=>C.purse-spent();
-function talentFor(k){ const tt=W[k]||ARMOR[k]||SHIELDS[k]; if(tt&&tt.mag) k=tt.base; const id=D.talentFor&&D.talentFor[k]; return id?T(id):null; }
+function talentFor(k){ const tt=W[k]||ARMOR[k]||SHIELDS[k]; if(tt&&tt.mag) k=tt.base; let id=D.talentFor&&D.talentFor[k]; if(!id&&D.talentFor&&RULES.EXTRA.like[k]) id=D.talentFor[RULES.EXTRA.like[k]]; return id?T(id):null; }
 
 function fightList(slot){   /* what can go in a slot: owned things that fit it */
   const ok=k=>{
@@ -170,14 +171,14 @@ function fightList(slot){   /* what can go in a slot: owned things that fit it *
     if(slot==="b") return isShield(k)||(isWeap(k)&&!W[k].two);
     if(slot==="s1"||slot==="s2") return isShield(k)||isWeap(k);
     return k==="dagger"||k==="mg"; };
-  return Object.keys(C.inv).filter(k=>own(k)>0&&ok(k)); }
+  return [...Object.keys(C.inv),...(C.inv.bastard&&!C.inv.bastard2?["bastard2"]:[])].filter(k=>own(k)>0&&ok(k)); }
 function used(k,except){ return ["a","b","s1","s2","d1","d2"].filter(s=>s!==except&&C[s]===k).length; }
 
 
 /* The talent list and the shop are built once and then only updated in place. Rebuilding them on every change would replace the button under a finger
    (a number box loses focus, its change redraws the page, and the tap on Buy or a talent is lost). */
 let BUILT=null;
-const SHOPKEYS=()=>[["Weapons",Object.keys(W).filter(k=>isWeap(k)&&D.prices[k]!=null)],["Armor",Object.keys(ARMOR).filter(k=>isArmor(k)&&D.prices[k]!=null)],["Shields",Object.keys(SHIELDS).filter(k=>D.prices[k]!=null)],["Other",(D.misc||[]).map(m=>m.id)]];
+const SHOPKEYS=()=>[["Weapons",Object.keys(W).filter(k=>isWeap(k)&&k!=="bastard2"&&basePrice(k)!=null)],["Armor",Object.keys(ARMOR).filter(k=>isArmor(k)&&D.prices[k]!=null)],["Shields",Object.keys(SHIELDS).filter(k=>D.prices[k]!=null)],["Other",(D.misc||[]).map(m=>m.id)]];
 function buildStatic(){
   if(BUILT===D) return; BUILT=D;
   const levels=[...new Set(D.talents.map(t=>t.iq))].sort((a,b)=>a-b); let h="";

@@ -45,6 +45,17 @@ const W = {
   lbow:    {n:"Longbow",       d:1,m:2, st:11, two:1, miss:1, rate:"2 shots/turn at adjDX 18+", grp:"Missile weapons"},
   lxbow:   {n:"Light crossbow",d:2,m:0, st:12, two:1, miss:1, rate:"1 shot every other turn; every turn at adjDX 14+", grp:"Missile weapons"},
   hxbow:   {n:"Heavy crossbow",d:3,m:0, st:15, two:1, miss:1, rate:"1 shot every 3rd turn; every other turn at adjDX 14+", grp:"Missile weapons"},
+  /* weapons the 2018 table has that this page lacked: numbers from the 1980 Advanced Melee weapons table (check them against the 2018 book). adv marks them. */
+  bastard: {n:"Bastard sword (1 hand)", d:2,m:1, st:13, grp:"Melee weapons", adv:1},
+  bastard2:{n:"Bastard sword (2 hands)",d:3,m:-2,st:13, two:1, grp:"Melee weapons", adv:1, note:"The same sword as the 1-hand one, held in both hands."},
+  greatsw: {n:"Great sword",   d:3,m:1, st:16, two:1, grp:"Melee weapons", adv:1},
+  hatchet: {n:"Hatchet",       d:1,m:0, st:9,  th:1, grp:"Melee weapons", adv:1},
+  pick:    {n:"Military pick", d:2,m:0, st:12, grp:"Melee weapons", adv:1},
+  greathm: {n:"Great hammer",  d:2,m:2, st:14, two:1, grp:"Melee weapons", adv:1},
+  qstaff:  {n:"Quarterstaff",  d:1,m:2, st:11, two:1, grp:"Melee weapons", adv:1},
+  trident: {n:"Trident",       d:1,m:0, st:10, th:1, grp:"Pole weapons", adv:1, note:"Too short for a 2-hex jab."},
+  naginata:{n:"Naginata",      d:1,m:2, st:10, two:1, pole:1, grp:"Pole weapons", adv:1},
+  pike:    {n:"Pike",          d:2,m:1, st:12, two:1, pole:1, grp:"Pole weapons", adv:1},
   mg:      {n:"Main-gauche",   d:1,m:-1,st:0,  left:1, grp:"x", note:"Left hand. Parries 1 hit per attack from the front, from one-handed non-missile weapons only. No DX penalty for parrying. A separate dagger attack on an attack turn is at −4 DX. 1d−1 in hand-to-hand."},
 };
 const SHIELDS = {
@@ -58,6 +69,9 @@ const CAMP_SHIELDS = {
 };
 const RATE = {sbow:15,hbow:16,lbow:18,lxbow:14,hxbow:14};
 
+/* for the weapons marked adv: a price (1980 table; used when the rules data has none) and the weapon whose talent they use (when the rules data has no talent for them) */
+const EXTRA={price:{bastard:100,bastard2:100,greatsw:150,hatchet:15,pick:60,greathm:110,qstaff:20,trident:30,naginata:65,pike:50},
+  like:{bastard:"broad",bastard2:"broad",greatsw:"twohsw",hatchet:"smallax",pick:"mace",greathm:"hammer",qstaff:"spear",trident:"spear",naginata:"halberd",pike:"halberd"}};
 function addCampaign(){ Object.assign(SHIELDS,CAMP_SHIELDS); return SHIELDS; }
 /* natural weapons and hides for creatures (Wizard 2018 p. 15-16), kept out of the fighter menus with hid */
 function addCreatureGear(){
@@ -98,5 +112,5 @@ function addMagic(list){
       out.push({id:m.id,kind,n:nm,base:m.base,stops,note}); }
   }
   return out; }
-return {EDITION:"Melee Third Edition (2018)",RACES,ARMOR,W,SHIELDS,RATE,CAMP_SHIELDS,addCampaign,addMagic,cleanCreature,addCreatureGear};
+return {EDITION:"Melee Third Edition (2018)",RACES,ARMOR,W,SHIELDS,RATE,CAMP_SHIELDS,EXTRA,addCampaign,addMagic,cleanCreature,addCreatureGear};
 })();
