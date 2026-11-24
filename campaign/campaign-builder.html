@@ -178,7 +178,7 @@ function used(k,except){ return ["a","b","s1","s2","d1","d2"].filter(s=>s!==exce
 /* The talent list and the shop are built once and then only updated in place. Rebuilding them on every change would replace the button under a finger
    (a number box loses focus, its change redraws the page, and the tap on Buy or a talent is lost). */
 let BUILT=null;
-const SHOPKEYS=()=>[["Weapons",Object.keys(W).filter(k=>isWeap(k)&&k!=="bastard2"&&basePrice(k)!=null)],["Armor",Object.keys(ARMOR).filter(k=>isArmor(k)&&D.prices[k]!=null)],["Shields",Object.keys(SHIELDS).filter(k=>D.prices[k]!=null)],["Other",(D.misc||[]).map(m=>m.id)]];
+const SHOPKEYS=()=>[["Weapons",Object.keys(W).filter(k=>isWeap(k)&&k!=="bastard2"&&basePrice(k)!=null)],["Armor",Object.keys(ARMOR).filter(k=>isArmor(k)&&D.prices[k]!=null)],["Shields",Object.keys(SHIELDS).filter(k=>basePrice(k)!=null)],["Other",(D.misc||[]).map(m=>m.id)]];
 function buildStatic(){
   if(BUILT===D) return; BUILT=D;
   const levels=[...new Set(D.talents.map(t=>t.iq))].sort((a,b)=>a-b); let h="";

@@ -16,7 +16,7 @@ with sync_playwright() as p:
     pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     pg.evaluate("(h)=>localStorage.setItem('campaign-char-v1',JSON.stringify(h))", HERO); pg.reload()
     shop = pg.inner_text("#shop")
-    ok("W1 the shop sells the bastard sword and the other added weapons at the 2018 prices", all(x in shop for x in ["Bastard sword (1 hand)", "Great sword", "Hatchet", "Trident", "Pike", "War ax"]) and pg.inner_text("#pr_bastard") == "$100")
+    ok("W1 the shop sells the bastard sword and the other added weapons at the 2018 prices", all(x in shop for x in ["Bastard sword (1 hand)", "Great sword", "Hatchet", "Trident", "Pike", "War ax", "Quarterstaff", "Spike shield", "Tower shield"]) and pg.inner_text("#pr_bastard") == "$100")
     ok("W2 the 2-hands bastard sword is not sold separately", "2 hands" not in shop)
     pg.click("#buy_bastard")
     ok("W3 after buying the one sword it can be readied one-handed or two-handed", pg.evaluate("()=>[fightList('a').includes('bastard'),fightList('a').includes('bastard2'),own('bastard2'),spent()]") == [True, True, 1, 100])
