@@ -1,0 +1,88 @@
+<!doctype html><html lang="en"><head>
+<script src="ns.js"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blank character sheet</title>
+<style>
+:root{--ink:#1d1a16;--mut:#6b655b;--line:#555;--acc:#000;--paper:#fff;--bg:#e9e4d9}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1b19}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 Georgia,"Times New Roman",serif}
+.bar{max-width:8.5in;margin:0 auto;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-family:system-ui,sans-serif;color:#222}
+.bar a{color:#1d4e9e}.bar button,.bar label{font:inherit}.bar button{padding:8px 14px;border-radius:8px;border:1px solid #888;background:#fff;cursor:pointer}.bar button.pri{background:#1d4e9e;color:#fff;border-color:#1d4e9e}
+.page{width:8.5in;min-height:11in;margin:0 auto 24px;background:var(--paper);color:var(--ink);padding:.4in .45in;position:relative}
+@page{size:letter;margin:0}
+@media print{body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:0;height:11in;overflow:hidden;page-break-after:always}}
+h2{font:700 11pt Georgia,serif;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:0 0 4px;border-bottom:1.5px solid var(--acc);padding-bottom:2px}
+.head{display:grid;grid-template-columns:1fr 1.3in;gap:.2in;align-items:end;border-bottom:3px double var(--acc);padding-bottom:6px}
+.fld{border-bottom:1px solid var(--ink);min-height:.3in;display:flex;align-items:flex-end;font-size:9pt;color:var(--mut);padding-bottom:1px}
+.big{font-size:9pt;color:var(--mut)}
+.top{display:grid;grid-template-columns:1.15in 1fr 1.9in;gap:.16in;margin-top:.14in;align-items:start}
+.sc{display:grid;grid-template-rows:.78in .78in .78in .78in 1.1in;gap:.08in}
+.sc>div{border:2px solid var(--acc);border-radius:8px;padding:3px 6px;display:flex;flex-direction:column}
+.sc b{font:700 12pt Georgia,serif;letter-spacing:.1em;color:var(--acc)}
+.sc small{font-size:7pt;color:var(--mut);line-height:1.1}
+.sc .v{flex:1}
+.mid{display:grid;grid-template-rows:.78in .78in .78in .78in 1.1in;gap:.08in}
+.mid>div{border:1.5px solid var(--line);border-radius:8px;padding:3px 7px;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.mid .cap{font:600 8pt system-ui,sans-serif;color:var(--mut);letter-spacing:.05em}
+.mid .two{display:grid;grid-template-columns:1fr 1fr;gap:.1in;flex:1}
+.mid .two div{border-bottom:1px solid var(--ink);display:flex;align-items:flex-end;font-size:8pt;color:var(--mut)}
+.mid .one{flex:1;display:grid;grid-template-columns:.9in 1fr;gap:.1in;align-items:stretch}
+.mid .bx{border:1.5px solid var(--acc);border-radius:6px;margin:2px 0}
+.right .portrait{border:2px solid var(--acc);border-radius:6px;aspect-ratio:4/5;position:relative}
+.portrait span{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:8pt;font-style:italic;color:var(--mut)}
+.carry{border:1.5px solid var(--line);border-radius:8px;margin-top:.08in;padding:3px 7px;font-size:8pt;color:var(--mut)}
+.carry div{border-bottom:1px solid var(--ink);height:.27in;display:flex;align-items:flex-end}
+.cells{display:grid;grid-template-columns:repeat(20,1fr);gap:2px;flex:1}
+.cells i{border:1px solid var(--line);font:normal 6pt system-ui,sans-serif;color:var(--mut);display:flex;align-items:flex-end;justify-content:flex-end;padding:0 1px;border-radius:2px;min-height:.17in}
+.cells i.t{background:#eee}
+.note{font-size:7.5pt;color:var(--mut);margin-top:2px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:.2in;margin-top:.12in}
+table{width:100%;border-collapse:collapse;font-size:9pt}
+th{font:600 8pt system-ui,sans-serif;color:var(--mut);text-align:left;padding:1px 3px;letter-spacing:.05em}
+td{border-bottom:1px solid var(--line);height:.26in;padding:0 3px}
+td.n,th.n{width:.65in;text-align:center}
+.sp td{height:.225in}
+.lines div{height:.26in;border-bottom:1px solid var(--line)}
+body{--nh:1.05in}body.fighter{--nh:3.6in}body.fighter .wiz{display:none}
+</style></head><body class="wizard">
+<div class="bar"><a href="index.html">← Menu</a>
+<label><input type="radio" name="k" value="wizard" checked> Wizard sheet</label><label><input type="radio" name="k" value="fighter"> Fighter sheet</label>
+<button class="pri" id="pr">Print</button><span style="font-size:13px;color:#555">Prints one US letter page (set the printer to "actual size", no margins).</span></div>
+<div class="page">
+ <div class="head"><div><div class="fld" style="font-size:11pt">Name</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.15in"><div class="fld">Player</div><div class="fld">Race</div><div class="fld">Wizard or fighter</div></div></div><div class="fld" style="justify-content:flex-end">Date</div></div>
+ <div class="top">
+  <div class="sc">
+   <div><b>ST</b><small>strength</small><span class="v"></span></div>
+   <div><b>DX</b><small>dexterity</small><span class="v"></span></div>
+   <div><b>IQ</b><small>intelligence</small><span class="v"></span></div>
+   <div><b>MA</b><small>moves a turn</small><span class="v"></span></div>
+   <div><b>EP</b><small>experience points</small><span class="v"></span></div>
+  </div>
+  <div class="mid">
+   <div><span class="cap">CURRENT ST (hits you take and ST you spend come off the same number)</span><div class="one"><div class="bx"></div><div class="note" style="align-self:end">Subtract each hit and each ST you spend, and write the new number here.</div></div></div>
+   <div><span class="cap">ADJUSTED DX NOW (with what is in your hands and your armor)</span><div class="one"><div class="bx"></div><div class="note" style="align-self:end">Write a new number when you change what you hold or when something hits your DX.</div></div></div>
+   <div><span class="cap">ARMOR AND SHIELD</span><div class="two"><div>Armor: stops / DX penalty</div><div>Shield: stops / DX penalty</div></div></div>
+   <div><span class="cap">IN YOUR HANDS</span><div class="two"><div>Right hand</div><div>Left hand</div></div></div>
+   <div><span class="cap">EXPERIENCE POINTS EARNED</span><div class="one" style="grid-template-columns:2in 1fr"><div class="bx"></div><div class="note" style="align-self:end">At 100 EP trade them for one point of ST, DX or IQ.</div></div></div>
+  </div>
+  <div class="right"><div class="portrait"><span>Picture</span></div>
+   <div class="carry">Slung on your back<div></div>Sheathed at your side<div></div></div>
+   <div class="carry" style="height:1.1in">Silver and other money</div></div>
+ </div>
+ <div class="cols">
+  <div><h2>Weapons</h2><table><thead><tr><th>Weapon</th><th class="n">Damage</th><th class="n">Min ST</th></tr></thead><tbody id="gear"></tbody></table></div>
+  <div><h2>Equipment and loot</h2><div class="lines" data-n="6"></div></div>
+ </div>
+ <div class="wiz" style="margin-top:.12in"><h2>Spells <span style="font:italic 8pt Georgia;letter-spacing:0;text-transform:none;color:var(--mut)">(you may know as many as your IQ; add more in the notes)</span></h2><div class="cols" style="margin-top:2px"><table class="sp"><thead><tr><th class="n">IQ</th><th>Spell</th><th class="n">Cost</th></tr></thead><tbody class="spb"></tbody></table><table class="sp"><thead><tr><th class="n">IQ</th><th>Spell</th><th class="n">Cost</th></tr></thead><tbody class="spb"></tbody></table></div></div>
+ <div class="notes" style="margin-top:.12in"><h2>Notes</h2><div class="lines" data-n="4" data-f="13"></div></div>
+</div>
+<script>
+const rows=(id,n,cls)=>{ document.getElementById(id).innerHTML=Array.from({length:n},()=>"<tr>"+cls.map(c=>`<td class="${c}"></td>`).join("")+"</tr>").join(""); };
+rows("gear",5,["","n","n"]);
+document.querySelectorAll(".spb").forEach(t=>rows2(t,10));
+function rows2(t,n){ t.innerHTML=Array.from({length:n},()=>"<tr><td class='n'></td><td></td><td class='n'></td></tr>").join(""); }
+const fillLines=()=>{ const f=document.body.classList.contains("fighter"); document.querySelectorAll(".lines").forEach(e=>{ e.innerHTML="<div></div>".repeat(+(f&&e.dataset.f?e.dataset.f:e.dataset.n)); }); };
+fillLines();
+document.querySelectorAll("input[name=k]").forEach(r=>r.onchange=()=>{ document.body.className=r.value; fillLines(); });
+document.getElementById("pr").onclick=()=>window.print();
+</script></body></html>

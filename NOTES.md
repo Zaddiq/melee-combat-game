@@ -545,3 +545,8 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - Picks carry `att` (ST/DX/IQ) and `al` (the friend's index in the unit list) on the tablet and on phones (online-host.js).
 - Test: tests/aid_test.py (11). All suites pass.
 - Not done: the Arena, duel and other pages keep their old Aid; fighters' ST bar on the phone does not show the lent ST separately; Aid on a friend who is not adjacent is not allowed (thrown spells touch the next hex).
+
+## Campaign copy (branch campaign-fork)
+- campaign/ holds a full copy of every page and script, with the magic-weapons change applied. The files in the repo root are unchanged and stay the old, stable game.
+- campaign/ns.js (first script on every page there) prefixes all localStorage names with "campaign:", so the two games never share characters or encounters. Moving a character between old and campaign is by copy/paste of its JSON.
+- Firebase rooms are shared infrastructure but keyed by random codes, so no clash. New campaign work goes only in campaign/. Test: tests/campaign_fork_test.py.
