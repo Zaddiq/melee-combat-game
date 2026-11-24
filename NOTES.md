@@ -550,3 +550,9 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - campaign/ holds a full copy of every page and script, with the magic-weapons change applied. The files in the repo root are unchanged and stay the old, stable game.
 - campaign/ns.js (first script on every page there) prefixes all localStorage names with "campaign:", so the two games never share characters or encounters. Moving a character between old and campaign is by copy/paste of its JSON.
 - Firebase rooms are shared infrastructure but keyed by random codes, so no clash. New campaign work goes only in campaign/. Test: tests/campaign_fork_test.py.
+
+## Bestiary (branch bestiary, campaign/ only)
+- campaign/bestiary.html: monster manual. Entries {id,name,st,dx,iq,w,armor,sh,d,race,cls,spells,note} in localStorage `bestiary-v1` (stored as "campaign:bestiary-v1" by ns.js). New, edit, remove, search, "Add the monsters from the module in the Colosseum" (reads `colosseum-module`, dedupes), paste-in import (list, module, encounter), copy-all export, "Add the standard beasts".
+- RULES.cleanCreature(c) checks and normalizes a monster; RULES.addCreatureGear() adds the natural weapons and hides to W/ARMOR (the Colosseum already did this itself; the bestiary page needs it too).
+- Colosseum: loadBest() registers each as CRE["b_<id>"]; the computer-side menu lists them under "My bestiary"; they are not offered as summon forms. Up to 3 at once (creMax). Module monsters are kept in the owner's browser only, never in the repo.
+- Not enforced: special attacks, immunities, size. Dragons/multi-hex monsters are not bestiary entries. Test: tests/bestiary_test.py.

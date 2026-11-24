@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="ns.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bestiary</title>
+<style>
+:root{--bg:#f6f4ef;--fg:#1d1d1f;--mut:#666;--card:#fff;--line:#d8d4ca;--acc:#1d4e9e;--bad:#a3121e;--ok:#2b7a3d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e8e8ea;--mut:#9aa0a8;--card:#1f2228;--line:#363a42;--acc:#7fa8ee;--bad:#ee7b7f;--ok:#6cc27f}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif}
+main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:0 0 8px}
+a{color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.mut{color:var(--mut);font-size:14px}.bad{color:var(--bad)}.ok{color:var(--ok)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+input,select,button,textarea{font:inherit;padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+input[type=number]{width:5em}
+button{cursor:pointer}button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+textarea{width:100%;box-sizing:border-box;font:12px monospace}
+.mon{display:grid;grid-template-columns:1fr auto;gap:4px 10px}
+.mon h3{margin:0;font-size:18px}.stats{font-size:20px;font-weight:600;letter-spacing:.02em}
+.facts{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:14px;margin-top:4px}.facts b{color:var(--mut);font-weight:600}
+.note{font-size:14px;margin-top:6px;white-space:pre-wrap}
+label{font-size:14px;color:var(--mut)}label input,label select{display:block;color:var(--fg)}
+</style>
+</head>
+<body><main>
+<h1>Bestiary</h1>
+<p class="mut"><a href="index.html">← Menu</a> · <a href="colosseum.html">Colosseum</a> · Monsters saved here appear in the Colosseum's computer-side menu under "My bestiary". They are kept in this browser, in the campaign game only.</p>
+
+<div class="card">
+ <div class="row"><input id="q" type="search" placeholder="Search by name or note" style="flex:1;min-width:12em">
+  <button id="add" class="pri">New monster</button>
+  <button id="fromMod">Add the monsters from the module in the Colosseum</button>
+  <button id="std">Add the standard beasts</button></div>
+ <div class="row"><button id="showImp">Paste in monsters…</button><button id="exp">Copy all as text</button><span id="msg" class="mut"></span></div>
+ <div id="impBox" style="display:none"><p class="mut">Paste a list of monsters, or a whole module or encounter (its creatures are taken).</p><textarea id="imp" rows="5"></textarea><div class="row"><button id="doImp" class="pri">Add them</button></div></div>
+</div>
+
+<div class="card" id="edCard" style="display:none"><h2 id="edTitle">Monster</h2>
+ <div class="row">
+  <label>Name<input id="f_name" maxlength="40" style="width:13em"></label>
+  <label>ST<input id="f_st" type="number" min="1" max="80"></label><label>DX<input id="f_dx" type="number" min="1" max="40"></label><label>IQ<input id="f_iq" type="number" min="1" max="40"></label>
+  <label>Race<select id="f_race"></select></label><label>Class<select id="f_cls"><option value="fighter">Fighter</option><option value="wizard">Wizard</option></select></label></div>
+ <div class="row">
+  <label>Weapon<select id="f_w"></select></label><label>Armor<select id="f_armor"></select></label><label>Shield<select id="f_sh"></select></label>
+  <label>Second weapon<select id="f_d"><option value="none">none</option><option value="dagger">Dagger</option><option value="mg">Main-gauche</option></select></label></div>
+ <div class="row"><label style="flex:1;min-width:14em">Spells (wizards only, separated by commas)<input id="f_spells" style="width:100%;box-sizing:border-box"></label></div>
+ <div class="row"><label style="flex:1;min-width:14em">Notes (what the fight does not enforce: special attacks, immunities, treasure, where it lives)<textarea id="f_note" rows="3"></textarea></label></div>
+ <div class="row"><button id="save" class="pri">Save</button><button id="cancel">Cancel</button><span id="edMsg" class="bad"></span></div>
+</div>
+
+<div id="list"></div>
+<p id="empty" class="mut" style="display:none">Nothing here yet. Add a monster, or use one of the buttons above.</p>
+
+<script src="rules.js"></script>
+<script>
+RULES.addCampaign(); RULES.addCreatureGear();
+const {RACES,ARMOR,W,SHIELDS}=RULES, $=id=>document.getElementById(id), KEY="bestiary-v1";
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let L=[], EDIT=null;
+function load(){ try{ const o=JSON.parse(localStorage.getItem(KEY)||"[]"); L=Array.isArray(o)?o.filter(x=>x&&/^[a-z0-9_]{1,24}$/.test(x.id)&&RULES.cleanCreature(x)).map(x=>Object.assign({id:x.id},RULES.cleanCreature(x))):[]; }catch(e){ L=[]; } }
+function store(){ try{ localStorage.setItem(KEY,JSON.stringify(L)); }catch(e){ $("msg").textContent="Could not save in this browser."; } }
+const say=t=>{ $("msg").textContent=t; };
+const dmg=k=>{ const w=W[k]; if(!w) return "bare hands"; return w.d+"d"+(w.m>0?"+"+w.m:w.m<0?"−"+(-w.m):""); };
+function newId(name){ let b=name.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,18)||"monster", id=b, i=2; while(L.some(x=>x.id===id)) id=b+"_"+(i++); return id; }
+const sameMon=(a,b)=>["name","st","dx","iq","w","armor","sh","d","cls"].every(k=>a[k]===b[k]);
+function addMany(list,from){ let n=0,dup=0; for(const raw of list){ const c=RULES.cleanCreature(raw); if(!c) continue; if(L.some(x=>sameMon(x,c))){ dup++; continue; } if(from&&!c.note) c.note="From: "+from; L.push(Object.assign({id:newId(c.name)},c)); n++; if(L.length>=300) break; }
+  store(); render(); say(n+" added"+(dup?", "+dup+" already there":"")+"."); }
+function creaturesIn(o){   /* a list, a module, an encounter, or an id -> monster map */
+  if(Array.isArray(o)) return o.flatMap(creaturesIn).filter(x=>x&&typeof x==="object"&&!Array.isArray(x)&&x.name);
+  if(!o||typeof o!=="object") return [];
+  if(Array.isArray(o.encounters)) return o.encounters.flatMap(creaturesIn);
+  if(o.creatures&&typeof o.creatures==="object") return Object.values(o.creatures);
+  if(o.name&&o.st!=null) return [o];
+  return []; }
+
+function card(m){
+  const ar=ARMOR[m.armor], sh=SHIELDS[m.sh];
+  return `<div class="card mon" data-id="${m.id}"><div><h3>${esc(m.name)}</h3><div class="stats">ST ${m.st} · DX ${m.dx} · IQ ${m.iq}</div></div>
+  <div><button data-edit="${m.id}">Edit</button> <button data-del="${m.id}">Remove</button></div>
+  <div style="grid-column:1/-1"><div class="facts"><span><b>Weapon</b> ${esc(W[m.w]?W[m.w].n:"bare hands")} (${dmg(m.w)})</span>${m.d!=="none"?`<span><b>Also</b> ${esc(W[m.d].n)}</span>`:""}
+   <span><b>Armor</b> ${esc(ar.n)}${ar.stops?` (stops ${ar.stops})`:""}</span>${sh?`<span><b>Shield</b> ${esc(sh.n)}${sh.stops?` (stops ${sh.stops})`:""}</span>`:""}
+   <span><b>Race</b> ${esc(RACES[m.race].n)}</span>${m.cls==="wizard"?`<span><b>Wizard</b>${m.spells.length?": "+esc(m.spells.join(", ")):""}</span>`:""}</div>
+   ${m.note?`<div class="note">${esc(m.note)}</div>`:""}</div></div>`; }
+function render(){
+  const q=$("q").value.trim().toLowerCase(), rows=L.filter(m=>!q||(m.name+" "+m.note).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));
+  $("list").innerHTML=rows.map(card).join(""); $("empty").style.display=L.length?"none":""; }
+
+function fillForm(m){ $("f_name").value=m.name; for(const k of ["st","dx","iq"]) $("f_"+k).value=m[k]; for(const k of ["race","cls","w","armor","sh","d"]) $("f_"+k).value=m[k]; $("f_spells").value=m.spells.join(", "); $("f_note").value=m.note; }
+function openEd(id){ EDIT=id; const m=id?L.find(x=>x.id===id):{name:"",st:10,dx:10,iq:8,w:"none",armor:"none",sh:"none",d:"none",race:"human",cls:"fighter",spells:[],note:""}; if(!m) return;
+  $("edTitle").textContent=id?"Edit "+m.name:"New monster"; fillForm(m); $("edMsg").textContent=""; $("edCard").style.display=""; $("f_name").focus(); $("edCard").scrollIntoView({block:"nearest"}); }
+function setup(){
+  const wk=Object.keys(W).filter(k=>!W[k].left&&k!=="staff"), nat=wk.filter(k=>W[k].hid), reg=wk.filter(k=>!W[k].hid);
+  $("f_w").innerHTML=`<option value="none">Bare hands</option>`+`<optgroup label="Weapons">`+reg.map(k=>`<option value="${k}">${esc(W[k].n)} (${dmg(k)})</option>`).join("")+`</optgroup><optgroup label="Natural weapons">`+nat.map(k=>`<option value="${k}">${esc(W[k].n)} (${dmg(k)})</option>`).join("")+`</optgroup>`;
+  $("f_armor").innerHTML=Object.keys(ARMOR).map(k=>`<option value="${k}">${esc(ARMOR[k].n)}${ARMOR[k].stops?" (stops "+ARMOR[k].stops+")":""}</option>`).join("");
+  $("f_sh").innerHTML=`<option value="none">none</option>`+Object.keys(SHIELDS).map(k=>`<option value="${k}">${esc(SHIELDS[k].n)}</option>`).join("");
+  $("f_race").innerHTML=Object.keys(RACES).map(k=>`<option value="${k}">${esc(RACES[k].n)}</option>`).join(""); }
+$("add").onclick=()=>openEd(null);
+$("cancel").onclick=()=>{ $("edCard").style.display="none"; };
+$("save").onclick=()=>{
+  const raw={name:$("f_name").value,st:$("f_st").value,dx:$("f_dx").value,iq:$("f_iq").value,race:$("f_race").value,cls:$("f_cls").value,w:$("f_w").value,armor:$("f_armor").value,sh:$("f_sh").value,d:$("f_d").value,spells:$("f_spells").value.split(",").map(x=>x.trim()).filter(Boolean),note:$("f_note").value};
+  const c=RULES.cleanCreature(raw); if(!c){ $("edMsg").textContent="Give it a name."; return; }
+  if(+raw.st!==c.st||+raw.dx!==c.dx||+raw.iq!==c.iq){ $("edMsg").textContent="ST must be 1 to 80, DX and IQ 1 to 40."; return; }
+  if(EDIT){ const i=L.findIndex(x=>x.id===EDIT); L[i]=Object.assign({id:EDIT},c); } else { if(L.length>=300){ $("edMsg").textContent="That is a lot of monsters (300 is the limit)."; return; } L.push(Object.assign({id:newId(c.name)},c)); }
+  store(); $("edCard").style.display="none"; render(); say("Saved."); };
+$("list").onclick=e=>{ const d=e.target.dataset||{}; if(d.edit) openEd(d.edit); if(d.del){ const m=L.find(x=>x.id===d.del); if(m&&confirm("Remove "+m.name+" from the bestiary?")){ L=L.filter(x=>x!==m); store(); render(); say("Removed."); } } };
+$("q").oninput=render;
+$("fromMod").onclick=()=>{ let o=null; try{ o=JSON.parse(localStorage.getItem("colosseum-module")||"null"); }catch(e){} const l=creaturesIn(o); if(!l.length){ say("No module is loaded in the Colosseum yet. Paste it there first (Encounter card)."); return; } addMany(l,(o&&o.module)||"the module"); };
+$("std").onclick=()=>addMany([{name:"Wolf",st:10,dx:14,iq:6,w:"bite",armor:"wolfhide"},{name:"Myrmidon",st:12,dx:12,iq:8,w:"broad"},{name:"Bear",st:30,dx:11,iq:6,w:"bite2",armor:"bearhide"},{name:"Gargoyle",st:20,dx:11,iq:8,w:"fist2",armor:"stonehide"},{name:"Giant",st:30,dx:9,iq:8,w:"club3",armor:"bighide"}]);
+$("showImp").onclick=()=>{ $("impBox").style.display=$("impBox").style.display?"":"none"; };
+$("doImp").onclick=()=>{ let o; try{ o=JSON.parse($("imp").value); }catch(e){ say("That is not valid text: "+e.message); return; } const l=creaturesIn(o); if(!l.length){ say("No monsters found in that."); return; } addMany(l,""); $("imp").value=""; };
+$("exp").onclick=()=>{ const t=JSON.stringify(L.map(({id,...r})=>r)); try{ navigator.clipboard.writeText(t).then(()=>say("Copied."),()=>say("Could not copy.")); }catch(e){ say("Could not copy."); } };
+setup(); load(); render();
+</script>
+</main></body></html>

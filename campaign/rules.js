@@ -59,6 +59,20 @@ const CAMP_SHIELDS = {
 const RATE = {sbow:15,hbow:16,lbow:18,lxbow:14,hxbow:14};
 
 function addCampaign(){ Object.assign(SHIELDS,CAMP_SHIELDS); return SHIELDS; }
+/* natural weapons and hides for creatures (Wizard 2018 p. 15-16), kept out of the fighter menus with hid */
+function addCreatureGear(){
+  Object.assign(W,{bite:{n:"Bite",d:1,m:1,st:0,hid:1},bite2:{n:"Bite",d:2,m:2,st:0,hid:1},fist2:{n:"Fist",d:2,m:0,st:0,hid:1},club3:{n:"Club",d:3,m:3,st:0,hid:1},
+    claw:{n:"Claw",d:2,m:-2,st:0,hid:1},claw3:{n:"Claw",d:3,m:-3,st:0,hid:1},claw2:{n:"Claw",d:2,m:0,st:0,hid:1}});
+  for(const [k,v] of Object.entries({scales:["Scales",3,8],scales4:["Scales",4,8],scalesS:["Scales",3,6],scales5:["Scales",5,8],wolfhide:["Fur",1,12],bearhide:["Fur",2,8],stonehide:["Stone skin",3,8],bighide:["Hide",0,8]})) ARMOR[k]={n:v[0],stops:v[1],ma:v[2],pen:{w:0,m:0},hid:1};
+}
+/* A monster for the Bestiary: checks every field against the tables and returns a clean copy (or null when it has no name). Anything unknown falls back to a plain value. */
+function cleanCreature(c){
+  if(!c||typeof c!=="object") return null; const name=String(c.name||"").trim().slice(0,40); if(!name) return null;
+  const n=(v,lo,hi,d)=>{ v=Math.round(+v); return v>=lo&&v<=hi?v:d; };
+  return {name,st:n(c.st,1,80,10),dx:n(c.dx,1,40,10),iq:n(c.iq,1,40,8),
+    w:W[c.w]&&!W[c.w].left&&c.w!=="staff"?c.w:"none",armor:ARMOR[c.armor]?c.armor:"none",sh:SHIELDS[c.sh]?c.sh:"none",
+    d:c.d==="dagger"||c.d==="mg"?c.d:"none",race:RACES[c.race]?c.race:"human",cls:c.cls==="wizard"?"wizard":"fighter",
+    spells:Array.isArray(c.spells)?c.spells.filter(x=>typeof x==="string").map(x=>x.slice(0,30)).slice(0,12):[],note:String(c.note||"").slice(0,300)}; }
 /* Magic weapons a hero carries: {id:"mg_1",n,base,dx,dm,note}. Each becomes a copy of its base weapon with a new name, a damage bonus and a DX bonus (dxb) that
    counts whenever it is readied. Anything unchecked is dropped; returns the list that was accepted. */
 function addMagic(list){
@@ -70,5 +84,5 @@ function addMagic(list){
     const it={id:m.id,n:String(m.n||"Magic "+b.n).slice(0,40),base:m.base,dx:num(m.dx,-3,6),dm:num(m.dm,-3,6),note:String(m.note||"").slice(0,300)};
     W[it.id]=Object.assign({},b,{n:it.n,m:b.m+it.dm,dxb:it.dx,mag:1,note:it.note}); out.push(it); }
   return out; }
-return {EDITION:"Melee Third Edition (2018)",RACES,ARMOR,W,SHIELDS,RATE,CAMP_SHIELDS,addCampaign,addMagic};
+return {EDITION:"Melee Third Edition (2018)",RACES,ARMOR,W,SHIELDS,RATE,CAMP_SHIELDS,addCampaign,addMagic,cleanCreature,addCreatureGear};
 })();
