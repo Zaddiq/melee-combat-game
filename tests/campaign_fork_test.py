@@ -28,7 +28,7 @@ with sync_playwright() as p:
     ex = pg.evaluate("()=>exportChar()")
     ok("M5 export carries only the good item", [m["id"] for m in ex["camp"]["magic"]] == ["mg_1"] and ex["a"] == "mg_1")
     ok("M6 the builder's adjusted DX counts the readied sword", pg.evaluate("()=>adjDX()") == 13)
-    pg.evaluate("()=>localStorage.setItem('magic-items-v1',JSON.stringify([{id:'cat1',kind:'shield',n:'Warding Shield',base:'small',stops:2}]))"); pg.reload()
+    pg.evaluate("()=>localStorage.setItem('magic-items-v1',JSON.stringify([{id:'cat1',kind:'shield',n:'Warding Shield',base:'small',stops:2,found:1}]))"); pg.reload()
     pg.select_option("#magicPick", "cat1"); pg.click("#magicAdd")
     ok("M7 adding makes a second item with a new id", pg.evaluate("()=>C.magic.map(m=>m.id)") == ["mg_1", "mg_2"] and pg.evaluate("()=>SHIELDS.mg_2.stops") == 3)
     pg.click("[data-mdel=mg_1]")

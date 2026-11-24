@@ -229,11 +229,11 @@ function render(keepFocus){
   fillRoster();
   store.set(CKEY,JSON.stringify(exportChar(true)));
 }
-function catalog(){ try{ const o=JSON.parse(store.get("magic-items-v1")||"[]"); return Array.isArray(o)?o.filter(x=>x&&typeof x.id==="string"):[]; }catch(e){ return []; } }
+function catalog(){ try{ const o=JSON.parse(store.get("magic-items-v1")||"[]"); return Array.isArray(o)?o.filter(x=>x&&typeof x.id==="string"&&x.found):[]; }catch(e){ return []; } }
 const magicText=m=>m.kind==="weapon"?`${W[m.base]?W[m.base].n:m.base}, DX +${m.dx}, damage +${m.dm}`:`${(m.kind==="armor"?ARMOR:SHIELDS)[m.base]?(m.kind==="armor"?ARMOR:SHIELDS)[m.base].n:m.base}, stops ${m.stops} more`;
 function renderMagic(){
   $("magic").innerHTML=C.magic.length?C.magic.map(m=>`<div class="row" data-m="${m.id}"><b>${esc(m.n)}</b><span class="mut">${esc(magicText(m))}${m.note?" · "+esc(m.note):""}</span>${m.flame?`<label><input type="checkbox" data-lit${m.lit?" checked":""}> Flame on</label>`:""}<button data-mdel="${m.id}">Remove</button></div>`).join(""):'<div class="mut">None.</div>';
-  const cat=catalog(); $("magicPick").innerHTML=cat.length?cat.map(x=>`<option value="${esc(x.id)}">${esc(x.n||"item")}</option>`).join(""):'<option value="">(the list is empty)</option>';
+  const cat=catalog(); $("magicPick").innerHTML=cat.length?cat.map(x=>`<option value="${esc(x.id)}">${esc(x.n||"item")}</option>`).join(""):'<option value="">(nothing found yet)</option>';
   $("magicAdd").disabled=!cat.length||C.magic.length>=20; }
 $("magic").onchange=e=>{ const r=e.target.closest("[data-m]"); if(!r||e.target.dataset.lit===undefined) return; const m=C.magic.find(x=>x.id===r.dataset.m); if(!m) return; m.lit=e.target.checked?1:0; RULES.addMagic(C.magic); render(); };
 $("magic").onclick=e=>{ const id=e.target.dataset&&e.target.dataset.mdel; if(!id) return; C.magic=C.magic.filter(m=>m.id!==id); delete C.inv[id]; for(const sl of ["a","b","s1","s2","d1","d2"]) if(C[sl]===id) C[sl]="none"; if(C.armor===id) C.armor="none"; syncMagic(C.magic); render(); };

@@ -15,10 +15,10 @@ with sync_playwright() as p:
     ok("P1 starts empty", pg.is_visible("#empty"))
     pg.click("#add"); pg.fill("#f_n", "Dawnbringer"); pg.select_option("#f_base", "broad"); pg.fill("#f_dx", "2"); pg.fill("#f_dm", "4"); pg.click("#save")
     ok("P2 DX and damage over 5 together are refused", "at most 5" in pg.inner_text("#edMsg") and pg.evaluate("()=>localStorage.getItem('magic-items-v1')") is None)
-    pg.fill("#f_dm", "3"); pg.check("#f_flame"); pg.fill("#f_note", "Say 'Dawn' to flame."); pg.click("#save")
+    pg.fill("#f_dm", "3"); pg.check("#f_flame"); pg.check("#f_found"); pg.fill("#f_note", "Say 'Dawn' to flame."); pg.click("#save")
     t = pg.inner_text("#list")
     ok("P3 saved: shows damage 2d+3, DX +2 and flaming 2d+6", all(x in t for x in ["Dawnbringer", "2d+3", "DX +2", "2d+6", "Say 'Dawn'"]))
-    pg.click("#add"); pg.fill("#f_n", "Mithril"); pg.select_option("#f_kind", "armor"); pg.select_option("#f_base", "chain"); pg.fill("#f_stops", "2"); pg.click("#save")
+    pg.click("#add"); pg.fill("#f_n", "Mithril"); pg.select_option("#f_kind", "armor"); pg.select_option("#f_base", "chain"); pg.fill("#f_stops", "2"); pg.click("#save")   # left hidden on purpose
     ok("P4 armor: shows 3 + 2 = 5 hits stopped", "3 +2 = 5" in pg.inner_text("#list"))
     pg.click("#add"); pg.fill("#f_n", "Bad"); pg.select_option("#f_kind", "armor"); pg.fill("#f_stops", "6"); pg.click("#save")
     ok("P5 armor stopping over 5 extra is refused", "1 to 5" in pg.inner_text("#edMsg")); pg.click("#cancel")
@@ -30,6 +30,12 @@ with sync_playwright() as p:
     pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     HERO = {"name": "Sam", "cls": "fighter", "race": "human", "total": 36, "st": 14, "dx": 12, "iq": 10, "armor": "none", "a": "none", "b": "none", "s1": "none", "d1": "none", "d2": "none", "spells": [], "camp": {"v": 1, "langs": 0, "tal": [], "purse": 0, "inv": {}, "s2": "none", "d2": "none", "fx": {"pen": [], "ms": 0, "th": 0}, "magic": []}}
     pg.evaluate("([h,l])=>{ localStorage.setItem('campaign-char-v1',JSON.stringify(h)); localStorage.setItem('magic-items-v1',l); }", [HERO, saved]); pg.reload()
+    opts = pg.evaluate("()=>[...document.querySelectorAll('#magicPick option')].map(o=>o.textContent)")
+    ok("Q0 an item not yet found is not offered in the builder", opts == ["Dawnbringer"])
+    pg.goto(BASE + "magic.html"); pg.click("[data-found]:near(:text('Mithril'))") if False else None
+    pg.evaluate("()=>{ const b=[...document.querySelectorAll('#list .it')].find(c=>c.textContent.includes('Mithril')).querySelector('[data-found]'); b.click(); }")
+    ok("Q0b Found it! makes it available", pg.evaluate("()=>JSON.parse(localStorage.getItem('magic-items-v1')).every(x=>x.found)"))
+    pg.goto(BASE + "campaign-builder.html")
     opts = pg.evaluate("()=>[...document.querySelectorAll('#magicPick option')].map(o=>o.textContent)")
     ok("Q1 the builder lists the items from the magic list", sorted(opts) == ["Dawnbringer", "Mithril"])
     pg.select_option("#magicPick", label="Dawnbringer"); pg.click("#magicAdd"); pg.select_option("#magicPick", label="Mithril"); pg.click("#magicAdd")

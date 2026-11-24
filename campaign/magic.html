@@ -27,7 +27,7 @@ label{font-size:14px;color:var(--mut)}label input,label select{display:block;col
 </head>
 <body><main>
 <h1>Magic items</h1>
-<p class="mut"><a href="index.html">← Menu</a> · <a href="campaign-builder.html">Campaign character builder</a> · <a href="bestiary.html">Bestiary</a> · Items you make here are kept in this browser. In the campaign builder, pick one to give it to a hero.</p>
+<p class="mut"><a href="index.html">← Menu</a> · <a href="campaign-builder.html">Campaign character builder</a> · <a href="bestiary.html">Bestiary</a> · Items you make here are kept in this browser. Items start hidden: press "Found it!" when the party finds one, and only then can a hero take it in the campaign builder (so nobody sees what is coming).</p>
 <div class="card mut">Rules (Advanced Wizard, Weapon/Armor Enchantment): a weapon's DX bonus and damage bonus add up to at most 5, in any mix. Armor and shields stop 1 to 5 extra hits. An enchanted iron weapon or armor still spoils a wizard's casting: it has to be silver. A flaming weapon does +2 damage if it does 1 die or less, +3 if it does up to 2 dice, and one more die if it does more than 2 (a bow adds 1, a crossbow 2); it only flames for someone who knows how, so the Flame on tick is up to you. Anything else an item does (a command word, a ring's power) goes in the note and you apply it at the table.</div>
 
 <div class="card"><div class="row"><input id="q" type="search" placeholder="Search by name or note" style="flex:1;min-width:12em"><button id="add" class="pri">New item</button><button id="showImp">Paste in items…</button><button id="exp">Copy all as text</button><span id="msg" class="mut"></span></div>
@@ -39,6 +39,7 @@ label{font-size:14px;color:var(--mut)}label input,label select{display:block;col
   <label>Made from<select id="f_base"></select></label></div>
  <div class="row" id="wRow"><label>DX bonus<input id="f_dx" type="number" min="0" max="5" value="0"></label><label>Damage bonus<input id="f_dm" type="number" min="0" max="5" value="0"></label><label class="ck"><input id="f_flame" type="checkbox"> Can flame</label></div>
  <div class="row" id="aRow" style="display:none"><label>Extra hits stopped<input id="f_stops" type="number" min="1" max="5" value="1"></label></div>
+ <div class="row"><label class="ck"><input id="f_found" type="checkbox"> Found in the game (heroes can take it from the campaign builder; leave unticked to keep it hidden until the party finds it)</label></div>
  <div class="row"><label style="flex:1;min-width:14em">Note (name to speak, other powers, where found)<textarea id="f_note" rows="3"></textarea></label></div>
  <div class="row"><button id="save" class="pri">Save</button><button id="cancel">Cancel</button><span id="edMsg" class="bad"></span></div></div>
 
@@ -53,7 +54,7 @@ let L=[], EDIT=null;
 const num=(v,lo,hi)=>{ v=Math.round(+v); return v>=lo?Math.min(v,hi):0; };
 function clean(x){   /* one item, checked against the rules; null if it cannot be made */
   const t=RULES.addMagic([{id:"mg_1",kind:x.kind,n:x.n,base:x.base,dx:x.dx,dm:x.dm,stops:x.stops,flame:x.flame,note:x.note}])[0]; if(!t) return null; delete t.id; delete t.lit; return t; }
-function load(){ try{ const o=JSON.parse(localStorage.getItem(KEY)||"[]"); L=(Array.isArray(o)?o:[]).filter(x=>x&&/^[a-z0-9_]{1,24}$/.test(x.id)).map(x=>{ const c=clean(x); return c&&Object.assign({id:x.id},c); }).filter(Boolean); }catch(e){ L=[]; } }
+function load(){ try{ const o=JSON.parse(localStorage.getItem(KEY)||"[]"); L=(Array.isArray(o)?o:[]).filter(x=>x&&/^[a-z0-9_]{1,24}$/.test(x.id)).map(x=>{ const c=clean(x); return c&&Object.assign({id:x.id,found:x.found?1:0},c); }).filter(Boolean); }catch(e){ L=[]; } }
 function store(){ try{ localStorage.setItem(KEY,JSON.stringify(L)); }catch(e){ say("Could not save in this browser."); } }
 const say=t=>{ $("msg").textContent=t; };
 const dice=(d,m)=>d+"d"+(m>0?"+"+m:m<0?"−"+(-m):"");
@@ -63,26 +64,26 @@ function card(m){
   if(m.kind==="weapon"){ const b=W[m.base]; f=`<span><b>Weapon</b> ${esc(b.n)} ${dice(b.d,b.m+m.dm)} damage</span><span><b>DX</b> +${m.dx}</span>`;
     if(m.flame){ const o=RULES.addMagic([{id:"mg_1",n:"x",base:m.base,dx:m.dx,dm:m.dm,flame:1,lit:1}]); f+=`<span><b>Flaming</b> ${dice(W.mg_1.d,W.mg_1.m)} damage</span>`; } }
   else { const T=m.kind==="armor"?ARMOR:SHIELDS; f=`<span><b>${m.kind==="armor"?"Armor":"Shield"}</b> ${esc(T[m.base].n)}</span><span><b>Stops</b> ${T[m.base].stops} +${m.stops} = ${T[m.base].stops+m.stops}</span>`; }
-  return `<div class="card it"><div><h3>${esc(m.n)}</h3><div class="facts">${f}</div>${m.note?`<div class="note">${esc(m.note)}</div>`:""}</div><div><button data-edit="${m.id}">Edit</button> <button data-del="${m.id}">Remove</button></div></div>`; }
+  return `<div class="card it"><div><h3>${esc(m.n)} <span class="mut" style="font-weight:400">${m.found?"· found":"· not found yet, hidden from the builder"}</span></h3><div class="facts">${f}</div>${m.note?`<div class="note">${esc(m.note)}</div>`:""}</div><div><button data-found="${m.id}">${m.found?"Hide again":"Found it!"}</button> <button data-edit="${m.id}">Edit</button> <button data-del="${m.id}">Remove</button></div></div>`; }
 function render(){ const q=$("q").value.trim().toLowerCase(); $("list").innerHTML=L.filter(m=>!q||(m.n+" "+m.note).toLowerCase().includes(q)).sort((a,b)=>a.n.localeCompare(b.n)).map(card).join(""); $("empty").style.display=L.length?"none":""; }
 function fillBase(k,v){ const T=k==="weapon"?Object.keys(W).filter(x=>!W[x].hid&&!W[x].left&&x!=="staff"&&!/^mg_/.test(x)).map(x=>[x,W[x].n]):k==="armor"?Object.keys(ARMOR).filter(x=>!ARMOR[x].hid&&x!=="none"&&!/^mg_/.test(x)).map(x=>[x,ARMOR[x].n]):Object.keys(SHIELDS).filter(x=>!/^mg_/.test(x)).map(x=>[x,SHIELDS[x].n]);
   $("f_base").innerHTML=T.map(([x,n])=>`<option value="${x}">${esc(n)}</option>`).join(""); if(v&&T.some(t=>t[0]===v)) $("f_base").value=v; $("wRow").style.display=k==="weapon"?"":"none"; $("aRow").style.display=k==="weapon"?"none":""; }
 $("f_kind").onchange=()=>fillBase($("f_kind").value);
-function openEd(id){ EDIT=id; const m=id?L.find(x=>x.id===id):{n:"",kind:"weapon",base:"broad",dx:0,dm:0,stops:1,flame:0,note:""}; if(!m) return;
-  $("edTitle").textContent=id?"Edit "+m.n:"New item"; $("f_n").value=m.n; $("f_kind").value=m.kind; fillBase(m.kind,m.base); $("f_dx").value=m.dx||0; $("f_dm").value=m.dm||0; $("f_stops").value=m.stops||1; $("f_flame").checked=!!m.flame; $("f_note").value=m.note; $("edMsg").textContent=""; $("edCard").style.display=""; $("f_n").focus(); }
+function openEd(id){ EDIT=id; const m=id?L.find(x=>x.id===id):{n:"",kind:"weapon",base:"broad",dx:0,dm:0,stops:1,flame:0,note:"",found:0}; if(!m) return;
+  $("edTitle").textContent=id?"Edit "+m.n:"New item"; $("f_n").value=m.n; $("f_kind").value=m.kind; fillBase(m.kind,m.base); $("f_dx").value=m.dx||0; $("f_dm").value=m.dm||0; $("f_stops").value=m.stops||1; $("f_flame").checked=!!m.flame; $("f_note").value=m.note; $("f_found").checked=!!m.found; $("edMsg").textContent=""; $("edCard").style.display=""; $("f_n").focus(); }
 $("add").onclick=()=>openEd(null); $("cancel").onclick=()=>{ $("edCard").style.display="none"; };
 $("save").onclick=()=>{
-  const raw={n:$("f_n").value.trim(),kind:$("f_kind").value,base:$("f_base").value,dx:+$("f_dx").value||0,dm:+$("f_dm").value||0,stops:+$("f_stops").value||1,flame:$("f_flame").checked?1:0,note:$("f_note").value};
+  const raw={n:$("f_n").value.trim(),kind:$("f_kind").value,base:$("f_base").value,dx:+$("f_dx").value||0,dm:+$("f_dm").value||0,stops:+$("f_stops").value||1,flame:$("f_flame").checked?1:0,note:$("f_note").value,found:$("f_found").checked?1:0};
   if(!raw.n){ $("edMsg").textContent="Give it a name."; return; }
   if(raw.kind==="weapon"){ if(raw.dx<0||raw.dm<0||raw.dx>5||raw.dm>5){ $("edMsg").textContent="Each bonus is 0 to 5."; return; } if(raw.dx+raw.dm>5){ $("edMsg").textContent="DX and damage bonuses add up to at most 5 (now "+(raw.dx+raw.dm)+")."; return; } if(raw.dx+raw.dm===0&&!raw.flame&&!raw.note){ $("edMsg").textContent="It needs a bonus, flame or a note."; return; } }
   else if(raw.stops<1||raw.stops>5){ $("edMsg").textContent="Extra hits stopped: 1 to 5."; return; }
   const c=clean(raw); if(!c){ $("edMsg").textContent="That cannot be made."; return; }
-  if(EDIT){ const i=L.findIndex(x=>x.id===EDIT); L[i]=Object.assign({id:EDIT},c); } else { if(L.length>=200){ $("edMsg").textContent="200 items is the limit."; return; } L.push(Object.assign({id:newId()},c)); }
+  if(EDIT){ const i=L.findIndex(x=>x.id===EDIT); L[i]=Object.assign({id:EDIT,found:raw.found},c); } else { if(L.length>=200){ $("edMsg").textContent="200 items is the limit."; return; } L.push(Object.assign({id:newId(),found:raw.found},c)); }
   store(); $("edCard").style.display="none"; render(); say("Saved."); };
-$("list").onclick=e=>{ const d=e.target.dataset||{}; if(d.edit) openEd(d.edit); if(d.del){ const m=L.find(x=>x.id===d.del); if(m&&confirm("Remove "+m.n+" from the list? Heroes who already have it keep it.")){ L=L.filter(x=>x!==m); store(); render(); say("Removed."); } } };
+$("list").onclick=e=>{ const d=e.target.dataset||{}; if(d.edit) openEd(d.edit); if(d.found){ const m=L.find(x=>x.id===d.found); if(m){ m.found=m.found?0:1; store(); render(); say(m.found?m.n+" is now available to heroes.":m.n+" is hidden again."); } } if(d.del){ const m=L.find(x=>x.id===d.del); if(m&&confirm("Remove "+m.n+" from the list? Heroes who already have it keep it.")){ L=L.filter(x=>x!==m); store(); render(); say("Removed."); } } };
 $("q").oninput=render;
 $("showImp").onclick=()=>{ $("impBox").style.display=$("impBox").style.display?"":"none"; };
-$("doImp").onclick=()=>{ let o; try{ o=JSON.parse($("imp").value); }catch(e){ say("That is not valid text: "+e.message); return; } if(!Array.isArray(o)) o=[o]; let n=0; for(const x of o){ if(!x||typeof x!=="object") continue; const c=clean(x); if(c&&!L.some(y=>y.n===c.n&&y.base===c.base&&y.dx===c.dx&&y.dm===c.dm&&y.stops===c.stops)&&L.length<200){ L.push(Object.assign({id:newId()},c)); n++; } } store(); render(); say(n+" added."); $("imp").value=""; };
+$("doImp").onclick=()=>{ let o; try{ o=JSON.parse($("imp").value); }catch(e){ say("That is not valid text: "+e.message); return; } if(!Array.isArray(o)) o=[o]; let n=0; for(const x of o){ if(!x||typeof x!=="object") continue; const c=clean(x); if(c&&!L.some(y=>y.n===c.n&&y.base===c.base&&y.dx===c.dx&&y.dm===c.dm&&y.stops===c.stops)&&L.length<200){ L.push(Object.assign({id:newId(),found:x.found?1:0},c)); n++; } } store(); render(); say(n+" added."); $("imp").value=""; };
 $("exp").onclick=()=>{ const t=JSON.stringify(L.map(({id,...r})=>r)); try{ navigator.clipboard.writeText(t).then(()=>say("Copied."),()=>say("Could not copy.")); }catch(e){ say("Could not copy."); } };
 load(); render();
 </script>
