@@ -71,7 +71,7 @@ const RATE = {sbow:15,hbow:16,lbow:18,lxbow:14,hxbow:14};
 
 /* for the weapons marked adv: a price (from the 2018 table, read from the owner's photo; used when the rules data has none) and the weapon whose talent they use (when the rules data has no talent for them) */
 const EXTRA={price:{bastard:100,bastard2:100,greatsw:150,hatchet:15,warax:60,greathm:110,qstaff:20,trident:30,pike:50,tower:70,spike:40},
-  like:{bastard:"broad",bastard2:"broad",greatsw:"twohsw",hatchet:"smallax",warax:"smallax",greathm:"hammer",qstaff:"spear",trident:"spear",pike:"halberd"}};
+  like:{mg:"dagger",bastard:"broad",bastard2:"broad",greatsw:"twohsw",hatchet:"smallax",warax:"smallax",greathm:"hammer",qstaff:"spear",trident:"spear",pike:"halberd"}};
 function addCampaign(){ Object.assign(SHIELDS,CAMP_SHIELDS); return SHIELDS; }
 /* natural weapons and hides for creatures (Wizard 2018 p. 15-16), kept out of the fighter menus with hid */
 function addCreatureGear(){

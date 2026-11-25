@@ -198,7 +198,8 @@ function buildStatic(){
       ks=[...ks].sort((a,b)=>gi(a)-gi(b)||(W[a].st||0)-(W[b].st||0)||(W[a].d*10+W[a].m)-(W[b].d*10+W[b].m)); }
     let lastG=null;
     for(const k of ks){ if(wk&&gp(k)!==lastG){ lastG=gp(k); s+=`<tr><th colspan="6" style="text-align:left">${esc(lastG)}</th></tr>`; }
-      const dmg=wk?`<td>${W[k].d}d${W[k].m?(W[k].m>0?"+":"")+W[k].m:""}</td>`:"";
+      const fd=x=>`${x.d}d${x.m?(x.m>0?"+":"")+x.m:""}`;
+      const dmg=wk?`<td>${fd(W[k])}${W[k+"2"]&&W[k+"2"].two?` / ${fd(W[k+"2"])} <span class="mut">(2 hands)</span>`:""}</td>`:"";
       s+=`<tr><td>${esc(itemName(k))} <span class="ok" id="own_${k}"></span></td><td>${W[k]&&W[k].st?"ST "+W[k].st:""}</td><td id="pr_${k}"></td>${dmg}<td id="tf_${k}"></td><td><button data-buy="${k}" id="buy_${k}">Buy</button></td></tr>`; }
     s+="</table>"; }
   $("shop").innerHTML=s; }
