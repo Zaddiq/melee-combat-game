@@ -577,3 +577,9 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - Campaign builder Loot section: items with a worth (camp.loot, max 60); Sell (one) or Sell all adds the worth to "Money to spend"; Throw away removes. Loot is carried on the character like gear.
 - Campaign builder: a wizard who knows the Staff spell starts with the Wizard's staff in the right hand (shown, locked); the export still has a:"none" (the Colosseum adds the staff from the spell). Test: tests/staff_start_test.py.
 - The campaign pages' storage is separate from the old pages (ns.js "campaign:" prefix): the rules data (talents/prices) has to be pasted once into the campaign builder at /campaign/. The 1980/2018 default prices for the added weapons do not need it.
+
+## One builder in the campaign game (branch campaign-only-builder, campaign/ only; stacked on loot-move-staff)
+- campaign/campaign-builder.html now keeps its open character under the shared key "wizard-builder-v1" (prefixed "campaign:" by ns.js, so separate from the old site). The Colosseum's "Load from builder", a phone's "From the builder" and a phone's "Send to builder" all use that key, so they now meet the campaign builder. Unnamed hero in progress is kept under "campaign-char-v1" until it has a name.
+- Removed from the campaign builder: "Take the regular builder's open character" and "Make it the regular builder's open character". Added "Paste a character…" (bring one in from the old game's Copy data).
+- campaign/index.html has no old builder card; campaign/builder.html is a redirect to the campaign builder; links in the other campaign pages point to the campaign builder.
+- Known gap: the campaign builder cannot choose spells for a NEW wizard (spells come with a pasted/imported character). A spell picker is the next step. The arenas/duel/simulator are still in the campaign menu. Test: tests/one_builder_test.py.

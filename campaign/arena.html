@@ -25,7 +25,7 @@ svg{width:100%;height:auto;max-height:80vh}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
 </style></head><body><main>
 <h1>Arena Classic</h1>
-<p style="margin:0 0 6px"><a href="index.html" style="color:var(--acc)">← Menu</a> · <a href="builder.html" style="color:var(--acc)">Character builder</a> · <a href="sim.html" style="color:var(--acc)">Fight simulator</a></p>
+<p style="margin:0 0 6px"><a href="index.html" style="color:var(--acc)">← Menu</a> · <a href="campaign-builder.html" style="color:var(--acc)">Campaign character builder</a> · <a href="sim.html" style="color:var(--acc)">Fight simulator</a></p>
 <p class="mut">Basic fight against a computer opponent matched to your ST+DX. Missile and thrown weapons are in: arrows are unlimited, and range is counted in megahexes.</p>
 <div class="grid"><div>
  <div class="card"><h2>Fight</h2><div id="ctl" class="mut">Load a fighter first (the box below).</div></div>
@@ -223,7 +223,7 @@ function recBlock(){
 function renderMe(){
   if(!me) return; $("me").innerHTML=card(me,"me")+warn(me)+recBlock();
   $("me").querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>spend(e.dataset.sp));
-  const sb=$("bSend"); if(sb) sb.onclick=()=>{ if(sendToBuilder(updated(me.rec))) $("msg").innerHTML="Sent. Open the <a href=\"builder.html\" style=\"color:var(--acc)\">character builder</a> and press its load button to see "+esc(me.name)+" with the new stats."; };
+  const sb=$("bSend"); if(sb) sb.onclick=()=>{ if(sendToBuilder(updated(me.rec))) $("msg").innerHTML="Sent. Open the <a href=\"campaign-builder.html\" style=\"color:var(--acc)\">campaign character builder</a> and press its load button to see "+esc(me.name)+" with the new stats."; };
   const c=$("bCopy"); if(c) c.onclick=()=>{ const r=me.rec; const o=Object.assign({},me.src,{st:r.st,dx:r.dx,total:r.total0+r.pts,ep:r.ep,arenaWins:r.wins,arenaRetired:r.retired});
     const t=JSON.stringify(o), ta=$("exp"); ta.style.display="block"; ta.value=t; ta.select(); copyText(t); $("msg").textContent="Copied. Paste it into the builder's save/load box to update your fighter."; };
   const x=$("bReset"); if(x) x.onclick=()=>{ if(confirm("Erase the arena record for "+me.name+"? Wins, EP and gained points are lost.")){ delete REC[recKey(me)]; saveRec(); const o=me.src; setMe(fromBuilder(o),"Record erased. Starting fresh from the builder's version."); } };

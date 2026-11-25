@@ -29,7 +29,7 @@ with sync_playwright() as p:
     pg.goto(BASE + "campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
     pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     HERO = {"name": "Sam", "cls": "fighter", "race": "human", "total": 36, "st": 14, "dx": 12, "iq": 10, "armor": "none", "a": "none", "b": "none", "s1": "none", "d1": "none", "d2": "none", "spells": [], "camp": {"v": 1, "langs": 0, "tal": [], "purse": 0, "inv": {}, "s2": "none", "d2": "none", "fx": {"pen": [], "ms": 0, "th": 0}, "magic": []}}
-    pg.evaluate("([h,l])=>{ localStorage.setItem('campaign-char-v1',JSON.stringify(h)); localStorage.setItem('magic-items-v1',l); }", [HERO, saved]); pg.reload()
+    pg.evaluate("([h,l])=>{ localStorage.setItem('wizard-builder-v1',JSON.stringify(h)); localStorage.setItem('magic-items-v1',l); }", [HERO, saved]); pg.reload()
     opts = pg.evaluate("()=>[...document.querySelectorAll('#magicPick option')].map(o=>o.textContent)")
     ok("Q0 an item not yet found is not offered in the builder", opts == ["Dawnbringer"])
     pg.goto(BASE + "magic.html"); pg.click("[data-found]:near(:text('Mithril'))") if False else None

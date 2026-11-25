@@ -27,8 +27,8 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
 </head>
 <body><main>
 <h1>Campaign character builder</h1>
-<p style="margin:0 0 8px"><a href="index.html">← Menu</a> · <a href="builder.html">Character builder (Melee legal)</a> · <a href="colosseum.html">Colosseum</a></p>
-<p class="mut">For campaign play: a hero or wizard with talents, a purse and as much gear as the money allows. The talents, their costs and the prices are NOT part of this page: you paste them in once (the "Rules data" box) and they stay in this browser only. Start from a fighter or wizard you already made in the regular builder, add talents and buy gear here, then copy the result to the Colosseum.</p>
+<p style="margin:0 0 8px"><a href="index.html">← Menu</a> · <a href="colosseum.html">Colosseum</a> · <a href="magic.html">Magic items</a> · <a href="bestiary.html">Bestiary</a></p>
+<p class="mut">For campaign play: a hero or wizard with talents, a purse and as much gear as the money allows. The talents, their costs and the prices are NOT part of this page: you paste them in once (the "Rules data" box) and they stay in this browser only. This is the only builder in the campaign game: the character open here is the one the Colosseum and the phones offer as "From the builder", and what a phone sends back lands here. To bring in a character from the old game, paste its data (button below).</p>
 
 <details class="card" id="dataCard" open><summary style="cursor:pointer;font-weight:600">Rules data <span id="dataState" class="mut"></span></summary>
  <div class="mut" style="margin:6px 0">Paste your campaign data (JSON) and press Save. It never leaves this browser. Check every number against your own book: the data decides what a talent costs and what a sword sells for.</div>
@@ -38,8 +38,9 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
 
 <div id="work" style="display:none">
 <div class="card"><h2>1. The character</h2>
- <div class="row"><button id="fromBuilder">Take the regular builder's open character</button><button id="newChar">New human hero</button>
+ <div class="row"><button id="pasteBtn">Paste a character…</button><button id="newChar">New human hero</button>
   <select id="rosterSel"></select><button id="rosterLoad">Load</button><button id="rosterSave">Save in my list</button><button id="rosterDel">Delete</button></div>
+ <div id="pasteBox" style="display:none"><p class="mut">Paste a character from the old game's builder (its "Copy data" button) or any character data, then press Use it.</p><textarea id="pasteTxt" rows="4"></textarea><div class="row"><button id="pasteGo" class="pri">Use it</button><span id="pasteMsg" class="bad"></span></div></div>
  <div class="row"><label>Name <input id="chName" size="22"></label>
   <label>Race <select id="chRace"></select></label>
   <label>Kind <select id="chCls"><option value="fighter">Hero</option><option value="wizard">Wizard</option></select></label></div>
@@ -59,8 +60,8 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
 
 <div class="card"><h2>3. Use the character</h2>
  <div id="problems" class="bad"></div>
- <div class="row"><button class="pri" id="copyBtn">Copy the character data</button><button id="setBuilder">Make it the regular builder's open character</button><span class="mut" id="outMsg"></span></div>
- <div class="mut">In the Colosseum, paste this text into a player's "paste" box. A phone can use it too if you make it the open character (second button) on that phone's browser.</div>
+ <div class="row"><button class="pri" id="copyBtn">Copy the character data</button><span class="mut" id="outMsg"></span></div>
+ <div class="mut">The character on this page is saved automatically as the open character of this browser (once it has a name): the Colosseum's "Load from builder" and a phone's "From the builder" use it. The text below is for pasting somewhere else.</div>
  <textarea id="outBox" rows="5" readonly></textarea>
 </div>
 
@@ -90,7 +91,7 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
 RULES.addCampaign();
 const {RACES,ARMOR,W,SHIELDS}=RULES;
 const $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const DKEY="campaign-data-v1", CKEY="campaign-char-v1", RKEY="campaign-roster-v1", BKEY="wizard-builder-v1";
+const DKEY="campaign-data-v1", CKEY="wizard-builder-v1", SKEY="campaign-char-v1", RKEY="campaign-roster-v1";   /* the open character is the same key the Colosseum and the phones read; SKEY keeps an unnamed hero in progress */
 const store={get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} }};
 
 /* ---- the rules data (kept in this browser; never part of the page) ----
@@ -213,7 +214,7 @@ function render(keepFocus){
   for(const [id,k] of [["chSt","st"],["chDx","dx"],["chIq","iq"],["chTotal","total"],["chLangs","langs"],["purse","purse"]]) if(document.activeElement!==$(id)) $(id).value=C[k];
   $("silver").checked=C.silver;
   const sum=C.st+C.dx+C.iq, R=RACES[C.race]; $("ptsNote").textContent=sum>C.total?"Too many points: "+(sum-C.total)+" over.":sum<C.total?(C.total-sum)+" points still to spend.":"All points spent."; $("ptsNote").className=sum>C.total?"bad":"mut";
-  $("spellNote").textContent=C.cls==="wizard"?`Wizards keep their spells from the regular builder (${spellsOf(C).length} spell${spellsOf(C).length===1?"":"s"}, 1 IQ each). A wizard pays double for talents.`:"A hero's talents cost what the data says. Spells for heroes (3 IQ each) are not handled here yet.";
+  $("spellNote").textContent=C.cls==="wizard"?`Wizards keep the spells they came in with (${spellsOf(C).length} spell${spellsOf(C).length===1?"":"s"}, 1 IQ each). A wizard pays double for talents.`:"A hero's talents cost what the data says. Spells for heroes (3 IQ each) are not handled here yet.";
   /* talents */
   const used0=iqUsed(), over=used0>C.iq;
   $("iqUsed").textContent="IQ used "+used0+" of "+C.iq; $("iqUsed").className=over?"bad":""; $("iqNote").textContent=notes.join(" ");
@@ -232,10 +233,10 @@ function render(keepFocus){
   $("ld_a").disabled=hasStaff(C);
   fightNotes();
   /* output */
-  const probs=problems(); $("problems").innerHTML=probs.map(esc).join("<br>"); $("copyBtn").disabled=$("setBuilder").disabled=probs.length>0;
+  const probs=problems(); $("problems").innerHTML=probs.map(esc).join("<br>"); $("copyBtn").disabled=probs.length>0;
   $("outBox").value=probs.length?"":JSON.stringify(exportChar());
   fillRoster();
-  store.set(CKEY,JSON.stringify(exportChar(true)));
+  if(C.name.trim()) store.set(CKEY,JSON.stringify(exportChar(true))); else store.set(SKEY,JSON.stringify(exportChar(true)));
 }
 function catalog(){ try{ const o=JSON.parse(store.get("magic-items-v1")||"[]"); return Array.isArray(o)?o.filter(x=>x&&typeof x.id==="string"&&x.found):[]; }catch(e){ return []; } }
 const magicText=m=>m.kind==="weapon"?`${W[m.base]?W[m.base].n:m.base}, DX +${m.dx}, damage +${m.dm}`:`${(m.kind==="armor"?ARMOR:SHIELDS)[m.base]?(m.kind==="armor"?ARMOR:SHIELDS)[m.base].n:m.base}, stops ${m.stops} more`;
@@ -299,8 +300,9 @@ function setC(o){ C=o; render(); }
 $("dataSave").onclick=()=>{ let o; try{ o=JSON.parse($("dataBox").value); }catch(e){ $("dataMsg").textContent="That is not valid text: "+e.message; return; } const bad=checkData(o); if(bad){ $("dataMsg").textContent=bad; return; } store.set(DKEY,JSON.stringify(o)); D=o; $("dataBox").value=""; showData(); if(!C) setC(BLANKC()); else render(); $("dataMsg").textContent="Saved."; };
 $("dataClear").onclick=()=>{ store.del(DKEY); D=null; showData(); render(); };
 function showData(){ $("dataState").textContent=D?"(loaded: "+D.talents.length+" talents, "+Object.keys(D.prices).length+" priced items)":"(none yet: paste it here first)"; $("dataCard").open=!D; }
-$("fromBuilder").onclick=()=>{ let o=null; try{ o=JSON.parse(store.get(BKEY)||"null"); }catch(e){} if(!o||typeof o!=="object"){ $("outMsg").textContent="The regular builder has no open character in this browser."; return; } if(C&&!confirm("Replace the character on screen?")) return; setC(fromBuilderJson(o)); };
-$("newChar").onclick=()=>{ if(C&&!confirm("Replace the character on screen?")) return; setC(BLANKC()); };
+$("newChar").onclick=()=>{ if(C&&!confirm("Replace the character on screen?")) return; store.set(CKEY,""); setC(BLANKC()); };
+$("pasteBtn").onclick=()=>{ $("pasteBox").style.display=$("pasteBox").style.display?"":"none"; };
+$("pasteGo").onclick=()=>{ let o; try{ o=JSON.parse($("pasteTxt").value); }catch(e){ $("pasteMsg").textContent="That is not valid text: "+e.message; return; } if(!o||typeof o!=="object"||Array.isArray(o)||!o.name){ $("pasteMsg").textContent="That does not look like a character (it needs a name)."; return; } if(C&&C.name.trim()&&!confirm("Replace the character on screen?")) return; $("pasteMsg").textContent=""; $("pasteTxt").value=""; $("pasteBox").style.display="none"; setC(fromBuilderJson(o)); };
 $("chName").oninput=()=>{ C.name=$("chName").value; render(); };
 $("chRace").onchange=()=>{ C.race=$("chRace").value; const R=RACES[C.race]; C.st=Math.max(R.st,C.st); C.dx=Math.max(R.dx,C.dx); C.iq=Math.max(R.iq,C.iq); render(); };
 $("chCls").onchange=()=>{ C.cls=$("chCls").value; if(C.cls==="fighter") C.base.spells=[]; render(); };
@@ -312,13 +314,12 @@ $("owned").onclick=e=>{ const k=e.target.dataset&&e.target.dataset.sell; if(!k) 
 $("ldArmor").onchange=()=>{ C.armor=$("ldArmor").value; render(); };
 for(const sl of ["a","b","s1","s2","d1","d2"]) $("ld_"+sl).onchange=()=>{ C[sl]=$("ld_"+sl).value; render(); };
 $("copyBtn").onclick=()=>{ const t=$("outBox").value; try{ navigator.clipboard.writeText(t).then(()=>{ $("outMsg").textContent="Copied."; },()=>{ $("outBox").select(); $("outMsg").textContent="Select the text and copy it."; }); }catch(e){ $("outBox").select(); $("outMsg").textContent="Select the text and copy it."; } };
-$("setBuilder").onclick=()=>{ if(!confirm("This replaces the regular builder's open character in this browser. Go on?")) return; store.set(BKEY,JSON.stringify(exportChar())); $("outMsg").textContent="Done: it is now the regular builder's open character (and the one a phone offers as 'From the builder')."; };
 $("rosterSave").onclick=()=>{ if(!C.name.trim()){ $("outMsg").textContent="Give the character a name first."; return; } const r=roster(); r[C.name.trim()]=exportChar(true); store.set(RKEY,JSON.stringify(r)); fillRoster(); $("rosterSel").value=C.name.trim(); $("outMsg").textContent="Saved in this browser's list."; };
 $("rosterLoad").onclick=()=>{ const o=roster()[$("rosterSel").value]; if(!o) return; if(!confirm("Replace the character on screen?")) return; setC(fromBuilderJson(o)); };
 $("rosterDel").onclick=()=>{ const k=$("rosterSel").value, r=roster(); if(!r[k]||!confirm("Delete "+k+" from the list?")) return; delete r[k]; store.set(RKEY,JSON.stringify(r)); fillRoster(); };
 
 loadData(); showData();
-if(D){ let o=null; try{ o=JSON.parse(store.get(CKEY)||"null"); }catch(e){} C=o&&typeof o==="object"?fromBuilderJson(o):BLANKC(); }
+if(D){ let o=null; try{ o=JSON.parse(store.get(CKEY)||"null"); }catch(e){} if(!o||typeof o!=="object"||!o.name){ try{ o=JSON.parse(store.get(SKEY)||"null"); }catch(e){} } C=o&&typeof o==="object"?fromBuilderJson(o):BLANKC(); }
 render();
 </script>
 </body></html>

@@ -23,7 +23,7 @@ with sync_playwright() as p:
         const v={p:f,right:'broad',left:'none',hp:14}; return a-adjDXu(v,'single',null); }""", HERO) == 1)
     pg.goto(BASE + "campaign/campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
     pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
-    pg.evaluate("(h)=>{ localStorage.setItem('campaign-char-v1',JSON.stringify(h)); }", HERO); pg.reload()
+    pg.evaluate("(h)=>{ localStorage.setItem('wizard-builder-v1',JSON.stringify(h)); }", HERO); pg.reload()
     ok("M4 the builder shows the sword with its numbers", pg.evaluate("()=>document.querySelectorAll('#magic [data-m]').length")==1 and "Dawnbringer" in pg.inner_text("#magic"))
     ex = pg.evaluate("()=>exportChar()")
     ok("M5 export carries only the good item", [m["id"] for m in ex["camp"]["magic"]] == ["mg_1"] and ex["a"] == "mg_1")
