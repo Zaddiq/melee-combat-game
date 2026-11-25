@@ -201,7 +201,8 @@ function buildStatic(){
     for(const k of ks){ if(wk&&gp(k)!==lastG){ lastG=gp(k); s+=`<tr><th colspan="8" style="text-align:left">${esc(lastG)}</th></tr>`; }
       const fd=x=>`${x.d}d${x.m?(x.m>0?"+":"")+x.m:""}`;
       const dmg=wk?`<td>${fd(W[k])}${W[k+"2"]&&W[k+"2"].two?` / ${fd(W[k+"2"])}`:""}</td><td>${W[k+"2"]&&W[k+"2"].two?"1 or 2":W[k].two?"2":"1"}</td>`:"";
-      s+=`<tr><td>${esc(itemName(k))} <span class="ok" id="own_${k}"></span></td><td>${W[k]&&W[k].st?"ST "+W[k].st:""}</td><td id="pr_${k}"></td>${dmg}<td id="tf_${k}"></td><td><button data-buy="${k}" id="buy_${k}">Buy</button></td></tr>`; }
+      const nt=wk?[W[k].rate,W[k].th?"Can be thrown.":"",W[k].note].filter(Boolean).join(" "):"";
+      s+=`<tr><td>${esc(itemName(k))} <span class="ok" id="own_${k}"></span></td><td>${W[k]&&W[k].st?"ST "+W[k].st:""}</td><td id="pr_${k}"></td>${dmg}<td id="tf_${k}"></td><td><button data-buy="${k}" id="buy_${k}">Buy</button></td></tr>`+(nt?`<tr><td colspan="8" class="mut" style="font-size:12px;border-top:0;padding-top:0;white-space:normal;width:auto">${esc(nt)}</td></tr>`:""); }
     s+="</table>"; }
   $("shop").innerHTML=s; }
 function updateTalents(used0){
