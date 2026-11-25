@@ -594,3 +594,7 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 
 ## Campaign builder: spells and talents sections
 - Section 5 now has two collapsible parts. A hero sees Talents (open) first and, only if he has at least one spell, a collapsed "Spells (3 of 8 IQ spent)" after it. A wizard sees Spells (open) first and a collapsed "Talents (2 of 12 IQ spent)" after it, which opens to the full list on a click. A hero's spells count 3 IQ each, a wizard's 1 IQ each, and both count in the IQ used. Spells are listed, not edited, here. Test: tests/spell_talent_sections_test.py.
+
+## Campaign builder: spell picker
+- The rules data JSON may now carry "spells":[{n,iq}] (the 1980 Advanced Wizard Spell Table: names and IQ levels, 124 spells), kept in the owner's browser like the rest of the rules data, not in the repo. With it, the Spells section lists the known spells with a remove button and an Add spell picker (grouped by IQ level, only spells at or under the character's IQ that he does not know). A wizard pays 1 IQ per spell, a hero 3 IQ (and casts at DX -4, Advanced Wizard p. 11); Add stops when the IQ is used up. Without the spell list the section shows the spells read-only.
+- Heroes cannot cast in the Colosseum yet (castList is wizard-only); the spells are carried on the character.
