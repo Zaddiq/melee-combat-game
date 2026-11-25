@@ -583,3 +583,8 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - Removed from the campaign builder: "Take the regular builder's open character" and "Make it the regular builder's open character". Added "Paste a character…" (bring one in from the old game's Copy data).
 - campaign/index.html has no old builder card; campaign/builder.html is a redirect to the campaign builder; links in the other campaign pages point to the campaign builder.
 - Known gap: the campaign builder cannot choose spells for a NEW wizard (spells come with a pasted/imported character). A spell picker is the next step. The arenas/duel/simulator are still in the campaign menu. Test: tests/one_builder_test.py.
+
+## Campaign: weapons shop and bastard sword grip
+- The campaign builder's weapons shop is grouped (melee, pole, missile), sorted by ST, with a Damage column; the bastard sword row shows both damages.
+- Main-gauche uses the Knife talent (EXTRA.like.mg = dagger).
+- The bastard sword does its two-hand damage (3d-2, same as "bastard2") automatically whenever it is readied with nothing in the left hand; with a shield or main-gauche it does 2d+1. dmgRoll in campaign/colosseum, arena, duel, wizard-arena checks this at each hit and the log says "in both hands". "Bastard sword (2 hands)" is still selectable to force the two-hand grip. Test: tests/bastard_grip_test.py.

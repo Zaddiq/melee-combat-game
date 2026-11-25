@@ -725,7 +725,7 @@ function stopsFor(d,a,wid,kind){
   if(d.left==="mg"&&r==="front"&&!kind&&wid&&W[wid]&&!W[wid].two&&!W[wid].miss) s+=1;   /* parries one-handed non-missile weapons only */
   return s;
 }
-function dmgRoll(u,id){ const w=W[id]; let m=w.m; const dice=rollN(w.d+(u.extra?1:0)); let total=Math.max(0,sum(dice)+m); if(u.brkW===id) total=Math.floor(total/2); return {dice,m,total}; }
+function dmgRoll(u,id){ const two=id==="bastard"&&W.bastard2&&u.right===id&&u.left==="none", w=two?W.bastard2:W[id]; let m=w.m; const dice=rollN(w.d+(u.extra?1:0)); let total=Math.max(0,sum(dice)+m); if(u.brkW===id) total=Math.floor(total/2); return {dice,m,total,two}; }
 /* ---- pole weapons and shield-rush (Melee 2018 p. 12-13) ---- */
 const ATK=["attack","dual","rush"];
 const poleOf=u=>[u.right,u.left].find(k=>W[k]&&W[k].pole&&!SHIELDS[k])||null;
@@ -1233,7 +1233,7 @@ function doAttack(a,d,wid,mode,kind){
   if(d.fake==="image"||a.fake==="image"){ const im=d.fake==="image"?d:a; im.hp=0; lg(head+": HIT, but it is only an image: it vanishes without doing any harm."); endCheck(); return; }
   if((kind==="missile"||kind==="thrown")&&d.rev){ if(a.rev){ lg(head+": HIT, but both are protected by Reverse Missiles and the missile flies back and forth, harming no one."); return; } if(a.revHit){ lg(head+": the archer is warned that the first arrow turned back, and fires no second one."); return; } a.revHit=true; lg(head+": HIT, but Reverse Missiles turns it back on the one who fired!"); const t0=a; a=d; d=t0; }
   const r=dmgRoll(a,wid), full=r.total*mult, st=stopsFor(d,a,wid,kind), hits=Math.max(0,full-st);
-  lg(`${head}: HIT. ${iname(wid)} ${dice_txt(r)}${mult>1?" ×"+mult+" = "+full:""}; armor and shield stop ${Math.min(st,full)}. ${hits?vb(d,"You take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
+  lg(`${head}: HIT. ${iname(wid)}${r.two?" in both hands":""} ${dice_txt(r)}${mult>1?" ×"+mult+" = "+full:""}; armor and shield stop ${Math.min(st,full)}. ${hits?vb(d,"You take","takes")+" "+hits+" hit"+(hits>1?"s":""):"No damage gets through"}.`);
   if(hits>0){
     credit(a,d,hits); d.hp-=hits; d.hits+=hits; d.tookHit=true; d.sleep=false; if(!kind||kind==="jab"){ a.dealt=true; a.lastTgt=d; }   /* missile and thrown hits do not allow a forced retreat */
     lg(`${d.p.name}'s ST is now ${Math.max(d.hp,0)}.`);

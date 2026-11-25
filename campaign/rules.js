@@ -46,7 +46,7 @@ const W = {
   lxbow:   {n:"Light crossbow",d:2,m:0, st:12, two:1, miss:1, rate:"1 shot every other turn; every turn at adjDX 14+", grp:"Missile weapons"},
   hxbow:   {n:"Heavy crossbow",d:3,m:0, st:15, two:1, miss:1, rate:"1 shot every 3rd turn; every other turn at adjDX 14+", grp:"Missile weapons"},
   /* weapons the 2018 table (In the Labyrinth, Advanced Combat p. 109) has that this page lacked; adv marks them. Damage and ST were read from the owner's photo of that page. */
-  bastard: {n:"Bastard sword (1 hand)", d:2,m:1, st:13, grp:"Melee weapons", adv:1},
+  bastard: {n:"Bastard sword",  d:2,m:1, st:13, grp:"Melee weapons", adv:1, note:"2d+1 in one hand; 3d-2 when the left hand is empty (both hands on it)."},
   bastard2:{n:"Bastard sword (2 hands)",d:3,m:-2,st:13, two:1, grp:"Melee weapons", adv:1, note:"The same sword as the 1-hand one, held in both hands."},
   greatsw: {n:"Great sword",   d:3,m:1, st:16, two:1, grp:"Melee weapons", adv:1},
   hatchet: {n:"Hatchet",       d:1,m:0, st:9,  th:1, grp:"Melee weapons", adv:1},
