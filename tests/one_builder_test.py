@@ -16,6 +16,7 @@ with sync_playwright() as p:
     br = p.chromium.launch(); pg = br.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(BASE + "index.html")
     ok("O1 the campaign menu has the campaign builder and no old builder", pg.locator("a[href='campaign-builder.html']").count() == 1 and pg.locator("a[href='builder.html']").count() == 0)
+    ok("O1b the menu links to the original game's builder (outside the campaign) for bringing characters over", pg.locator("a[href='../builder.html']").count() == 1)
     pg.goto(BASE + "campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
     ok("O2 the builder offers no 'take the regular builder' buttons", pg.locator("#fromBuilder, #setBuilder").count() == 0 and pg.locator("a[href='builder.html']").count() == 0)
     pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
