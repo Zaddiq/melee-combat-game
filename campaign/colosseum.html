@@ -38,7 +38,9 @@ svg{width:100%;height:auto;max-height:80vh}
 
  <details class="card" id="giveCard"><summary style="cursor:pointer;font-weight:600">Hand out a magic item (from this tablet's list)</summary>
   <div class="mut" style="margin:8px 0 6px">The tablet keeps the whole <a href="magic.html">Magic items list</a>. Pick a player who came in from a phone with a campaign hero, pick an item (found or not), and it is sent to that phone and saved on that hero.</div>
-  <div class="row"><select id="gvWho" autocomplete="off"></select><select id="gvItem" autocomplete="off"></select><button id="gvGo">Give it</button></div><div id="gvMsg" class="mut"></div></details>
+  <div class="row"><select id="gvWho" autocomplete="off"></select><select id="gvItem" autocomplete="off"></select><button id="gvGo">Give it</button></div><div class="row"><b>Move an item:</b><select id="mvFrom" autocomplete="off"></select><select id="mvItem" autocomplete="off"></select><span>to</span><select id="mvTo" autocomplete="off"></select><button id="mvGo">Move it</button></div>
+  <div class="row"><b>Give loot:</b><select id="ltWho" autocomplete="off"></select><input id="ltName" placeholder="What is it" maxlength="40" style="width:11em"><label>Worth $ <input id="ltVal" type="number" min="0" step="1" style="width:6em"></label><button id="ltGo">Give loot</button></div>
+  <div class="mut">Loot is sold for money in the campaign builder, between sessions.</div><div id="gvMsg" class="mut"></div></details>
  <details class="card" id="encCard"><summary style="cursor:pointer;font-weight:600">Encounter (a room with monsters)</summary><div class="mut" style="margin:8px 0 6px">Pick it in the computer-side box under Players. The monsters, their gear and where they stand are plain text kept in this browser only; replace the sample with the monsters of your own module. Weapons and armor use the builder's names (broad, sbow, leather, small ...); a shaman is <code>"cls":"wizard"</code> with a short <code>spells</code> list (it casts Magic Fist and Clumsiness, and fights with its staff when its ST runs low).</div><div class="row"><label><input type="checkbox" id="campOn"> Campaign: fighters keep their ST from one fight to the next</label><button id="campRest">Rest (everyone to full ST)</button></div><div class="mut" id="campNote"></div><div id="modBar" class="row" style="display:none"><b id="modName"></b><button id="modPrev">◀ Previous</button><button id="modNext">Next ▶</button><button id="modDrop">Stop using the module</button></div><div class="mut">A whole module: paste <code>{"module":"Name","encounters":[ ...encounters... ]}</code> and press Save. Next and Previous then step through the rooms in order.</div><textarea id="encJson" rows="16" spellcheck="false"></textarea><div class="row"><button id="encApply">Save this encounter</button><button id="encReset">Back to the sample</button><span class="mut" id="encMsg"></span></div></details>
 
  <div class="card"><h2>Players</h2><div class="row"><select id="npSel" autocomplete="off"><option value="1">1 player (against the computer)</option><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select><select id="modeSel" autocomplete="off"><option value="ffa">Free for all</option><option value="teams">Teams (two sides)</option></select><select id="creSel" autocomplete="off" title="A side run by the computer"></select><select id="creN" autocomplete="off" title="How many"></select></div><div class="mut" id="npNote"></div></div>
@@ -1489,18 +1491,41 @@ ui(); drawMap();
 /* ---- hand out a magic item: the tablet's list -> a phone player's hero (sent back the same way experience is) ---- */
 function gvList(){ try{ const o=JSON.parse(localStorage.getItem("magic-items-v1")||"[]"); return Array.isArray(o)?o.filter(x=>x&&typeof x.id==="string"&&x.n):[]; }catch(e){ return []; } }
 function gvFill(){ const w=[]; for(let i=0;i<NP;i++){ const f=slot[i]; if(f&&f.phone) w.push(`<option value="${i}">Player ${i+1}: ${esc(f.name)}</option>`); }
-  $("gvWho").innerHTML=w.length?w.join(""):'<option value="">(no phone players seated)</option>'; const L=gvList();
-  $("gvItem").innerHTML=L.length?L.map(x=>`<option value="${esc(x.id)}">${esc(x.n)}${x.found?"":" (not found yet)"}</option>`).join(""):'<option value="">(the list is empty)</option>'; }
+  $("gvWho").innerHTML=w.length?w.join(""):'<option value="">(no phone players seated)</option>'; $("ltWho").innerHTML=$("gvWho").innerHTML; $("mvFrom").innerHTML=$("gvWho").innerHTML; $("mvTo").innerHTML=$("gvWho").innerHTML; if($("mvTo").options.length>1) $("mvTo").selectedIndex=1;
+  const L=gvList(); $("gvItem").innerHTML=L.length?L.map(x=>`<option value="${esc(x.id)}">${esc(x.n)}${x.found?"":" (not found yet)"}</option>`).join(""):'<option value="">(the list is empty)</option>'; mvFill(); }
+function mvFill(){ const f=slot[+$("mvFrom").value], m=f&&f.phone&&f.phone.src&&f.phone.src.camp&&Array.isArray(f.phone.src.camp.magic)?f.phone.src.camp.magic:[];
+  $("mvItem").innerHTML=m.length?m.map(x=>`<option value="${esc(x.id)}">${esc(x.n)}</option>`).join(""):'<option value="">(none on this hero)</option>'; }
+$("mvFrom").onchange=mvFill;
+function gvSend(f,ns){   /* keep the new copy of the hero on the tablet and send it to the phone (the same way experience goes back) */
+  f.phone.src=ns; f.phone.rec=Object.assign({name:f.phone.name,st:f.st,dx:f.dx,iq:f.iq,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false},f.phone.rec||{}); Online.result(f); }
+const gvOnline=()=>window.Online&&Online.isOn&&Online.isOn();
+function gvPlayer(i){ const f=slot[i]; if(!f||!f.phone) return ["That seat is not a phone player."]; const src=f.phone.src; if(!src||!src.camp||typeof src.camp!=="object") return [f.name+" is not a campaign hero (no campaign builder data), so items cannot be added."]; return [null,f,src]; }
+const gvSame=(m,it)=>m.n===it.n&&m.base===it.base&&m.dx===it.dx&&m.dm===it.dm&&m.stops===it.stops;
 function giveItem(i,itemId){
-  const f=slot[i], it=gvList().find(x=>x.id===itemId); if(!f||!f.phone) return "That seat is not a phone player.";
-  if(!it) return "Pick an item first."; const src=f.phone.src; if(!src||!src.camp||typeof src.camp!=="object") return f.name+" is not a campaign hero (no campaign builder data), so items cannot be added.";
-  const cur=Array.isArray(src.camp.magic)?src.camp.magic:[]; if(cur.some(m=>m.n===it.n&&m.base===it.base&&m.dx===it.dx&&m.dm===it.dm&&m.stops===it.stops)) return f.name+" already has "+it.n+".";
+  const [err,f,src]=gvPlayer(i); if(err) return err; const it=gvList().find(x=>x.id===itemId); if(!it) return "Pick an item first.";
+  const cur=Array.isArray(src.camp.magic)?src.camp.magic:[]; if(cur.some(m=>gvSame(m,it))) return f.name+" already has "+it.n+".";
   let n=1; while(cur.some(m=>m.id==="mg_"+n)) n++; const got=RULES.addMagic([Object.assign({},it,{id:"mg_"+n,lit:0})]); if(!got.length) return "That item cannot be made.";
-  if(!window.Online||!Online.isOn||!Online.isOn()) return "This tablet is not hosting an online table, so the phone cannot be reached.";
+  if(!gvOnline()) return "This tablet is not hosting an online table, so the phone cannot be reached.";
   const ns=JSON.parse(JSON.stringify(src)); ns.camp.magic=[...cur,got[0]]; ns.camp.inv=Object.assign({},ns.camp.inv||{},{["mg_"+n]:1});
-  f.phone.src=ns; f.phone.rec=Object.assign({name:f.phone.name,st:f.st,dx:f.dx,iq:f.iq,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false},f.phone.rec||{});
-  Online.result(f); return "Sent "+it.n+" to "+f.name+"'s phone. It shows in their campaign builder gear once the phone saves it."; }
+  gvSend(f,ns); return "Sent "+it.n+" to "+f.name+"'s phone. It shows in their campaign builder gear once the phone saves it."; }
+function moveItem(i,j,id){
+  if(i===j) return "Pick two different players.";
+  const [e1,fa,sa]=gvPlayer(i); if(e1) return e1; const [e2,fb,sb]=gvPlayer(j); if(e2) return e2;
+  const ma=Array.isArray(sa.camp.magic)?sa.camp.magic:[], it=ma.find(m=>m.id===id); if(!it) return fa.name+" does not have that item.";
+  const mb=Array.isArray(sb.camp.magic)?sb.camp.magic:[]; if(mb.some(m=>gvSame(m,it))) return fb.name+" already has "+it.n+".";
+  let n=1; while(mb.some(m=>m.id==="mg_"+n)) n++; const got=RULES.addMagic([Object.assign({},it,{id:"mg_"+n,lit:0})]); if(!got.length) return "That item cannot be moved.";
+  if(!gvOnline()) return "This tablet is not hosting an online table, so the phones cannot be reached.";
+  const na=JSON.parse(JSON.stringify(sa)); na.camp.magic=ma.filter(m=>m.id!==id); if(na.camp.inv) delete na.camp.inv[id];
+  for(const k of ["a","b","s1","d1","d2","armor"]) if(na[k]===id) na[k]="none"; for(const k of ["s2","d2"]) if(na.camp[k]===id) na.camp[k]="none";
+  const nb=JSON.parse(JSON.stringify(sb)); nb.camp.magic=[...mb,got[0]]; nb.camp.inv=Object.assign({},nb.camp.inv||{},{["mg_"+n]:1});
+  gvSend(fa,na); gvSend(fb,nb); return "Moved "+it.n+" from "+fa.name+" to "+fb.name+"."; }
+function giveLoot(i,name,val){
+  const [err,f,src]=gvPlayer(i); if(err) return err; name=String(name||"").trim().slice(0,40); val=Math.max(0,Math.min(1000000,Math.round(+val)||0)); if(!name) return "Say what the loot is.";
+  const cur=Array.isArray(src.camp.loot)?src.camp.loot:[]; if(cur.length>=60) return f.name+" is carrying too much loot already."; if(!gvOnline()) return "This tablet is not hosting an online table, so the phone cannot be reached.";
+  const ns=JSON.parse(JSON.stringify(src)); ns.camp.loot=[...cur,{n:name,v:val}]; gvSend(f,ns); return "Sent "+name+" ($"+val+") to "+f.name+"'s phone. They can sell it in the campaign builder."; }
 $("gvGo").onclick=()=>{ $("gvMsg").textContent=giveItem(+$("gvWho").value,$("gvItem").value); };
+$("mvGo").onclick=()=>{ $("gvMsg").textContent=moveItem(+$("mvFrom").value,+$("mvTo").value,$("mvItem").value); mvFill(); };
+$("ltGo").onclick=()=>{ $("gvMsg").textContent=giveLoot(+$("ltWho").value,$("ltName").value,$("ltVal").value); };
 $("giveCard").addEventListener("toggle",gvFill);
 </script>
 <script src="online-host.js"></script></body></html>

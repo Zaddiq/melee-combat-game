@@ -71,6 +71,10 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
  <h3>Magic items</h3>
  <p class="mut">Weapons, armor and shields with enchantments, taken from your <a href="magic.html">Magic items list</a> (make or change them there). A weapon's DX bonus is added to your adjusted DX whenever it is readied. A weapon that can flame does more damage while "Flame on" is ticked. Armor and shields stop extra hits. Other powers are in the item's note: the fight does not enforce them.</p>
  <div id="magic"></div><div class="row"><select id="magicPick"></select><button id="magicAdd">Add to this hero</button></div>
+ <h3>Loot</h3>
+ <p class="mut">Things found that are worth money (gems, jewelry, trade goods). Sell them between sessions: the money goes into "Money to spend" above.</p>
+ <div id="loot"></div>
+ <div class="row"><input id="lootN" placeholder="What is it" maxlength="40" style="width:13em"><label>Worth $ <input type="number" id="lootV" min="0" step="1" style="width:6em"></label><button id="lootAdd">Add loot</button><button id="lootAll">Sell all loot</button></div>
 </div>
 
 <div class="card"><h2>5. Talents and languages (change these rarely)</h2>
@@ -114,7 +118,7 @@ function loadData(){ try{ const o=JSON.parse(store.get(DKEY)||"null"); if(o&&!ch
 
 /* ---- the character ---- */
 let C=null;   /* {base (everything else the regular builder knows), name, race, cls, st, dx, iq, total, langs, tal:[ids], purse, silver, inv:{id:n}, armor, a,b,s1,s2,d1,d2} */
-const BLANKC=()=>({base:{},name:"",race:"human",cls:"fighter",st:8,dx:8,iq:8,total:32,langs:0,tal:[],purse:0,silver:false,inv:{},armor:"none",a:"none",b:"none",s1:"none",s2:"none",d1:"none",d2:"none",magic:[]});
+const BLANKC=()=>({base:{},name:"",race:"human",cls:"fighter",st:8,dx:8,iq:8,total:32,langs:0,tal:[],purse:0,silver:false,inv:{},armor:"none",a:"none",b:"none",s1:"none",s2:"none",d1:"none",d2:"none",magic:[],loot:[]});
 function fromBuilderJson(o){
   const c=BLANKC(), R=RACES[o.race]||RACES.human; c.base=JSON.parse(JSON.stringify(o)); for(const k of ["a","b","s1","d1","d2","armor","name","race","cls","st","dx","iq","total","silver"]) delete c.base[k];
   delete c.base.camp;
@@ -124,12 +128,14 @@ function fromBuilderJson(o){
   const cp=o.camp&&typeof o.camp==="object"?o.camp:null;
   if(cp){ c.langs=Math.max(0,Math.min(20,+cp.langs||0)); c.tal=Array.isArray(cp.tal)?cp.tal.filter(x=>typeof x==="string").slice(0,80):[]; c.purse=Math.max(0,+cp.purse||0);
     if(cp.inv&&typeof cp.inv==="object") for(const [k,v] of Object.entries(cp.inv)) if(typeof v==="number"&&v>0&&v<100) c.inv[k]=Math.floor(v); c.magic=syncMagic(RULES.addMagic(cp.magic)); for(const k of Object.keys(c.inv)) if(/^mg_/.test(k)&&!c.magic.some(m=>m.id===k)) delete c.inv[k]; for(const m of c.magic) c.inv[m.id]=1;
+    c.loot=cleanLoot(cp.loot);
     c.s2=typeof cp.s2==="string"?cp.s2:"none"; c.d2=typeof cp.d2==="string"?cp.d2:"none"; c.s1=o.s1||"none"; c.d1=o.d1||"none"; }
   else { c.s1=o.s1||"none"; c.d1=o.d1||"none"; }
   c.armor=ARMOR[o.armor]?o.armor:"none"; c.a=o.a||"none"; c.b=o.b||"none";
   /* what the character already carries is owned (a character from the regular builder arrives with its gear, and the money is its to spend) */
   for(const k of [c.armor,c.a,c.b,c.s1,c.d1,c.d2,c.s2]) if(k&&k!=="none"&&k!=="staff"&&!(cp&&cp.inv)) c.inv[k]=(c.inv[k]||0)+1;
   return c; }
+const cleanLoot=l=>Array.isArray(l)?l.filter(x=>x&&typeof x.n==="string"&&x.n.trim()).slice(0,60).map(x=>({n:x.n.trim().slice(0,40),v:Math.max(0,Math.min(1000000,Math.round(+x.v)||0))})):[];
 function syncMagic(list){ for(const T of [W,ARMOR,SHIELDS]) for(const k of Object.keys(T)) if(/^mg_/.test(k)&&!list.some(m=>m.id===k)) delete T[k]; return list; }
 const spellsOf=c=>Array.isArray(c.base.spells)?c.base.spells:[];
 const hasStaff=c=>c.cls==="wizard"&&spellsOf(c).includes("Staff");
@@ -219,9 +225,10 @@ function render(keepFocus){
   const ow=Object.keys(C.inv).filter(k=>own(k)>0&&!/^mg_/.test(k));
   $("owned").innerHTML=ow.length?`<table>${ow.map(k=>`<tr><td>${esc(itemName(k))}</td><td>× ${own(k)}</td><td>$${(priceOf(k)||0)*own(k)}</td><td><button data-sell="${k}">Sell one (full price back)</button></td></tr>`).join("")}</table>`:"Nothing yet.";
   /* fight loadout */
-  renderMagic(); fixLoadout();
+  renderMagic(); renderLoot(); fixLoadout();
   fillSelect($("ldArmor"),[["none","No armor"],...Object.keys(C.inv).filter(k=>isArmor(k)&&own(k)>0).map(k=>[k,ARMOR[k].n])],C.armor);
   for(const sl of ["a","b","s1","s2","d1","d2"]) fillSelect($("ld_"+sl),[["none","nothing"],...fightList(sl).filter(k=>k===C[sl]||own(k)>used(k,sl)).map(k=>[k,itemName(k)+(W[k]&&W[k].st>C.st?" (needs ST "+W[k].st+")":"")])],C[sl]);
+  if(hasStaff(C)) fillSelect($("ld_a"),[["staff","Wizard's staff (magical)"]],"staff");
   $("ld_a").disabled=hasStaff(C);
   fightNotes();
   /* output */
@@ -240,13 +247,21 @@ $("magic").onchange=e=>{ const r=e.target.closest("[data-m]"); if(!r||e.target.d
 $("magic").onclick=e=>{ const id=e.target.dataset&&e.target.dataset.mdel; if(!id) return; C.magic=C.magic.filter(m=>m.id!==id); delete C.inv[id]; for(const sl of ["a","b","s1","s2","d1","d2"]) if(C[sl]===id) C[sl]="none"; if(C.armor===id) C.armor="none"; syncMagic(C.magic); render(); };
 $("magicAdd").onclick=()=>{ const x=catalog().find(y=>y.id===$("magicPick").value); if(!x||C.magic.length>=20) return; let i=1; while(C.magic.some(m=>m.id==="mg_"+i)) i++;
   const got=RULES.addMagic([Object.assign({},x,{id:"mg_"+i,lit:0})]); if(!got.length){ $("magicPick").focus(); return; } C.magic.push(got[0]); C.inv[got[0].id]=1; render(); };
+function renderLoot(){
+  const tot=C.loot.reduce((t,x)=>t+x.v,0);
+  $("loot").innerHTML=C.loot.length?`<table>${C.loot.map((x,i)=>`<tr><td>${esc(x.n)}</td><td>$${x.v}</td><td><button data-lsell="${i}">Sell for $${x.v}</button> <button data-ldel="${i}">Throw away</button></td></tr>`).join("")}</table>`:'<div class="mut">None.</div>';
+  $("lootAll").disabled=!C.loot.length; $("lootAll").textContent=C.loot.length?"Sell all loot ($"+tot+")":"Sell all loot"; }
+$("loot").onclick=e=>{ const d=e.target.dataset||{}; if(d.lsell!==undefined){ const x=C.loot[+d.lsell]; if(!x) return; C.purse+=x.v; C.loot.splice(+d.lsell,1); render(); }
+  else if(d.ldel!==undefined){ const x=C.loot[+d.ldel]; if(!x||!confirm("Throw away "+x.n+" without selling it?")) return; C.loot.splice(+d.ldel,1); render(); } };
+$("lootAdd").onclick=()=>{ const n=$("lootN").value.trim(), v=Math.max(0,Math.round(+$("lootV").value)||0); if(!n||C.loot.length>=60) return; C.loot.push({n:n.slice(0,40),v}); $("lootN").value=""; $("lootV").value=""; render(); };
+$("lootAll").onclick=()=>{ const t=C.loot.reduce((a,x)=>a+x.v,0); if(!C.loot.length) return; C.purse+=t; C.loot=[]; render(); };
 function fixLoadout(){   /* nothing may be in a slot unless owned, fitting, and not over its count or the character's ST */
   if(!ARMOR[C.armor]||(C.armor!=="none"&&own(C.armor)<1)) C.armor="none";
   const ORDER=["a","b","s1","s2","d1","d2"];
   for(const sl of ORDER){ const k=C[sl]; if(k==="none") continue;
     const before=ORDER.slice(0,ORDER.indexOf(sl)).filter(x=>C[x]===k).length;   /* earlier slots keep the item, later ones give it up */
     if(!fightList(sl).includes(k)||own(k)<before+1||(W[k]&&W[k].st>C.st)) C[sl]="none"; }
-  if(hasStaff(C)) C.a="none";
+  if(hasStaff(C)) C.a="staff"; else if(C.a==="staff") C.a="none";   /* a wizard who knows the Staff spell carries his staff in his right hand */
   if(C.a!=="none"&&W[C.a].two&&C.b!=="none"&&!isShield(C.b)) C.b="none";   /* a two-hander fills both hands (a shield goes on the back) */
 }
 function adjDX(){
@@ -268,10 +283,10 @@ function problems(){
   if(left()<0) p.push("The gear costs more than the money.");
   return p; }
 function exportChar(forSave){
-  const o=JSON.parse(JSON.stringify(C.base)); Object.assign(o,{name:C.name.trim(),race:C.race,cls:C.cls,total:C.total,st:C.st,dx:C.dx,iq:C.iq,silver:C.silver,armor:C.armor,a:C.a,b:C.b,s1:C.s1,d1:C.d1,d2:"none"});
+  const o=JSON.parse(JSON.stringify(C.base)); Object.assign(o,{name:C.name.trim(),race:C.race,cls:C.cls,total:C.total,st:C.st,dx:C.dx,iq:C.iq,silver:C.silver,armor:C.armor,a:hasStaff(C)?"none":C.a,b:C.b,s1:C.s1,d1:C.d1,d2:"none"});
   /* fx: what the fight engine needs to know (it has no talent list): carried items the hero lacks the talent for, and the two bonus talents */
   const pen=[...new Set([C.a,C.b,C.s1,C.d1,C.s2,C.d2].filter(k=>k&&k!=="none"&&k!=="staff").filter(k=>{ const t=talentFor(k); return t&&!has(t.id); }))];
-  o.camp={v:1,langs:C.langs,tal:C.tal.slice(),purse:C.purse,inv:Object.assign({},C.inv),s2:C.s2,d2:C.d2,magic:C.magic.map(m=>Object.assign({},m)),fx:{pen,ms:has("missile")?1:0,th:has("thrown")?1:0}};
+  o.camp={v:1,langs:C.langs,tal:C.tal.slice(),purse:C.purse,inv:Object.assign({},C.inv),s2:C.s2,d2:C.d2,magic:C.magic.map(m=>Object.assign({},m)),loot:C.loot.map(x=>({n:x.n,v:x.v})),fx:{pen,ms:has("missile")?1:0,th:has("thrown")?1:0}};
   if(forSave) o.name=C.name;
   return o; }
 
