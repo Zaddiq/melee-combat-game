@@ -22,6 +22,7 @@ textarea{width:100%;box-sizing:border-box;font:12px monospace}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px 18px}
 .tal{display:flex;gap:6px;align-items:baseline;padding:2px 0}.tal label{flex:1}.tal .c{color:var(--mut);font-size:13px;white-space:nowrap}
 table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;border-top:1px solid var(--line);font-size:15px}th{font-size:13px;color:var(--mut)}
+#shop td:not(:first-child),#shop th:not(:first-child){white-space:nowrap;width:1%}
 .bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:4px 0}.bar i{display:block;height:100%;background:var(--acc)}.bar i.over{background:var(--bad)}
 </style>
 </head>
@@ -191,15 +192,15 @@ function buildStatic(){
   const levels=[...new Set(D.talents.map(t=>t.iq))].sort((a,b)=>a-b); let h="";
   for(const L of levels){ h+=`<h3>IQ ${L} talents</h3><div class="grid2">`; for(const t of D.talents.filter(x=>x.iq===L)) h+=`<div class="tal"><input type="checkbox" id="tal_${t.id}" data-t="${t.id}"><label for="tal_${t.id}">${esc(t.n)}</label><span class="c" id="talc_${t.id}"></span></div>`; h+="</div>"; }
   $("talents").innerHTML=h;
-  let s=""; for(let [gn,ks] of SHOPKEYS()){ if(!ks.length) continue; s+=`<h3>${gn}</h3><table><tr><th>Item</th><th>Needs</th><th>Price</th>${gn==="Weapons"?"<th>Damage</th>":""}<th>Talent</th><th></th></tr>`;
+  let s=""; for(let [gn,ks] of SHOPKEYS()){ if(!ks.length) continue; s+=`<h3>${gn}</h3><table><tr><th>Item</th><th>Needs</th><th>Price</th>${gn==="Weapons"?"<th>Damage</th><th>Hands</th>":""}<th>Talent</th><th></th></tr>`;
     const wk=gn==="Weapons";
     const ord=["Melee weapons","Pole weapons","Missile weapons"], gp=k=>ord.includes(W[k].grp)?W[k].grp:ord[0], gi=k=>ord.indexOf(gp(k));
     if(wk){
       ks=[...ks].sort((a,b)=>gi(a)-gi(b)||(W[a].st||0)-(W[b].st||0)||(W[a].d*10+W[a].m)-(W[b].d*10+W[b].m)); }
     let lastG=null;
-    for(const k of ks){ if(wk&&gp(k)!==lastG){ lastG=gp(k); s+=`<tr><th colspan="6" style="text-align:left">${esc(lastG)}</th></tr>`; }
+    for(const k of ks){ if(wk&&gp(k)!==lastG){ lastG=gp(k); s+=`<tr><th colspan="8" style="text-align:left">${esc(lastG)}</th></tr>`; }
       const fd=x=>`${x.d}d${x.m?(x.m>0?"+":"")+x.m:""}`;
-      const dmg=wk?`<td>${fd(W[k])}${W[k+"2"]&&W[k+"2"].two?` / ${fd(W[k+"2"])} <span class="mut">(2 hands)</span>`:""}</td>`:"";
+      const dmg=wk?`<td>${fd(W[k])}${W[k+"2"]&&W[k+"2"].two?` / ${fd(W[k+"2"])}`:""}</td><td>${W[k+"2"]&&W[k+"2"].two?"1 or 2":W[k].two?"2":"1"}</td>`:"";
       s+=`<tr><td>${esc(itemName(k))} <span class="ok" id="own_${k}"></span></td><td>${W[k]&&W[k].st?"ST "+W[k].st:""}</td><td id="pr_${k}"></td>${dmg}<td id="tf_${k}"></td><td><button data-buy="${k}" id="buy_${k}">Buy</button></td></tr>`; }
     s+="</table>"; }
   $("shop").innerHTML=s; }
