@@ -588,3 +588,6 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - The campaign builder's weapons shop is grouped (melee, pole, missile), sorted by ST, with a Damage column; the bastard sword row shows both damages.
 - Main-gauche uses the Knife talent (EXTRA.like.mg = dagger).
 - The bastard sword does its two-hand damage (3d-2, same as "bastard2") automatically whenever it is readied with nothing in the left hand; with a shield or main-gauche it does 2d+1. dmgRoll in campaign/colosseum, arena, duel, wizard-arena checks this at each hit and the log says "in both hands". "Bastard sword (2 hands)" is still selectable to force the two-hand grip. Test: tests/bastard_grip_test.py.
+
+## Campaign: ready weapon and shield together after firing a bow
+- The "Ready X and Y together" choice used to need both hands empty, so after firing a bow (a two-hander in hand) it was missing. It is now also offered when the left hand is empty and the right holds a two-handed weapon; the bow goes on the back (or to the floor if the back is full). Test: tests/ready_after_bow_test.py.
