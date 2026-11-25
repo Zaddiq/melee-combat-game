@@ -83,7 +83,7 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
  <div class="row"><b id="iqUsed"></b><span class="mut" id="iqNote"></span></div><div class="bar"><i id="iqBar" style="width:0"></i></div>
  <div class="row"><label>Languages besides your own (1 IQ each) <input type="number" id="chLangs" min="0" max="20"></label></div>
 <div id="iqSecs" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
-  <details id="spellSec" style="order:1"><summary id="spellSum" style="cursor:pointer;font-weight:600"></summary><div id="spellList" style="margin-top:6px"></div><div id="spellAdd" class="row" style="margin-top:6px"><select id="spAdd"></select><button id="spAddBtn">Add spell</button></div><div id="spMsg" class="mut"></div></details>
+  <details id="spellSec" style="order:1"><summary id="spellSum" style="cursor:pointer;font-weight:600"></summary><div id="spellList" style="margin-top:6px"></div><div id="spellAdd" class="row" style="margin-top:6px"><select id="spAdd"></select><button id="spAddBtn">Add spell</button></div><div id="spDesc" style="margin:6px 0;padding:6px 10px;border-left:3px solid var(--acc);display:none"></div><div id="spMsg" class="mut"></div></details>
   <details id="talSec" style="order:2"><summary id="talSum" style="cursor:pointer;font-weight:600"></summary><div id="talents" style="margin-top:6px"></div></details>
  </div>
 </div>
@@ -99,7 +99,7 @@ const DKEY="campaign-data-v1", CKEY="wizard-builder-v1", SKEY="campaign-char-v1"
 const store={get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} }};
 
 /* ---- the rules data (kept in this browser; never part of the page) ----
-   {talents:[{id,n,iq,c,wc?,pre?[],preAny?[],dx?,st?,cIf?[[id,cost]]}], prices:{itemId:silver}, talentFor:{itemId:talentId}, misc:[{id,n,p}], spells?:[{n,iq}]}
+   {talents:[{id,n,iq,c,wc?,pre?[],preAny?[],dx?,st?,cIf?[[id,cost]]}], prices:{itemId:silver}, talentFor:{itemId:talentId}, misc:[{id,n,p}], spells?:[{n,iq,d?}]}
    item ids are the weapon, armor and shield ids used by the rest of the site (rules.js). */
 let D=null;
 function checkData(o){
@@ -118,7 +118,7 @@ function checkData(o){
   for(const [k,v] of Object.entries(o.prices)){ if(!(W[k]||ARMOR[k]||SHIELDS[k])||k==="none"||k==="staff") return "prices: "+k+" is not an item this site knows."; if(typeof v!=="number"||v<0) return "prices: "+k+" needs a number."; }
   if(o.talentFor) for(const [k,v] of Object.entries(o.talentFor)){ if(!(W[k]||SHIELDS[k])) return "talentFor: "+k+" is not a weapon or shield."; if(!ids.has(v)) return "talentFor: "+v+" is not a talent in the list."; }
   if(o.misc!=null&&(!Array.isArray(o.misc)||o.misc.some(m=>!m||!/^[a-z0-9_]{1,30}$/.test(m.id||"")||typeof m.n!=="string"||typeof m.p!=="number"))) return "misc must be a list of {id, n, p}.";
-  if(o.spells!=null&&(!Array.isArray(o.spells)||o.spells.length>300||o.spells.some(x=>!x||typeof x.n!=="string"||!x.n||x.n.length>30||!Number.isInteger(x.iq)||x.iq<1||x.iq>40))) return "spells must be a list of {n, iq}.";
+  if(o.spells!=null&&(!Array.isArray(o.spells)||o.spells.length>300||o.spells.some(x=>!x||typeof x.n!=="string"||!x.n||x.n.length>30||!Number.isInteger(x.iq)||x.iq<1||x.iq>40||(x.d!=null&&(typeof x.d!=="string"||x.d.length>400))))) return "spells must be a list of {n, iq}.";
   return ""; }
 function loadData(){ try{ const o=JSON.parse(store.get(DKEY)||"null"); if(o&&!checkData(o)){ D=o; return; } }catch(e){} D=null; }
 
@@ -240,10 +240,10 @@ function render(keepFocus){
   $("spellSec").style.order=wiz?1:2; $("talSec").style.order=wiz?2:1;
   $("spellSum").textContent=!wiz&&!sp.length?"Spells (none; 3 IQ each)":`Spells (${spCost} of ${C.iq} IQ spent)`;
   const per=wiz?1:3, iqLeft=C.iq-used0, SL=(D&&D.spells)||[];
-  $("spellList").innerHTML=sp.length?sp.map(n=>{ const e=SL.find(x=>x.n===n); return `<span class="chip" style="display:inline-block;border:1px solid var(--line);border-radius:14px;padding:2px 4px 2px 10px;margin:0 6px 6px 0">${esc(n)}${e?` <span class="mut">IQ ${e.iq}</span>`:""} <button data-spdel="${esc(n)}" style="padding:0 8px" aria-label="Remove ${esc(n)}">×</button></span>`; }).join(""):`<span class="mut">No spells.</span>`;
+  $("spellList").innerHTML=sp.length?sp.map(n=>{ const e=SL.find(x=>x.n===n); return `<span class="chip" style="display:inline-block;border:1px solid var(--line);border-radius:14px;padding:2px 4px 2px 10px;margin:0 6px 6px 0"${e&&e.d?` title="${esc(e.d)}"`:""}><span data-spshow="${esc(n)}" style="cursor:help">${esc(n)}</span>${e?` <span class="mut">IQ ${e.iq}</span>`:""} <button data-spdel="${esc(n)}" style="padding:0 8px" aria-label="Remove ${esc(n)}">×</button></span>`; }).join(""):`<span class="mut">No spells.</span>`;
   /* the picker: spells at or under the character's IQ that he does not know yet, by level; costs ${per} IQ each */
   const cand=SL.filter(x=>x.iq<=C.iq&&!sp.includes(x.n)).sort((a,b)=>a.iq-b.iq||a.n.localeCompare(b.n));
-  const sig=cand.map(x=>x.n).join("|"); if($("spAdd").dataset.sig!==sig){ $("spAdd").dataset.sig=sig; let h='<option value="">Choose a spell…</option>',g=null; for(const x of cand){ if(x.iq!==g){ if(g!==null) h+="</optgroup>"; g=x.iq; h+=`<optgroup label="IQ ${g} spells">`; } h+=`<option value="${esc(x.n)}">${esc(x.n)}</option>`; } if(g!==null) h+="</optgroup>"; $("spAdd").innerHTML=h; }
+  const sig=cand.map(x=>x.n).join("|"); if($("spAdd").dataset.sig!==sig){ $("spAdd").dataset.sig=sig; let h='<option value="">Choose a spell…</option>',g=null; for(const x of cand){ if(x.iq!==g){ if(g!==null) h+="</optgroup>"; g=x.iq; h+=`<optgroup label="IQ ${g} spells">`; } h+=`<option value="${esc(x.n)}"${x.d?` title="${esc(x.d)}"`:""}>${esc(x.n)}</option>`; } if(g!==null) h+="</optgroup>"; $("spAdd").innerHTML=h; }
   $("spellAdd").style.display=SL.length?"":"none";
   $("spAddBtn").disabled=iqLeft<per;
   $("spMsg").textContent=!SL.length?"Paste the up-to-date rules data (it has the spell list) to pick spells here.":iqLeft<per?`Not enough IQ left (a spell costs ${per}).`:`${per} IQ each; ${wiz?"a wizard":"a hero"} may know spells of IQ ${C.iq} or less${wiz?"":", and casts them at DX −4"}.`;
@@ -333,8 +333,11 @@ $("pasteBtn").onclick=()=>{ $("pasteBox").style.display=$("pasteBox").style.disp
 $("pasteGo").onclick=()=>{ let o; try{ o=JSON.parse($("pasteTxt").value); }catch(e){ $("pasteMsg").textContent="That is not valid text: "+e.message; return; } if(!o||typeof o!=="object"||Array.isArray(o)||!o.name){ $("pasteMsg").textContent="That does not look like a character (it needs a name)."; return; } if(C&&C.name.trim()&&!confirm("Replace the character on screen?")) return; $("pasteMsg").textContent=""; $("pasteTxt").value=""; $("pasteBox").style.display="none"; setC(fromBuilderJson(o)); };
 $("chName").oninput=()=>{ C.name=$("chName").value; render(); };
 $("chRace").onchange=()=>{ C.race=$("chRace").value; const R=RACES[C.race]; C.st=Math.max(R.st,C.st); C.dx=Math.max(R.dx,C.dx); C.iq=Math.max(R.iq,C.iq); render(); };
-$("spellList").onclick=e=>{ const n=e.target.dataset&&e.target.dataset.spdel; if(!n) return; C.base.spells=spellsOf(C).filter(x=>x!==n); render(); };
-$("spAddBtn").onclick=()=>{ const n=$("spAdd").value; if(!n||spellsOf(C).includes(n)) return; const e=((D&&D.spells)||[]).find(x=>x.n===n); if(!e||e.iq>C.iq) return; if(C.iq-iqUsed()<(C.cls==="wizard"?1:3)) return; C.base.spells=[...spellsOf(C),n]; $("spAdd").value=""; render(); };
+const spShow=n=>{ const e=((D&&D.spells)||[]).find(x=>x.n===n), b=$("spDesc"); if(!e||!e.d){ b.style.display="none"; return; } b.innerHTML="<b>"+esc(e.n)+"</b> (IQ "+e.iq+"): "+esc(e.d); b.style.display=""; };
+$("spAdd").onchange=()=>spShow($("spAdd").value);
+$("spellList").onmouseover=e=>{ const n=e.target.dataset&&e.target.dataset.spshow; if(n) spShow(n); };
+$("spellList").onclick=e=>{ const sh=e.target.dataset&&e.target.dataset.spshow; if(sh){ spShow(sh); return; } const n=e.target.dataset&&e.target.dataset.spdel; if(!n) return; C.base.spells=spellsOf(C).filter(x=>x!==n); render(); };
+$("spAddBtn").onclick=()=>{ const n=$("spAdd").value; if(!n||spellsOf(C).includes(n)) return; const e=((D&&D.spells)||[]).find(x=>x.n===n); if(!e||e.iq>C.iq) return; if(C.iq-iqUsed()<(C.cls==="wizard"?1:3)) return; C.base.spells=[...spellsOf(C),n]; $("spAdd").value=""; $("spDesc").style.display="none"; render(); };
 $("chCls").onchange=()=>{ C.cls=$("chCls").value; if(C.cls==="fighter") C.base.spells=[]; render(); };
 for(const [id,k,lo] of [["chSt","st",1],["chDx","dx",1],["chIq","iq",1],["chTotal","total",1],["chLangs","langs",0],["purse","purse",0]]) $(id).onchange=()=>{ let v=Math.round(+$(id).value); if(!(v>=lo)) v=lo; if(["st","dx","iq"].includes(k)){ const m=RACES[C.race][k]; if(v<m) v=m; } C[k]=v; render(); };
 $("silver").onchange=()=>{ C.silver=$("silver").checked; render(); };

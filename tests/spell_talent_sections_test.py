@@ -11,6 +11,8 @@ import os
 _P="/tmp/claude-0/-home-claude/5985870c-959b-57f7-a411-8e71a192306f/scratchpad/out/campaign-data-updated.json"   # the owner's rules data is not in the repo
 DATA=json.load(open(_P)) if os.path.exists(_P) else {"talents":[{"id":"knife","n":"Knife","iq":7,"c":1}],"prices":{"dagger":10},
   "spells":[{"n":n,"iq":q} for n,q in [("Staff",8),("Blur",8),("Light",8),("Image",8),("Trip",10),("Fireball",12),("Lightning",14)]]}
+for _s in DATA["spells"]:
+    _s.setdefault("d","Test description for "+_s["n"]+".")
 def hero(**k):
     c={"name":"H","race":"human","cls":"fighter","st":12,"dx":12,"iq":8,"total":32,"a":"none","b":"none","armor":"none","spells":[]}; c.update(k); return c
 with sync_playwright() as p:
@@ -46,6 +48,11 @@ with sync_playwright() as p:
     ok("P5 removing a spell gives the IQ back", "Spells (6 of 10 IQ spent)" in pg.inner_text("#spellSum") and not pg.is_disabled("#spAddBtn"))
     out=pg.evaluate("()=>exportChar()")
     ok("P6 the character carries its spells out to the game", sorted(out.get("spells",[]))==["Blur","Light"] if isinstance(out,dict) else False)
+    pg.select_option("#spAdd","Image")
+    ok("D1 choosing a spell in the picker shows its description", pg.is_visible("#spDesc") and "Image" in pg.inner_text("#spDesc") and len(pg.inner_text("#spDesc"))>20)
+    ok("D2 the options and the known spells carry the description as a hover tooltip", pg.evaluate("()=>document.querySelector('#spAdd option[value=Image]').title.length>10 && document.querySelector('#spellList .chip').title.length>10"))
+    pg.click("[data-spshow]")
+    ok("D3 clicking a known spell's name shows its description", "IQ" in pg.inner_text("#spDesc"))
     paste(hero(name="Wz",cls="wizard",iq=9,spells=["Staff"]))
     ok("P7 a wizard pays 1 IQ per spell", pg.inner_text("#spellSum").startswith("Spells (1 of 9"))
     ok("S6 no script errors", not errs)

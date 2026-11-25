@@ -598,3 +598,6 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 ## Campaign builder: spell picker
 - The rules data JSON may now carry "spells":[{n,iq}] (the 1980 Advanced Wizard Spell Table: names and IQ levels, 124 spells), kept in the owner's browser like the rest of the rules data, not in the repo. With it, the Spells section lists the known spells with a remove button and an Add spell picker (grouped by IQ level, only spells at or under the character's IQ that he does not know). A wizard pays 1 IQ per spell, a hero 3 IQ (and casts at DX -4, Advanced Wizard p. 11); Add stops when the IQ is used up. Without the spell list the section shows the spells read-only.
 - Heroes cannot cast in the Colosseum yet (castList is wizard-only); the spells are carried on the character.
+
+## Campaign builder: spell descriptions
+- Each spell in the rules data's "spells" list may carry "d", a short plain-words summary (kept in the owner's rules data, not in the repo). The picker shows it as a tooltip on each option, in a box when a spell is chosen (tablets have no hover), and on the known-spell chips (hover or tap the name).
