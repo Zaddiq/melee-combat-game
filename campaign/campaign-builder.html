@@ -79,10 +79,13 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
  <div class="row"><input id="lootN" placeholder="What is it" maxlength="40" style="width:13em"><label>Worth $ <input type="number" id="lootV" min="0" step="1" style="width:6em"></label><button id="lootAdd">Add loot</button><button id="lootAll">Sell all loot</button></div>
 </div>
 
-<div class="card"><h2>5. Talents and languages (change these rarely)</h2>
+<div class="card"><h2>5. Spells, talents and languages (change these rarely)</h2>
  <div class="row"><b id="iqUsed"></b><span class="mut" id="iqNote"></span></div><div class="bar"><i id="iqBar" style="width:0"></i></div>
  <div class="row"><label>Languages besides your own (1 IQ each) <input type="number" id="chLangs" min="0" max="20"></label></div>
- <div id="talents"></div>
+<div id="iqSecs" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+  <details id="spellSec" style="order:1"><summary id="spellSum" style="cursor:pointer;font-weight:600"></summary><div id="spellList" class="mut" style="margin-top:6px"></div></details>
+  <details id="talSec" style="order:2"><summary id="talSum" style="cursor:pointer;font-weight:600"></summary><div id="talents" style="margin-top:6px"></div></details>
+ </div>
 </div>
 </div>
 
@@ -155,7 +158,7 @@ function reasons(t){   /* why this talent cannot be taken now (empty = it can) *
   for(const x of t.pre||[]) if(!has(x)) r.push("needs "+T(x).n);
   if(t.preAny&&!t.preAny.some(has)) r.push("needs "+t.preAny.map(x=>T(x).n).join(" or "));
   return r; }
-function iqUsed(){ let u=C.langs|0; if(C.cls==="wizard") u+=spellsOf(C).length; for(const id of C.tal){ const t=T(id); if(t) u+=costOf(t); } return u; }
+function iqUsed(){ let u=C.langs|0; u+=spellsOf(C).length*(C.cls==="wizard"?1:3); for(const id of C.tal){ const t=T(id); if(t) u+=costOf(t); } return u; }
 function cleanTalents(){   /* drop what the character can no longer have (unknown ids, lost prerequisites, attributes lowered) */
   const notes=[]; let again=true;
   C.tal=C.tal.filter((x,i,a)=>T(x)&&a.indexOf(x)===i);
@@ -185,7 +188,7 @@ function used(k,except){ return ["a","b","s1","s2","d1","d2"].filter(s=>s!==exce
 
 /* The talent list and the shop are built once and then only updated in place. Rebuilding them on every change would replace the button under a finger
    (a number box loses focus, its change redraws the page, and the tap on Buy or a talent is lost). */
-let BUILT=null;
+let BUILT=null, lastCls=null;
 const SHOPKEYS=()=>[["Weapons",Object.keys(W).filter(k=>isWeap(k)&&k!=="bastard2"&&basePrice(k)!=null)],["Armor",Object.keys(ARMOR).filter(k=>isArmor(k)&&D.prices[k]!=null)],["Shields",Object.keys(SHIELDS).filter(k=>basePrice(k)!=null)],["Other",(D.misc||[]).map(m=>m.id)]];
 function buildStatic(){
   if(BUILT===D) return; BUILT=D;
@@ -224,12 +227,20 @@ function render(keepFocus){
   for(const [id,k] of [["chSt","st"],["chDx","dx"],["chIq","iq"],["chTotal","total"],["chLangs","langs"],["purse","purse"]]) if(document.activeElement!==$(id)) $(id).value=C[k];
   $("silver").checked=C.silver;
   const sum=C.st+C.dx+C.iq, R=RACES[C.race]; $("ptsNote").textContent=sum>C.total?"Too many points: "+(sum-C.total)+" over.":sum<C.total?(C.total-sum)+" points still to spend.":"All points spent."; $("ptsNote").className=sum>C.total?"bad":"mut";
-  $("spellNote").textContent=C.cls==="wizard"?`Wizards keep the spells they came in with (${spellsOf(C).length} spell${spellsOf(C).length===1?"":"s"}, 1 IQ each). A wizard pays double for talents.`:"A hero's talents cost what the data says. Spells for heroes (3 IQ each) are not handled here yet.";
+  $("spellNote").textContent=C.cls==="wizard"?`Wizards keep the spells they came in with (${spellsOf(C).length} spell${spellsOf(C).length===1?"":"s"}, 1 IQ each). A wizard pays double for talents.`:"A hero's talents cost what the data says. A hero's spells cost 3 IQ each.";
   /* talents */
   const used0=iqUsed(), over=used0>C.iq;
   $("iqUsed").textContent="IQ used "+used0+" of "+C.iq; $("iqUsed").className=over?"bad":""; $("iqNote").textContent=notes.join(" ");
   $("iqBar").style.width=Math.min(100,C.iq?used0/C.iq*100:0)+"%"; $("iqBar").className=over?"over":"";
   buildStatic(); updateTalents(used0);
+  /* spells and talents: the one the character lives by comes first and open, the other is a collapsed heading with its IQ cost */
+  const wiz=C.cls==="wizard", sp=spellsOf(C), spCost=sp.length*(wiz?1:3), talCost=C.tal.reduce((n,id)=>{ const t=T(id); return n+(t?costOf(t):0); },0);
+  if(lastCls!==C.cls){ lastCls=C.cls; $("spellSec").open=wiz; $("talSec").open=!wiz; }
+  $("spellSec").style.order=wiz?1:2; $("talSec").style.order=wiz?2:1;
+  $("spellSec").style.display=(wiz||sp.length)?"":"none";
+  $("spellSum").textContent=`Spells (${spCost} of ${C.iq} IQ spent)`;
+  $("spellList").innerHTML=sp.length?sp.map(n=>esc(n)).join(", ")+`<div>${wiz?"1":"3"} IQ each. Spells come in with the character; they are not changed here yet.</div>`:"No spells.";
+  $("talSum").textContent=`Talents (${talCost} of ${C.iq} IQ spent)`;
   /* shop */
   updateShop();
   $("moneyLeft").textContent="Left: $"+left(); $("moneyLeft").className=left()<0?"bad":"ok";

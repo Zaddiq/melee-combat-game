@@ -591,3 +591,6 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 
 ## Campaign: ready weapon and shield together after firing a bow
 - The "Ready X and Y together" choice used to need both hands empty, so after firing a bow (a two-hander in hand) it was missing. It is now also offered when the left hand is empty and the right holds a two-handed weapon; the bow goes on the back (or to the floor if the back is full). Test: tests/ready_after_bow_test.py.
+
+## Campaign builder: spells and talents sections
+- Section 5 now has two collapsible parts. A hero sees Talents (open) first and, only if he has at least one spell, a collapsed "Spells (3 of 8 IQ spent)" after it. A wizard sees Spells (open) first and a collapsed "Talents (2 of 12 IQ spent)" after it, which opens to the full list on a click. A hero's spells count 3 IQ each, a wizard's 1 IQ each, and both count in the IQ used. Spells are listed, not edited, here. Test: tests/spell_talent_sections_test.py.
