@@ -21,5 +21,6 @@ with sync_playwright() as p:
     ok("T6 a loaded rules file overrides the starter data", "your data" in (pg.text_content("#dataState") or "") and pg.locator("#talents .tal").count()==1)
     pg.evaluate("document.getElementById('dataCard').open=true"); pg.click("#dataClear")
     ok("T7 removing it goes back to the starter data", "starter" in (pg.text_content("#dataState") or "") and pg.locator("#talents .tal").count()>50)
+    ok("T7b a new character starts with $1000 to spend", pg.evaluate("()=>BLANKC().purse")==1000)
     ok("T8 no script errors", not errs)
 print(f"{n-bad}/{n} passed")

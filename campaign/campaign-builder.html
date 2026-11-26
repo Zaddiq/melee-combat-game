@@ -127,7 +127,7 @@ function loadData(){ USING_STARTER=false; try{ const o=JSON.parse(store.get(DKEY
 
 /* ---- the character ---- */
 let C=null;   /* {base (everything else the regular builder knows), name, race, cls, st, dx, iq, total, langs, tal:[ids], purse, silver, inv:{id:n}, armor, a,b,s1,s2,d1,d2} */
-const BLANKC=()=>({base:{},name:"",race:"human",cls:"fighter",st:8,dx:8,iq:8,total:32,langs:0,tal:[],purse:0,silver:false,inv:{},armor:"none",a:"none",b:"none",s1:"none",s2:"none",d1:"none",d2:"none",magic:[],loot:[]});
+const BLANKC=()=>({base:{},name:"",race:"human",cls:"fighter",st:8,dx:8,iq:8,total:32,langs:0,tal:[],purse:1000,silver:false,inv:{},armor:"none",a:"none",b:"none",s1:"none",s2:"none",d1:"none",d2:"none",magic:[],loot:[]});
 function fromBuilderJson(o){
   const c=BLANKC(), R=RACES[o.race]||RACES.human; c.base=JSON.parse(JSON.stringify(o)); for(const k of ["a","b","s1","d1","d2","armor","name","race","cls","st","dx","iq","total","silver"]) delete c.base[k];
   delete c.base.camp;

@@ -611,3 +611,6 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 
 ## Campaign Colosseum: opponent list shows each dragon once
 - The opponent list offered both the two placeholder test dragons (sdragon, dragon) and the book-number summon dragons (bsdragon, bdragon), all named "Small Dragon" and "Dragon". The placeholders are no longer listed (still in CRE for tests); the book ones show as "Dragon (summon-spell stats)" and "Small Dragon (summon-spell stats)". Dragons from the owner's bestiary appear in "My bestiary". Test: tests/dragon_list_test.py.
+
+## Campaign builder: new characters start with $1000
+- BLANKC (a new character) has a purse of 1000; saved characters keep what they have. Test: tests/starter_data_test.py (T7b).
