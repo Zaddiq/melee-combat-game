@@ -32,7 +32,7 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
 <p class="mut">For campaign play: a hero or wizard with talents, a purse and as much gear as the money allows. The talents, their costs and the prices are NOT part of this page: you paste them in once (the "Rules data" box) and they stay in this browser only. This is the only builder in the campaign game: the character open here is the one the Colosseum and the phones offer as "From the builder", and what a phone sends back lands here. To bring in a character from the old game, paste its data (button below).</p>
 
 <details class="card" id="dataCard" open><summary style="cursor:pointer;font-weight:600">Rules data <span id="dataState" class="mut"></span></summary>
- <div class="mut" style="margin:6px 0">Paste your campaign data (JSON) and press Save. It never leaves this browser. Check every number against your own book: the data decides what a talent costs and what a sword sells for.</div>
+ <div class="mut" style="margin:6px 0">The builder already has built-in starter data (names, costs and prices only), so you can build a character right away. To use fuller data, such as spell descriptions, choose your rules file or paste it here and press Save; yours takes over. It never leaves this browser. Check every number against your own book: the data decides what a talent costs and what a sword sells for.</div>
  <textarea id="dataBox" rows="6" spellcheck="false" placeholder='{"talents":[...],"prices":{...}}'></textarea>
  <div class="row"><label>Or load the data file: <input type="file" id="dataFile" accept=".json,application/json,text/plain"></label></div>
  <div class="row"><button id="dataSave">Save the data</button><button id="dataClear">Remove it</button><span class="mut" id="dataMsg"></span></div>
@@ -91,6 +91,7 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
 </div>
 
 <script src="rules.js"></script>
+<script src="starter-data.js"></script>
 <script>
 "use strict";
 RULES.addCampaign();
@@ -121,7 +122,8 @@ function checkData(o){
   if(o.misc!=null&&(!Array.isArray(o.misc)||o.misc.some(m=>!m||!/^[a-z0-9_]{1,30}$/.test(m.id||"")||typeof m.n!=="string"||typeof m.p!=="number"))) return "misc must be a list of {id, n, p}.";
   if(o.spells!=null&&(!Array.isArray(o.spells)||o.spells.length>300||o.spells.some(x=>!x||typeof x.n!=="string"||!x.n||x.n.length>30||!Number.isInteger(x.iq)||x.iq<1||x.iq>40||(x.d!=null&&(typeof x.d!=="string"||x.d.length>400))))) return "spells must be a list of {n, iq}.";
   return ""; }
-function loadData(){ try{ const o=JSON.parse(store.get(DKEY)||"null"); if(o&&!checkData(o)){ D=o; return; } }catch(e){} D=null; }
+let USING_STARTER=false;
+function loadData(){ USING_STARTER=false; try{ const o=JSON.parse(store.get(DKEY)||"null"); if(o&&!checkData(o)){ D=o; return; } }catch(e){} const st=window.STARTER_DATA; if(st&&!checkData(st)){ D=st; USING_STARTER=true; return; } D=null; }
 
 /* ---- the character ---- */
 let C=null;   /* {base (everything else the regular builder knows), name, race, cls, st, dx, iq, total, langs, tal:[ids], purse, silver, inv:{id:n}, armor, a,b,s1,s2,d1,d2} */
@@ -327,9 +329,9 @@ function fillRoster(){ const r=roster(), ks=Object.keys(r); fillSelect($("roster
 /* ---- events ---- */
 function setC(o){ C=o; render(); }
 $("dataFile").onchange=()=>{ const f=$("dataFile").files&&$("dataFile").files[0]; if(!f) return; if(f.size>2000000){ $("dataMsg").textContent="That file is too big to be the rules data."; return; } const r=new FileReader(); r.onload=()=>{ $("dataBox").value=String(r.result||""); $("dataSave").click(); $("dataFile").value=""; }; r.onerror=()=>{ $("dataMsg").textContent="Could not read that file."; }; r.readAsText(f); };
-$("dataSave").onclick=()=>{ let o; try{ o=JSON.parse($("dataBox").value); }catch(e){ $("dataMsg").textContent="That is not valid text: "+e.message; return; } const bad=checkData(o); if(bad){ $("dataMsg").textContent=bad; return; } store.set(DKEY,JSON.stringify(o)); D=o; $("dataBox").value=""; showData(); if(!C) setC(BLANKC()); else render(); $("dataMsg").textContent="Saved."; };
-$("dataClear").onclick=()=>{ store.del(DKEY); D=null; showData(); render(); };
-function showData(){ $("dataState").textContent=D?"(loaded: "+D.talents.length+" talents, "+Object.keys(D.prices).length+" priced items)":"(none yet: paste it here first)"; $("dataCard").open=!D; }
+$("dataSave").onclick=()=>{ let o; try{ o=JSON.parse($("dataBox").value); }catch(e){ $("dataMsg").textContent="That is not valid text: "+e.message; return; } const bad=checkData(o); if(bad){ $("dataMsg").textContent=bad; return; } store.set(DKEY,JSON.stringify(o)); D=o; USING_STARTER=false; $("dataBox").value=""; showData(); if(!C) setC(BLANKC()); else render(); $("dataMsg").textContent="Saved."; };
+$("dataClear").onclick=()=>{ store.del(DKEY); loadData(); showData(); if(D&&!C) setC(BLANKC()); render(); };
+function showData(){ $("dataState").textContent=D?(USING_STARTER?"(built-in starter data: ":"(your data loaded: ")+D.talents.length+" talents, "+Object.keys(D.prices).length+" priced items"+((D.spells||[]).length?", "+D.spells.length+" spells":"")+")":"(none yet: paste it here first)"; $("dataCard").open=!D; }
 $("newChar").onclick=()=>{ if(C&&!confirm("Replace the character on screen?")) return; store.set(CKEY,""); setC(BLANKC()); };
 $("pasteBtn").onclick=()=>{ $("pasteBox").style.display=$("pasteBox").style.display?"":"none"; };
 $("pasteGo").onclick=()=>{ let o; try{ o=JSON.parse($("pasteTxt").value); }catch(e){ $("pasteMsg").textContent="That is not valid text: "+e.message; return; } if(!o||typeof o!=="object"||Array.isArray(o)||!o.name){ $("pasteMsg").textContent="That does not look like a character (it needs a name)."; return; } if(C&&C.name.trim()&&!confirm("Replace the character on screen?")) return; $("pasteMsg").textContent=""; $("pasteTxt").value=""; $("pasteBox").style.display="none"; setC(fromBuilderJson(o)); };

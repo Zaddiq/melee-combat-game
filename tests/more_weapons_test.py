@@ -13,7 +13,7 @@ HERO = {"name": "Big", "cls": "fighter", "race": "human", "total": 36, "st": 15,
 with sync_playwright() as p:
     br = p.chromium.launch(); pg = br.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(BASE + "campaign/campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
-    pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     pg.evaluate("(h)=>localStorage.setItem('wizard-builder-v1',JSON.stringify(h))", HERO); pg.reload()
     shop = pg.inner_text("#shop")
     ok("W1 the shop sells the bastard sword and the other added weapons at the 2018 prices", all(x in shop for x in ["Bastard sword", "Great sword", "Hatchet", "Trident", "Pike", "War ax", "Quarterstaff", "Spike shield", "Tower shield"]) and pg.inner_text("#pr_bastard") == "$100")

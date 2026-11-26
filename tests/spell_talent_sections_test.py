@@ -18,7 +18,7 @@ def hero(**k):
 with sync_playwright() as p:
     pg=p.chromium.launch().new_page(); errs=[]; pg.on("pageerror",lambda e:errs.append(e)); pg.on("dialog",lambda d:d.accept())
     pg.goto(BASE+"campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
-    pg.fill("#dataBox",json.dumps(DATA)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox",json.dumps(DATA)); pg.click("#dataSave")
     def load(c):
         pg.evaluate("(c)=>{ C=normalize(c); render(); }",c) if pg.evaluate("typeof normalize")=="function" else None
     # use the paste box, the supported way in

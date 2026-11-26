@@ -22,7 +22,7 @@ with sync_playwright() as p:
     ok("M3 in the fight the same +1 shows in adjDXu, and not when sheathed", pg.evaluate("""(h)=>{ const f=fromBuilder(h); const u={p:f,right:'mg_1',left:'none',hp:14}; const a=adjDXu(u,'single',null);
         const v={p:f,right:'broad',left:'none',hp:14}; return a-adjDXu(v,'single',null); }""", HERO) == 1)
     pg.goto(BASE + "campaign/campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
-    pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     pg.evaluate("(h)=>{ localStorage.setItem('wizard-builder-v1',JSON.stringify(h)); }", HERO); pg.reload()
     ok("M4 the builder shows the sword with its numbers", pg.evaluate("()=>document.querySelectorAll('#magic [data-m]').length")==1 and "Dawnbringer" in pg.inner_text("#magic"))
     ex = pg.evaluate("()=>exportChar()")

@@ -601,3 +601,6 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 
 ## Campaign builder: spell descriptions
 - Each spell in the rules data's "spells" list may carry "d", a short plain-words summary (kept in the owner's rules data, not in the repo). The picker shows it as a tooltip on each option, in a box when a spell is chosen (tablets have no hover), and on the known-spell chips (hover or tap the name).
+
+## Campaign builder: public starter data
+- campaign/starter-data.js (window.STARTER_DATA) holds names, IQ levels, costs, prices, talentFor and spell names with levels, and no book text or descriptions. The campaign builder uses it when no rules file has been loaded, so any phone can build a full character with nothing pasted. A rules file saved in the browser (paste or "Choose file") overrides it and may add spell descriptions; "Remove it" returns to the starter data. The numbers are from the 1980 books (talents, older prices) plus the 2018 weapon/armor additions; they should be checked against a 2018 copy. Test: tests/starter_data_test.py. Still to do: have the table share the loaded rules to phones when they join.

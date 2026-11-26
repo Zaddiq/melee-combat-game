@@ -19,7 +19,7 @@ with sync_playwright() as p:
     ok("O1b the menu links to the original game's builder (outside the campaign) for bringing characters over", pg.locator("a[href='../builder.html']").count() == 1)
     pg.goto(BASE + "campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
     ok("O2 the builder offers no 'take the regular builder' buttons", pg.locator("#fromBuilder, #setBuilder").count() == 0 and pg.locator("a[href='builder.html']").count() == 0)
-    pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     ok("O3 an unnamed new hero is not written as the open character", pg.evaluate("()=>localStorage.getItem('wizard-builder-v1')") in (None, ""))
     pg.click("#pasteBtn"); pg.fill("#pasteTxt", json.dumps(OLD)); pg.click("#pasteGo")
     ok("O4 pasting a character from the old game brings it in, with its gear owned", pg.evaluate("()=>[C.name,C.a,own('broad')]") == ["Kid", "broad", 1])

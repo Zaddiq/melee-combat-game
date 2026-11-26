@@ -30,7 +30,7 @@ with sync_playwright() as p:
     ok("M5 loot given: Bob carries Ruby worth $250", pg.evaluate("()=>slot[1].phone.src.camp.loot") == [{"n": "Ruby", "v": 250}])
     loot_hero = pg.evaluate("()=>slot[1].phone.src")
     pg.goto(BASE + "campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
-    pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     loot_hero["camp"]["loot"].append({"n": "Silver cup", "v": 40})
     pg.evaluate("(h)=>localStorage.setItem('wizard-builder-v1',JSON.stringify(h))", loot_hero); pg.reload()
     ok("L1 the builder shows both loot items with their prices", "Ruby" in pg.inner_text("#loot") and "Sell for $250" in pg.inner_text("#loot") and "Silver cup" in pg.inner_text("#loot"))

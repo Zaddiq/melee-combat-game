@@ -13,7 +13,7 @@ def wiz(spells): return {"name": "Wen", "cls": "wizard", "race": "human", "total
 with sync_playwright() as p:
     br = p.chromium.launch(); pg = br.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(BASE + "campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
-    pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     pg.evaluate("(o)=>localStorage.setItem('wizard-builder-v1',JSON.stringify(o))", wiz(["Staff", "Magic Fist"])); pg.reload()
     ok("S1 the right hand shows the Wizard's staff and cannot be changed", pg.input_value("#ld_a") == "staff" and pg.is_disabled("#ld_a") and "staff" in pg.inner_text("#ld_a").lower())
     ok("S2 adjusted DX has no iron penalty (the staff is not iron)", pg.evaluate("()=>adjDX()") == 12)

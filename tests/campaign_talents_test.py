@@ -17,7 +17,7 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     # --- the builder's export carries the summary the engine needs
     pg.goto(BASE + "campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
-    pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     pg.evaluate("(o)=>localStorage.setItem('wizard-builder-v1',JSON.stringify(o))", HERO); pg.once("dialog", lambda d: d.accept()); pg.click("#fromBuilder")
     fx = pg.evaluate("()=>{ C.s2='lbow'; C.d2='javelin'; return exportChar().camp.fx; }")
     ok("T1 export lists carried items the hero lacks the talent for", sorted(fx["pen"]) == ["broad", "dagger", "lbow"] and fx["ms"] == 0 and fx["th"] == 0)
@@ -54,7 +54,7 @@ with sync_playwright() as p:
     ok("T9 the regular builder does not know the tower shield", pg.evaluate("()=>!RULES.SHIELDS.tower&&Object.keys(RULES.SHIELDS).length===2"))
     pg.goto(BASE + "campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
     d = json.loads(json.dumps(DATA)); d["prices"]["tower"] = 60; d["talentFor"]["tower"] = "knife"
-    pg.fill("#dataBox", json.dumps(d)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox", json.dumps(d)); pg.click("#dataSave")
     ok("T10 campaign data may price the tower shield (it appears in the shop)", pg.is_visible("#work") and "Tower shield" in pg.inner_text("#work"))
     ok("T11 no script errors", not errs)
     br.close()

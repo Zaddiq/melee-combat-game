@@ -34,12 +34,12 @@ with sync_playwright() as p:
     ok("B1 with no data the page asks for it and shows nothing else", not pg.is_visible("#work") and pg.is_visible("#dataBox"))
     ok("B2 the page itself carries no talent or price list", "Fencing" not in pg.content().split("<script>")[0] and "broadsword" not in pg.content().lower().split("<script>")[0])
     bad = json.loads(json.dumps(DATA)); bad["prices"]["unicorn"] = 5
-    pg.fill("#dataBox", json.dumps(bad)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox", json.dumps(bad)); pg.click("#dataSave")
     ok("B3 data naming an unknown item is refused with a message", "unicorn" in pg.inner_text("#dataMsg") and not pg.is_visible("#work"))
     bad = json.loads(json.dumps(DATA)); bad["talents"][5]["pre"] = ["nothing"]
-    pg.fill("#dataBox", json.dumps(bad)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox", json.dumps(bad)); pg.click("#dataSave")
     ok("B4 data with a missing prerequisite is refused", "not in the list" in pg.inner_text("#dataMsg"))
-    pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     ok("B5 good data is saved, the builder appears, and the box says what loaded", pg.is_visible("#work") and "7 talents" in pg.inner_text("#dataState"))
     # a hero from the regular builder
     pg.evaluate("(o)=>localStorage.setItem('wizard-builder-v1',JSON.stringify(o))", HERO); pg.once("dialog", lambda d: d.accept()); pg.click("#fromBuilder")

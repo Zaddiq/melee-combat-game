@@ -27,7 +27,7 @@ with sync_playwright() as p:
     pg.fill("#q", "mith"); ok("P7 search narrows", pg.locator("#list .it").count() == 1); pg.fill("#q", "")
     saved = pg.evaluate("()=>localStorage.getItem('magic-items-v1')")
     pg.goto(BASE + "campaign-builder.html"); pg.evaluate("localStorage.clear()"); pg.reload()
-    pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox", json.dumps(DATA)); pg.click("#dataSave")
     HERO = {"name": "Sam", "cls": "fighter", "race": "human", "total": 36, "st": 14, "dx": 12, "iq": 10, "armor": "none", "a": "none", "b": "none", "s1": "none", "d1": "none", "d2": "none", "spells": [], "camp": {"v": 1, "langs": 0, "tal": [], "purse": 0, "inv": {}, "s2": "none", "d2": "none", "fx": {"pen": [], "ms": 0, "th": 0}, "magic": []}}
     pg.evaluate("([h,l])=>{ localStorage.setItem('wizard-builder-v1',JSON.stringify(h)); localStorage.setItem('magic-items-v1',l); }", [HERO, saved]); pg.reload()
     opts = pg.evaluate("()=>[...document.querySelectorAll('#magicPick option')].map(o=>o.textContent)")
