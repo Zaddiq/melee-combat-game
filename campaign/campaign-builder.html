@@ -196,7 +196,7 @@ function buildStatic(){
   const levels=[...new Set(D.talents.map(t=>t.iq))].sort((a,b)=>a-b); let h="";
   for(const L of levels){ h+=`<h3>IQ ${L} talents</h3><div class="grid2">`; for(const t of D.talents.filter(x=>x.iq===L)) h+=`<div class="tal"><input type="checkbox" id="tal_${t.id}" data-t="${t.id}"><label for="tal_${t.id}">${esc(t.n)}</label><span class="c" id="talc_${t.id}"></span></div>`; h+="</div>"; }
   $("talents").innerHTML=h;
-  let s=""; for(let [gn,ks] of SHOPKEYS()){ if(!ks.length) continue; s+=`<h3>${gn}</h3><table><tr><th>Item</th><th>Needs</th><th>Price</th>${gn==="Weapons"?"<th>Damage</th><th>Hands</th>":""}<th>Talent</th><th></th></tr>`;
+  let s=""; for(let [gn,ks] of SHOPKEYS()){ if(!ks.length) continue; s+=`<h3>${gn}</h3><table><tr><th>Item</th>${gn==="Armor"||gn==="Shields"?"":"<th>Needs</th>"}<th>Price</th>${gn==="Weapons"?"<th>Damage</th><th>Hands</th>":gn==="Armor"?"<th>Stops</th><th>adjDX</th><th>MA</th>":gn==="Shields"?"<th>Stops</th><th>adjDX</th>":""}<th>Talent</th><th></th></tr>`;
     const wk=gn==="Weapons";
     const ord=["Melee weapons","Pole weapons","Missile weapons"], gp=k=>ord.includes(W[k].grp)?W[k].grp:ord[0], gi=k=>ord.indexOf(gp(k));
     if(wk){
@@ -206,7 +206,7 @@ function buildStatic(){
       const fd=x=>`${x.d}d${x.m?(x.m>0?"+":"")+x.m:""}`;
       const dmg=wk?`<td>${fd(W[k])}${W[k+"2"]&&W[k+"2"].two?` / ${fd(W[k+"2"])}`:""}</td><td>${W[k+"2"]&&W[k+"2"].two?"1 or 2":W[k].two?"2":"1"}</td>`:"";
       const nt=wk?[W[k].rate,W[k].th?"Can be thrown.":"",W[k].note].filter(Boolean).join(" "):"";
-      s+=`<tr><td>${esc(itemName(k))} <span class="ok" id="own_${k}"></span></td><td>${W[k]&&W[k].st?"ST "+W[k].st:""}</td><td id="pr_${k}"></td>${dmg}<td id="tf_${k}"></td><td><button data-buy="${k}" id="buy_${k}">Buy</button></td></tr>`+(nt?`<tr><td colspan="8" class="mut" style="font-size:12px;border-top:0;padding-top:0;white-space:normal;width:auto">${esc(nt)}</td></tr>`:""); }
+      s+=`<tr><td>${esc(itemName(k))} <span class="ok" id="own_${k}"></span></td>${gn==="Armor"||gn==="Shields"?"":`<td>${W[k]&&W[k].st?"ST "+W[k].st:""}</td>`}<td id="pr_${k}"></td>${dmg}${gn==="Armor"?`<td>${ARMOR[k].stops}</td><td>${ARMOR[k].pen.m?"−"+ARMOR[k].pen.m:"0"}</td><td>${ARMOR[k].ma}</td>`:gn==="Shields"?`<td>${SHIELDS[k].stops}</td><td>${SHIELDS[k].pen?"−"+SHIELDS[k].pen:"0"}</td>`:""}<td id="tf_${k}"></td><td><button data-buy="${k}" id="buy_${k}">Buy</button></td></tr>`+(nt?`<tr><td colspan="8" class="mut" style="font-size:12px;border-top:0;padding-top:0;white-space:normal;width:auto">${esc(nt)}</td></tr>`:""); }
     s+="</table>"; }
   $("shop").innerHTML=s; }
 function updateTalents(used0){
