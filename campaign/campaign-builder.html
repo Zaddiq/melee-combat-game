@@ -34,6 +34,7 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
 <details class="card" id="dataCard" open><summary style="cursor:pointer;font-weight:600">Rules data <span id="dataState" class="mut"></span></summary>
  <div class="mut" style="margin:6px 0">Paste your campaign data (JSON) and press Save. It never leaves this browser. Check every number against your own book: the data decides what a talent costs and what a sword sells for.</div>
  <textarea id="dataBox" rows="6" spellcheck="false" placeholder='{"talents":[...],"prices":{...}}'></textarea>
+ <div class="row"><label>Or load the data file: <input type="file" id="dataFile" accept=".json,application/json,text/plain"></label></div>
  <div class="row"><button id="dataSave">Save the data</button><button id="dataClear">Remove it</button><span class="mut" id="dataMsg"></span></div>
 </details>
 
@@ -325,6 +326,7 @@ function fillRoster(){ const r=roster(), ks=Object.keys(r); fillSelect($("roster
 
 /* ---- events ---- */
 function setC(o){ C=o; render(); }
+$("dataFile").onchange=()=>{ const f=$("dataFile").files&&$("dataFile").files[0]; if(!f) return; if(f.size>2000000){ $("dataMsg").textContent="That file is too big to be the rules data."; return; } const r=new FileReader(); r.onload=()=>{ $("dataBox").value=String(r.result||""); $("dataSave").click(); $("dataFile").value=""; }; r.onerror=()=>{ $("dataMsg").textContent="Could not read that file."; }; r.readAsText(f); };
 $("dataSave").onclick=()=>{ let o; try{ o=JSON.parse($("dataBox").value); }catch(e){ $("dataMsg").textContent="That is not valid text: "+e.message; return; } const bad=checkData(o); if(bad){ $("dataMsg").textContent=bad; return; } store.set(DKEY,JSON.stringify(o)); D=o; $("dataBox").value=""; showData(); if(!C) setC(BLANKC()); else render(); $("dataMsg").textContent="Saved."; };
 $("dataClear").onclick=()=>{ store.del(DKEY); D=null; showData(); render(); };
 function showData(){ $("dataState").textContent=D?"(loaded: "+D.talents.length+" talents, "+Object.keys(D.prices).length+" priced items)":"(none yet: paste it here first)"; $("dataCard").open=!D; }
