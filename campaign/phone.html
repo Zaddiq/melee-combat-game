@@ -31,7 +31,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}
   <div class="mut" id="xp" style="margin-top:6px"></div>
   <div id="spendRow" style="display:none;margin-top:8px"></div>
   <div id="sendRow" style="display:none;margin-top:8px"><button id="toBuilder" style="margin-top:0">Send to builder (with XP)</button><div class="mut" id="sendMsg" style="margin-top:6px"></div></div>
-  <div class="mut" style="margin-top:6px"><a href="campaign-builder.html" style="color:var(--acc)">Build or change a character</a> (whatever is open in the builder is offered here) · <a href="wizard-arena.html" style="color:var(--acc)">Arena</a></div>
+  <div class="mut" style="margin-top:6px"><span id="rulesNote" class="ok"></span> <a href="campaign-builder.html" style="color:var(--acc)">Build or change a character</a> (whatever is open in the builder is offered here) · <a href="wizard-arena.html" style="color:var(--acc)">Arena</a></div>
 </div>
 <div class="card" id="joinCard">
   <label for="code">Table name</label><input id="code" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false">
@@ -62,7 +62,7 @@ const KEY="colosseum-phone";
 const ST=Net.wanted()==="mem"?sessionStorage:localStorage;   /* the test fake shares localStorage between tabs, so each tab keeps its own memory */
 const rd=()=>{ try{ return JSON.parse(ST.getItem(KEY)||"null"); }catch(e){ return null; } };
 const wr=v=>{ try{ if(v) ST.setItem(KEY,JSON.stringify(v)); else ST.removeItem(KEY); }catch(e){} };
-let myP=0, lastKey=null, room=null, offPub=null, offMe=null, offPriv=null, offRes=null, removed=false, closed=false, lastRing=null, ringT=null, sentSeq=null;
+let myP=0, lastKey=null, room=null, offPub=null, offMe=null, offPriv=null, offRes=null, offRules=null, removed=false, closed=false, lastRing=null, ringT=null, sentSeq=null;
 const q=new URLSearchParams(location.search), saved=rd();
 $("code").value=Net.clean(q.get("room")||(saved&&saved.room)||"");
 $("nm").value=(saved&&saved.name)||"";
@@ -172,6 +172,10 @@ function applyResult(c,v){
   $("xp").textContent=r.name+": "+r.ep+"/"+(r.itl?r.need:100)+" EP saved to your roster"+(r.pend>0?" · an attribute point is waiting (spend it below)":"")+".";
   fillChars(chosen()); if(room) Net.setFighter(room,fjFor(chosen())).catch(()=>{});
 }
+/* the table's rules data (talents, prices, spells) from the host: kept in this browser for the campaign builder, which checks it again when it loads it */
+function adoptRules(v){ if(typeof v!=="string"||!v||v.length>60000) return; let o=null; try{ o=JSON.parse(v); }catch(e){ return; } if(!o||!Array.isArray(o.talents)||typeof o.prices!=="object") return;
+  let cur=null; try{ cur=localStorage.getItem("campaign-data-v1"); }catch(e){} if(cur===v) return; try{ localStorage.setItem("campaign-data-v1",v); }catch(e){ return; }
+  const n=$("rulesNote"); if(n) n.textContent="The table's rules were saved on this phone ("+o.talents.length+" talents"+(Array.isArray(o.spells)&&o.spells.length?", "+o.spells.length+" spells":"")+"). The character builder now uses them."; }
 async function enter(c,name){
   $("err").textContent="";
   try{ await Net.start(); await Net.joinRoom(c,name,fjFor(chosen())); }catch(e){ $("err").textContent=e.message; showIn(false); if(/no table|closed/i.test(e.message)){ wr(null); $("code").value=""; } return; }
@@ -187,6 +191,7 @@ async function enter(c,name){
   });
   lastRing=null; sentSeq=null;
   offRes=Net.watchRes(c,v=>applyResult(c,v));
+  offRules=Net.watchRules(c,v=>adoptRules(v));
   offPriv=Net.watchPriv(c,v=>{ if(!removed&&!closed) showPlay(v); });
   offMe=Net.watchMe(c,v=>{ if(v===null&&room&&!closed){ removed=true; $("play").innerHTML=""; $("dot").className="dot"; $("conn").textContent="Not at the table"; $("seat").textContent="You were removed from the table."; $("seatNote").textContent="Leave and join again if that was a mistake."; $("seatNote").style.display=""; } else if(v&&v.on===false) Net.setOn(c,true).catch(()=>{}); });
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&room) Net.setOn(room,true).catch(()=>{}); });
@@ -195,7 +200,7 @@ function showSnd(){ $("snd").textContent="Sound: "+(Bell.on?"on":"off"); $("vol"
 $("vol").onclick=()=>{ Bell.nextVol(); Bell.unlock(); if(Bell.on) Bell.ring(myP); showSnd(); };
 $("snd").onclick=()=>{ Bell.setOn(!Bell.on); Bell.unlock(); if(Bell.on) Bell.ring(myP); showSnd(); };
 async function keepAwake(on){ const v=await Bell.awake(on); $("awk").textContent=on?(v?"Screen stays on.":"Turn off auto-lock so you do not miss your turn."):""; }
-function leave(){ keepAwake(false); try{ Voice.stop(); }catch(e){} const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); if(offRes) offRes(); offPub=offMe=offPriv=offRes=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); $("code").value=""; $("err").textContent=""; $("code").focus(); }
+function leave(){ keepAwake(false); try{ Voice.stop(); }catch(e){} const c=room; room=null; if(offPub) offPub(); if(offMe) offMe(); if(offPriv) offPriv(); if(offRes) offRes(); if(offRules) offRules(); offRules=offPub=offMe=offPriv=offRes=null; $("play").innerHTML=""; wr(null); if(c) Net.leaveRoom(c).catch(()=>{}); showIn(false); $("code").value=""; $("err").textContent=""; $("code").focus(); }
 $("code").onfocus=()=>{ try{ $("code").select(); }catch(e){} };
 $("go").onclick=()=>{ const c=Net.clean($("code").value); let n=$("nm").value.trim(); if(!n&&chosen()!=="none"){ try{ const f=JSON.parse(fjFor(chosen())); n=String(f.name).slice(0,20); }catch(e){} } if(c.length<3){ $("err").textContent="Type the table name shown on the tablet."; return; } if(!n){ $("err").textContent="Type your name (or choose a character)."; return; } enter(c,n); };
 $("leave").onclick=leave;

@@ -93,8 +93,10 @@ const Net={
     throw new Error("The name "+want+" is in use by another tablet. Pick a different table name.");
   },
   publish(c,pub){ return this.b.set("rooms/"+c+"/pub",pub); },
+  publishRules(c,str){ return this.b.set("rooms/"+c+"/rules",str); },   /* the host's rules data (a JSON string) for every phone at the table */
+  watchRules(c,cb){ return this.b.on("rooms/"+c+"/rules",cb); },
   watchJoins(c,cb){ return this.b.on("rooms/"+c+"/join",cb); },
-  async closeRoom(c){ await this.b.remove("rooms/"+c+"/pub"); await this.b.remove("rooms/"+c+"/join"); await this.b.remove("rooms/"+c+"/priv"); await this.b.remove("rooms/"+c+"/cmd"); await this.b.remove("rooms/"+c+"/res"); await this.b.remove("rooms/"+c+"/vc"); await this.b.remove("rooms/"+c+"/host"); },
+  async closeRoom(c){ await this.b.remove("rooms/"+c+"/pub"); await this.b.remove("rooms/"+c+"/join"); await this.b.remove("rooms/"+c+"/priv"); await this.b.remove("rooms/"+c+"/cmd"); await this.b.remove("rooms/"+c+"/res"); await this.b.remove("rooms/"+c+"/rules"); await this.b.remove("rooms/"+c+"/vc"); await this.b.remove("rooms/"+c+"/host"); },
   kick(c,uid){ return this.b.remove("rooms/"+c+"/join/"+uid); },
   /* phone side */
   async joinRoom(c,name,fj){
