@@ -625,3 +625,8 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 
 ## Campaign builder: built-in spell descriptions
 - campaign/starter-data.js now carries the short summaries the original builder already shows for its 62 table spells (type, ST cost, effect), so the picker shows descriptions with nothing loaded. The other ~63 Advanced Wizard spells get theirs only from a loaded rules file (or one shared by the table). 3-Hex Shadow was added to the starter list.
+
+## Premade fighters (host gives one to a player)
+- campaign/premade.js: window.PREMADE, 8 ready-made 32-point characters in the campaign builder's format (talents, gear, a wizard with spells). Names and numbers only.
+- campaign/colosseum.html: card "Premade fighters": pick one and a player seat, "Give to this player". A tablet seat gets it directly; a phone seat gets it too (Online.assign in online-host.js sends it to the phone's own list, marked phone.given so the table does not drop it).
+- Test: tests/premade_test.py.
