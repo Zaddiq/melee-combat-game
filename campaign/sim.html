@@ -179,6 +179,8 @@ function build(s) {
     field(s, "os", "Extra hits stopped", "Monster hide, fur and so on. Use 0 for none.", true) +
     field(s, "od", "Extra DX adjustment", "Other bonuses or penalties. Use 0 for none.", true) +
     '<p class="live" id="' + s + '_live"></p>' +
+    '<button type="button" class="pdfbtn" id="' + s + '_bench">Send to bench ' + s.toUpperCase() + ' (to use in the campaign builder or at the table)</button>' +
+    '<p class="live" id="' + s + '_bmsg" role="status"></p>' +
     '<button type="button" class="pdfbtn" id="' + s + '_pdf" hidden>Save character sheet (PDF)</button>' +
     '<p class="live" id="' + s + '_pmsg" role="status"></p></fieldset>';
 }
@@ -209,6 +211,20 @@ $("fighters").innerHTML = build("a") + build("b");
   });
   if (used.length) { var n = document.createElement("p"); n.className = "live"; n.textContent = "Loaded from your bench: " + used.join(", ") + ". Only the main weapon, shield and armor count here."; $("fighters").parentNode.insertBefore(n, $("fighters")); }
 })();
+
+/* "Send to bench": a quick fighter made here becomes bench A or B (the same slot as its letter), ready to load in the campaign builder or at the table */
+["a", "b"].forEach(function (s) {
+  $(s + "_bench").onclick = function () {
+    var wk = Object.keys(RULES.W).filter(function (k) { var w = RULES.W[k]; return !w.miss && k !== "staff" && k !== "mg"; });
+    var ak = Object.keys(RULES.ARMOR), sk = Object.keys(RULES.SHIELDS), wi = +$(s + "_w").value, si = +$(s + "_sh").value, msg = $(s + "_bmsg");
+    if (wi >= wk.length) { msg.textContent = "Pick a listed weapon (not Custom damage) to send this fighter."; return; }
+    var st = parseInt($(s + "_st").value, 10), dx = parseInt($(s + "_dx").value, 10), name = $(s + "_name").value.trim();
+    if (!name || !(st >= 8 && st <= 40) || !(dx >= 8 && dx <= 40)) { msg.textContent = "Give a name and a ST and DX of 8 or more."; return; }
+    var two = RULES.W[wk[wi]].two, o = { name: name.slice(0, 40), race: $(s + "_race").value === "1" ? "elf" : "human", cls: "fighter", st: st, dx: dx, iq: 8, total: st + dx + 8, armor: ak[+$(s + "_ar").value] || "none", a: wk[wi], b: !two && si > 0 ? sk[si - 1] : "none", s1: "none", d1: "none", d2: "none" };
+    var B = {}; try { B = JSON.parse(localStorage.getItem("melee-bench-v1") || "{}") || {}; } catch (e) {}
+    B[s] = o; try { localStorage.setItem("melee-bench-v1", JSON.stringify(B)); msg.textContent = o.name + " is on bench " + s.toUpperCase() + " (IQ 8). Load it in the campaign builder, or give it to a player at the table."; } catch (e) { msg.textContent = "Could not save to the bench here."; }
+  };
+});
 
 function parseDamage(text) {
   var m = text.replace(/\s/g, "").toLowerCase().match(/^(\d+)d(\d*)([+-]\d+)?$/);

@@ -40,8 +40,9 @@ table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;
 
 <div id="work" style="display:none">
 <div class="card"><h2>1. The character</h2>
- <div class="row"><button id="pasteBtn">Paste a character…</button><button id="newChar">New human hero</button>
+ <div class="row"><button id="pasteBtn">Paste a character…</button><button id="benchA">Load bench A</button><button id="benchB">Load bench B</button><button id="newChar">New human hero</button>
   <select id="rosterSel"></select><button id="rosterLoad">Load</button><button id="rosterSave">Save in my list</button><button id="rosterDel">Delete</button></div>
+ <div class="mut" id="benchMsg"></div>
  <div id="pasteBox" style="display:none"><p class="mut">Paste a character from the old game's builder (its "Copy data" button) or any character data, then press Use it.</p><textarea id="pasteTxt" rows="4"></textarea><div class="row"><button id="pasteGo" class="pri">Use it</button><span id="pasteMsg" class="bad"></span></div></div>
  <div class="row"><label>Name <input id="chName" size="22"></label>
   <label>Race <select id="chRace"></select></label>
@@ -339,6 +340,9 @@ $("dataClear").onclick=()=>{ store.del(DKEY); loadData(); showData(); if(D&&!C) 
 function showData(){ $("dataState").textContent=D?(USING_STARTER?"(built-in starter data: ":"(your data loaded: ")+D.talents.length+" talents, "+Object.keys(D.prices).length+" priced items"+((D.spells||[]).length?", "+D.spells.length+" spells":"")+")":"(none yet: paste it here first)"; $("dataCard").open=!D; }
 $("newChar").onclick=()=>{ if(C&&!confirm("Replace the character on screen?")) return; store.set(CKEY,""); setC(BLANKC()); };
 $("pasteBtn").onclick=()=>{ $("pasteBox").style.display=$("pasteBox").style.display?"":"none"; };
+function loadBench(k){ let B={}; try{ B=JSON.parse(store.get("melee-bench-v1")||"{}")||{}; }catch(e){} const o=B[k]; if(!o||typeof o!=="object"||!o.name){ $("benchMsg").textContent="Nothing on bench "+k.toUpperCase()+" yet. Make a fighter in the old builder (menu) or the Colosseum and press its Send to bench button."; return; }
+  if(C&&C.name.trim()&&!confirm("Replace the character on screen with the fighter on bench "+k.toUpperCase()+"?")) return; $("benchMsg").textContent="Loaded "+o.name+" from bench "+k.toUpperCase()+". Press Save in my list to keep it, or just leave it open and join a table from the phone."; setC(fromBuilderJson(o)); }
+$("benchA").onclick=()=>loadBench("a"); $("benchB").onclick=()=>loadBench("b");
 $("pasteGo").onclick=()=>{ let o; try{ o=JSON.parse($("pasteTxt").value); }catch(e){ $("pasteMsg").textContent="That is not valid text: "+e.message; return; } if(!o||typeof o!=="object"||Array.isArray(o)||!o.name){ $("pasteMsg").textContent="That does not look like a character (it needs a name)."; return; } if(C&&C.name.trim()&&!confirm("Replace the character on screen?")) return; $("pasteMsg").textContent=""; $("pasteTxt").value=""; $("pasteBox").style.display="none"; setC(fromBuilderJson(o)); };
 $("chName").oninput=()=>{ C.name=$("chName").value; render(); };
 $("chRace").onchange=()=>{ C.race=$("chRace").value; const R=RACES[C.race]; C.st=Math.max(R.st,C.st); C.dx=Math.max(R.dx,C.dx); C.iq=Math.max(R.iq,C.iq); render(); };
