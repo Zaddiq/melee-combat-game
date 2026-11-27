@@ -636,3 +636,6 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - campaign/campaign-builder.html: "Load bench A" / "Load bench B" next to Paste; uses fromBuilderJson, so the character can be saved in the list or left open to join by phone.
 - campaign/colosseum.html: the Premade fighters card also lists "From bench A/B", and gives them to a tablet or phone seat the same way.
 - Test: tests/bench_flow_test.py.
+
+## Bench fighters finish themselves
+- campaign-builder.html autoGear(): after "Load bench A/B" the fighter owns what it carries (the import already adds it to inv), the purse is raised if the gear costs more than $1000, and the talent each carried item needs is trained (prerequisites first) as far as IQ allows; the message lists what was trained and anything it had no IQ room for. Only the bench path does this (paste and list loading are unchanged). Tests B4b/B4c in tests/bench_flow_test.py.

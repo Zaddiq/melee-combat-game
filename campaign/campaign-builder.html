@@ -340,8 +340,20 @@ $("dataClear").onclick=()=>{ store.del(DKEY); loadData(); showData(); if(D&&!C) 
 function showData(){ $("dataState").textContent=D?(USING_STARTER?"(built-in starter data: ":"(your data loaded: ")+D.talents.length+" talents, "+Object.keys(D.prices).length+" priced items"+((D.spells||[]).length?", "+D.spells.length+" spells":"")+")":"(none yet: paste it here first)"; $("dataCard").open=!D; }
 $("newChar").onclick=()=>{ if(C&&!confirm("Replace the character on screen?")) return; store.set(CKEY,""); setC(BLANKC()); };
 $("pasteBtn").onclick=()=>{ $("pasteBox").style.display=$("pasteBox").style.display?"":"none"; };
+/* A fighter brought in from the bench is finished on its own: it buys the gear it carries and trains the talents that gear needs, as far as its IQ and purse allow */
+function autoGear(){ const bought=[], trained=[], missed=[];
+  const train=(t,depth)=>{ if(!t||has(t.id)) return true; if(depth>4) return false;
+    for(const x of t.pre||[]) if(!train(T(x),depth+1)) return false;
+    if(t.preAny&&!t.preAny.some(has)&&!(t.preAny.some(x=>train(T(x),depth+1)))) return false;
+    if(reasons(t).length||iqUsed()+costOf(t)>C.iq) return false; C.tal.push(t.id); trained.push(t.n); return true; };
+  for(const sl of ["a","b","s1","d1"]){ const k=C[sl]; if(!k||k==="none"||k==="staff") continue; if(priceOf(k)==null) continue;
+    if(!own(k)){ C.inv[k]=1; bought.push(itemName(k)); }
+    const tf=talentFor(k); if(tf&&!has(tf.id)&&!train(tf,0)) missed.push(itemName(k)+" (no room for "+tf.n+")"); }
+  const need=spent(); if(C.purse<need) C.purse=need;   /* it always has the money for what it carries; the rest of the $1000 stays in the purse */
+  return {bought,trained,missed}; }
 function loadBench(k){ let B={}; try{ B=JSON.parse(store.get("melee-bench-v1")||"{}")||{}; }catch(e){} const o=B[k]; if(!o||typeof o!=="object"||!o.name){ $("benchMsg").textContent="Nothing on bench "+k.toUpperCase()+" yet. Make a fighter in the old builder (menu) or the Colosseum and press its Send to bench button."; return; }
-  if(C&&C.name.trim()&&!confirm("Replace the character on screen with the fighter on bench "+k.toUpperCase()+"?")) return; $("benchMsg").textContent="Loaded "+o.name+" from bench "+k.toUpperCase()+". Press Save in my list to keep it, or just leave it open and join a table from the phone."; setC(fromBuilderJson(o)); }
+  if(C&&C.name.trim()&&!confirm("Replace the character on screen with the fighter on bench "+k.toUpperCase()+"?")) return; setC(fromBuilderJson(o)); const g=autoGear(); render();
+  $("benchMsg").textContent="Loaded "+o.name+" from bench "+k.toUpperCase()+". "+(g.bought.length?"Bought: "+g.bought.join(", ")+". ":"")+(g.trained.length?"Trained: "+g.trained.join(", ")+". ":"")+(g.missed.length?"Not trained: "+g.missed.join("; ")+". ":"")+"Press Save in my list to keep it, or leave it open and join a table from the phone."; }
 $("benchA").onclick=()=>loadBench("a"); $("benchB").onclick=()=>loadBench("b");
 $("pasteGo").onclick=()=>{ let o; try{ o=JSON.parse($("pasteTxt").value); }catch(e){ $("pasteMsg").textContent="That is not valid text: "+e.message; return; } if(!o||typeof o!=="object"||Array.isArray(o)||!o.name){ $("pasteMsg").textContent="That does not look like a character (it needs a name)."; return; } if(C&&C.name.trim()&&!confirm("Replace the character on screen?")) return; $("pasteMsg").textContent=""; $("pasteTxt").value=""; $("pasteBox").style.display="none"; setC(fromBuilderJson(o)); };
 $("chName").oninput=()=>{ C.name=$("chName").value; render(); };

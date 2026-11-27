@@ -23,6 +23,8 @@ with sync_playwright() as p:
     cb.wait_for_selector("#benchA")
     cb.click("#benchA")
     ok("B4 the campaign builder loads bench A", cb.input_value("#chName") == "Kid One" and "Loaded Kid One" in cb.inner_text("#benchMsg"))
+    ok("B4b it bought its weapon and trained the matching talent", cb.evaluate("()=>{ const k=C.a; const tf=talentFor(k); return own(k)>0&&(C.b==='none'||own(C.b)>0)&&(!tf||has(tf.id))&&left()>=0&&iqUsed()<=C.iq; }") and "Trained:" in cb.inner_text("#benchMsg"))
+    ok("B4c the shop shows no missing-talent warning for its weapon", "(you lack it)" not in cb.inner_text("#tf_"+cb.evaluate("()=>C.a")))
     cb.click("#rosterSave")
     ok("B5 and can save it in its list", "Kid One" in cb.eval_on_selector_all("#rosterSel option", "e=>e.map(x=>x.textContent)"))
     cb.click("#benchB")
