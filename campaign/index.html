@@ -20,15 +20,6 @@ footer{color:var(--mut);font-size:13px;margin-top:20px}footer p{margin:0 0 8px}f
 <body><main>
 <h1>Melee Game</h1>
 <p class="s">Tools for The Fantasy Trip: Melee and Wizard, using the Third Edition (2018) rules.</p>
-<a class="card" id="hostCamp" href="colosseum.html?campaign=1" style="border-color:var(--acc)"><b>Host a campaign table</b><span id="hostCampTxt">Opens the Colosseum with the phone table and your module, at the room where you left off.</span></a>
-<script>
-(function(){ var a=document.getElementById("hostCamp"),t=document.getElementById("hostCampTxt"),m=null;
- try{ m=JSON.parse(localStorage.getItem("colosseum-module")||"null"); }catch(e){}
- if(m&&Array.isArray(m.encounters)&&m.encounters.length){ var i=Math.max(0,Math.min(m.encounters.length-1,Math.round(+m.i)||0)); var n=m.encounters[i]&&m.encounters[i].name;
-  t.textContent="Continue "+(m.module||"your module")+": room "+(i+1)+" of "+m.encounters.length+(n?" ("+n+")":"")+". Opens the phone table and the fighters keep their ST."; }
- else { a.href="colosseum.html?campaign=1"; t.innerHTML="<b style='display:inline;font-size:inherit;color:var(--foe,#c33)'>No campaign is loaded yet.</b> Tap here, then paste your module file in the Encounter box (it opens for you). After that this button continues where you left off."; }
-})();
-</script>
 <a class="card" href="campaign-builder.html"><b>Campaign character builder</b><span>The campaign's only character builder: talents (with the IQ budget), a purse, gear, loot and magic items. The Colosseum and phones use the character open here. You paste your own rules data in; it stays in your browser.</span></a>
 <a class="card" href="../builder.html"><b>Old builder (to bring characters over)</b><span>The original game's builder, outside the campaign. Open a character there, press "Copy data", come back here and use "Paste a character…" in the campaign builder. Nothing is changed in the old game.</span></a>
 <a class="card" href="bestiary.html"><b>Bestiary</b><span>A monster manual: stats, gear and notes for each enemy. Everything saved here can be picked as the computer side in the Colosseum.</span></a>

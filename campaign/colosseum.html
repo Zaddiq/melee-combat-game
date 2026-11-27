@@ -1529,19 +1529,4 @@ $("mvGo").onclick=()=>{ $("gvMsg").textContent=moveItem(+$("mvFrom").value,+$("m
 $("ltGo").onclick=()=>{ $("gvMsg").textContent=giveLoot(+$("ltWho").value,$("ltName").value,$("ltVal").value); };
 $("giveCard").addEventListener("toggle",gvFill);
 </script>
-<script src="online-host.js"></script>
-<script>
-/* Menu button "Host a campaign table": ?campaign=1 sets up the campaign night in one go */
-(function(){ if(!/[?&]campaign=1/.test(location.search)) return;
- try{ history.replaceState(null,"",location.pathname); }catch(e){}
- const msg=t=>{ const d=document.createElement("div"); d.className="card"; d.id="campBanner"; d.style.cssText="border-color:var(--acc);margin:8px 0"; d.innerHTML=t; const h=document.querySelector("main")||document.body; h.insertBefore(d,h.firstChild); };
- if(!MOD){ const c=$("encCard"); c.open=true; msg("<b>No campaign is loaded yet.</b> Paste your module file into the Encounter box below and press Apply. Next time, the menu button will continue where you left off."); c.scrollIntoView(); return; }
- if(!$("creSel").querySelector('option[value="enc"]')){ msg("The Encounter side is not available."); return; }
- CREK="enc"; CREN=1; $("creSel").value="enc"; resetSetup();
- CAMP.on=true; $("campOn").checked=true; campStore(); campNote();
- const o=$("online"); o.open=true; if(o.ontoggle) try{ o.dispatchEvent(new Event("toggle")); }catch(e){}
- const nm=$("onName"); if(nm){ if(nm.value&&nm.value.trim()) $("onOpen").click(); else { nm.focus(); } }
- msg("<b>Campaign table:</b> "+(MOD.module||"module")+", room "+(MOD.i+1)+" of "+MOD.encounters.length+". Campaign ST is on."+($("onName")?" Type a table name and press Open.":" The phone table is opening."));
-})();
-</script>
-</body></html>
+<script src="online-host.js"></script></body></html>

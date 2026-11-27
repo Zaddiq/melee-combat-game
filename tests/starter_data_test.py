@@ -15,7 +15,7 @@ with sync_playwright() as p:
     ok("T3 the shop has the bastard sword and the armor columns", pg.locator("#buy_bastard").count()==1 and "adjDX" in pg.inner_text("#shop"))
     ok("T4 the spell picker has spells (names and levels)", pg.evaluate("()=>document.querySelectorAll('#spAdd option').length")>3 or True)
     d=pg.evaluate("()=>window.STARTER_DATA")
-    ok("T5 the starter data carries only short summaries for the original-table spells and no book text fields", len(d["spells"])>100 and 50<sum(1 for s in d["spells"] if s.get("d"))<80 and all(set(t)<= {"id","n","iq","c","pre","preAny","dx","st","cIf","wc"} for t in d["talents"]))
+    ok("T5 the starter data carries no descriptions and no book text fields", all("d" not in s for s in d["spells"]) and len(d["spells"])>100 and all(set(t)<= {"id","n","iq","c","pre","preAny","dx","st","cIf","wc"} for t in d["talents"]))
     own={"talents":[{"id":"knife","n":"Knife","iq":7,"c":1}],"prices":{"dagger":10}}
     pg.evaluate("document.getElementById('dataCard').open=true"); pg.fill("#dataBox",json.dumps(own)); pg.click("#dataSave")
     ok("T6 a loaded rules file overrides the starter data", "your data" in (pg.text_content("#dataState") or "") and pg.locator("#talents .tal").count()==1)
