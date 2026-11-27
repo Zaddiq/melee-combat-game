@@ -630,3 +630,9 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - campaign/premade.js: window.PREMADE, 8 ready-made 32-point characters in the campaign builder's format (talents, gear, a wizard with spells). Names and numbers only.
 - campaign/colosseum.html: card "Premade fighters": pick one and a player seat, "Give to this player". A tablet seat gets it directly; a phone seat gets it too (Online.assign in online-host.js sends it to the phone's own list, marked phone.given so the table does not drop it).
 - Test: tests/premade_test.py.
+
+## Bench flow (quick fighters)
+- campaign/sim.html: each fighter box has "Send to bench A/B" (A to bench A, B to bench B; localStorage "melee-bench-v1", IQ 8, listed weapons only).
+- campaign/campaign-builder.html: "Load bench A" / "Load bench B" next to Paste; uses fromBuilderJson, so the character can be saved in the list or left open to join by phone.
+- campaign/colosseum.html: the Premade fighters card also lists "From bench A/B", and gives them to a tablet or phone seat the same way.
+- Test: tests/bench_flow_test.py.
