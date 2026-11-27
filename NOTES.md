@@ -639,3 +639,7 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 
 ## Bench fighters finish themselves
 - campaign-builder.html autoGear(): after "Load bench A/B" the fighter owns what it carries (the import already adds it to inv), the purse is raised if the gear costs more than $1000, and the talent each carried item needs is trained (prerequisites first) as far as IQ allows; the message lists what was trained and anything it had no IQ room for. Only the bench path does this (paste and list loading are unchanged). Tests B4b/B4c in tests/bench_flow_test.py.
+
+## Bigger text and a phone-friendly shop
+- Campaign pages (phone, campaign builder, Colosseum, menu, bestiary, magic, voice): the smallest text is now 15px and the usual small text 16px.
+- campaign-builder.html: under 700px wide the shop stacks each item (name on its own line, then its numbers and Buy) so nothing needs sideways panning. The printable sheet.html is left as it was.

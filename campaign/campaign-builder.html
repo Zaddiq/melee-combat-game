@@ -10,20 +10,29 @@
 @media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e8e8ea;--mut:#9aa0a8;--card:#1f2228;--line:#363a42;--acc:#7fa8ee;--bad:#ee7b7f;--ok:#6cc27f;--warn:#e0a24a}}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif}
 main{max-width:900px;margin:0 auto;padding:16px}
-h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:0 0 8px}h3{font-size:14px;margin:12px 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
 a{color:var(--acc)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
-.mut{color:var(--mut);font-size:14px}.bad{color:var(--bad)}.ok{color:var(--ok)}.warn{color:var(--warn)}
+.mut{color:var(--mut);font-size:16px}.bad{color:var(--bad)}.ok{color:var(--ok)}.warn{color:var(--warn)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
 input,select,button,textarea{font:inherit;padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
 input[type=number]{width:5em}input[type=checkbox]{padding:0}
 button{cursor:pointer}button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}button:disabled{opacity:.45;cursor:not-allowed}
 textarea{width:100%;box-sizing:border-box;font:12px monospace}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px 18px}
-.tal{display:flex;gap:6px;align-items:baseline;padding:2px 0}.tal label{flex:1}.tal .c{color:var(--mut);font-size:13px;white-space:nowrap}
-table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;border-top:1px solid var(--line);font-size:15px}th{font-size:13px;color:var(--mut)}
+.tal{display:flex;gap:6px;align-items:baseline;padding:2px 0}.tal label{flex:1}.tal .c{color:var(--mut);font-size:16px;white-space:nowrap}
+table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;text-align:left;border-top:1px solid var(--line);font-size:16px}th{font-size:16px;color:var(--mut)}
 #shop td:not(:first-child),#shop th:not(:first-child){white-space:nowrap;width:1%}
 .bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:4px 0}.bar i{display:block;height:100%;background:var(--acc)}.bar i.over{background:var(--bad)}
+@media (max-width:700px){ /* phones: the shop stacks each item (scroll down, never sideways) */
+ #shop table,#shop tbody{display:block;width:100%}
+ #shop tr:has(th:not([colspan])){display:none}
+ #shop tr{display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;border-top:1px solid var(--line);padding:6px 0;width:100%}
+ #shop td:not(:first-child),#shop th:not(:first-child),#shop td,#shop th{display:block;border:0;padding:0;width:auto;flex:0 0 auto}
+ #shop td:first-child,#shop td[colspan],#shop th[colspan]{flex:1 1 100%;font-weight:600}
+ #shop td[colspan]{font-weight:400}
+ html,body{overflow-x:hidden} textarea,pre,input[type=file]{max-width:100%}
+}
 </style>
 </head>
 <body><main>
@@ -215,7 +224,7 @@ function buildStatic(){
       const fd=x=>`${x.d}d${x.m?(x.m>0?"+":"")+x.m:""}`;
       const dmg=wk?`<td>${fd(W[k])}${W[k+"2"]&&W[k+"2"].two?` / ${fd(W[k+"2"])}`:""}</td><td>${W[k+"2"]&&W[k+"2"].two?"1 or 2":W[k].two?"2":"1"}</td>`:"";
       const nt=wk?[W[k].rate,W[k].th?"Can be thrown.":"",W[k].note].filter(Boolean).join(" "):"";
-      s+=`<tr><td>${esc(itemName(k))} <span class="ok" id="own_${k}"></span></td>${gn==="Armor"||gn==="Shields"?"":`<td>${W[k]&&W[k].st?"ST "+W[k].st:""}</td>`}<td id="pr_${k}"></td>${dmg}${gn==="Armor"?`<td>${ARMOR[k].stops}</td><td>${ARMOR[k].pen.m?"−"+ARMOR[k].pen.m:"0"}</td><td>${ARMOR[k].ma}</td>`:gn==="Shields"?`<td>${SHIELDS[k].stops}</td><td>${SHIELDS[k].pen?"−"+SHIELDS[k].pen:"0"}</td>`:""}<td id="tf_${k}"></td><td><button data-buy="${k}" id="buy_${k}">Buy</button></td></tr>`+(nt?`<tr><td colspan="8" class="mut" style="font-size:12px;border-top:0;padding-top:0;white-space:normal;width:auto">${esc(nt)}</td></tr>`:""); }
+      s+=`<tr><td>${esc(itemName(k))} <span class="ok" id="own_${k}"></span></td>${gn==="Armor"||gn==="Shields"?"":`<td>${W[k]&&W[k].st?"ST "+W[k].st:""}</td>`}<td id="pr_${k}"></td>${dmg}${gn==="Armor"?`<td>${ARMOR[k].stops}</td><td>${ARMOR[k].pen.m?"−"+ARMOR[k].pen.m:"0"}</td><td>${ARMOR[k].ma}</td>`:gn==="Shields"?`<td>${SHIELDS[k].stops}</td><td>${SHIELDS[k].pen?"−"+SHIELDS[k].pen:"0"}</td>`:""}<td id="tf_${k}"></td><td><button data-buy="${k}" id="buy_${k}">Buy</button></td></tr>`+(nt?`<tr><td colspan="8" class="mut" style="font-size:16px;border-top:0;padding-top:0;white-space:normal;width:auto">${esc(nt)}</td></tr>`:""); }
     s+="</table>"; }
   $("shop").innerHTML=s; }
 function updateTalents(used0){
