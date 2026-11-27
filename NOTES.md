@@ -622,3 +622,6 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 - campaign/index.html: top card "Host a campaign table". It reads the saved module (localStorage "colosseum-module") and says "Continue <module>: room N of M", or "No campaign is loaded yet".
 - colosseum.html?campaign=1 (script at the end of colosseum.html): with a module it picks the Encounter side, turns Campaign ST on, opens the Phones card and auto-opens the table with the saved name (colosseum-host-room); with no module it opens the Encounter box with a reminder. Room position is already saved by modGo.
 - Test: tests/host_campaign_test.py.
+
+## Campaign builder: built-in spell descriptions
+- campaign/starter-data.js now carries the short summaries the original builder already shows for its 62 table spells (type, ST cost, effect), so the picker shows descriptions with nothing loaded. The other ~63 Advanced Wizard spells get theirs only from a loaded rules file (or one shared by the table). 3-Hex Shadow was added to the starter list.
