@@ -66,7 +66,7 @@ function loadFromPhones(){
   let changed=false;
   for(const u of Object.keys(applied)) if(!(joins[u]&&seat[u]>=0)) delete applied[u];   /* a phone that left its seat will load again if it comes back */
   for(let i=0;i<NP;i++){ const u=uidOfPlayer(i), f0=slot[i];
-    if(!u||!joins[u].fj){ if(f0&&f0.phone){ slot[i]=null; me=slot[0]; foe=slot[1]; $("msg"+i).textContent=""; showSlot(i); changed=true; } continue; }   /* no phone, or it brings nobody: drop what it had brought */
+    if(!u||!joins[u].fj){ if(f0&&f0.phone&&!f0.phone.given){ slot[i]=null; me=slot[0]; foe=slot[1]; $("msg"+i).textContent=""; showSlot(i); changed=true; } continue; }   /* no phone, or it brings nobody: drop what it had brought */
     const tag=i+"|"+joins[u].fj; if(applied[u]===tag) continue;   /* already loaded (or the host replaced it by hand: leave that) */
     applied[u]=tag; const f=fromPhone(u,joins[u].fj,i); if(!f) continue;
     setP(i,f,"Brought by "+(joins[u].name||"a phone")+"."); changed=true; }
@@ -187,6 +187,9 @@ const Online=window.Online={ override:null, ring:0, lastKey:{},
     return pq.filter(u=>!ph.includes(u)).concat(ph); },
   redo(){ for(const k of Object.keys(sess)){ const x=activeSess(k); if(x&&x.step==='pick') sessOpts(x); } sessPushAll(); },   /* recompute every open pick session (used by tests after moving figures by hand) */
   ready(u){ if(!code||!G||!u) return null; const i=G.players.indexOf(u), uid=i>=0&&uidOfPlayer(i), S=uid&&activeSess(uid); if(!S||S.step!=="done"||!allIn()) return null; return S.act; },
+  assign(i,f,src){ const u=code&&uidOfPlayer(i); if(!u) return false;   /* a premade hero handed to the phone in seat i: the tablet keeps it, and the phone gets it in its own list (the way a new item is sent) */
+    const nm=f.name; f.phone={uid:u,fj:joins[u].fj||"",name:nm,key:nm.trim().toLowerCase(),src,given:true,rec:{name:nm,st:f.st,dx:f.dx,iq:f.iq,total0:f.total,pts:0,wins:0,losses:0,ep:0,banked:false,pend:0,must:false,retired:false,dead:false}};
+    applied[u]=i+"|"+(joins[u].fj||""); Online.result(f); return true; },
   isOn(){ return !!code; },   /* is a table open? (the magic-item hand-out needs one) */
   result(f){ if(!code||!f.phone) return; Net.sendRes(code,f.phone.uid,{id:Date.now(),key:f.phone.key,rec:Object.assign({},f.phone.rec,{src:f.phone.src})}).catch(fail); },
   hook(c,t){

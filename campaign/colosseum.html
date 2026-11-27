@@ -32,6 +32,7 @@ svg{width:100%;height:auto;max-height:80vh}
  <div class="card" id="friendBox" style="display:none"></div>
  <div class="card" id="vcHost" style="display:none"></div>
  <div class="card"><h2>The fight</h2><div id="ctl" class="mut">Load both fighters first (the boxes below).</div></div>
+ <details class="card" id="premCard"><summary style="cursor:pointer;font-weight:600">Premade fighters (for anyone without a character)</summary><div class="mut" style="margin:8px 0 6px">Pick a ready-made fighter and the player to give it to. A phone player gets it in their own list on the phone too.</div><div class="row"><select id="premSel"></select><select id="premSeat"></select><button class="pri" id="premGo">Give to this player</button></div><div id="premInfo" class="mut"></div><div id="premMsg" class="mut"></div></details>
  <details class="card" id="online"><summary style="cursor:pointer;font-weight:600">Phones (online table)</summary><div id="onBody" class="mut" style="margin-top:8px"></div></details>
  <details class="setup" id="setup" open><summary>The fighters</summary>
  <div class="card"><h2>Map</h2><div class="row"><select id="mapSel"><option value="melee">Melee map (two boards, 99 hexes)</option><option value="wizard">Wizard map (166 hexes, 21 megahexes)</option></select><span class="mut" id="mapNote"></span></div></div>
@@ -51,6 +52,7 @@ svg{width:100%;height:auto;max-height:80vh}
 <div class="card"><svg id="map" viewBox="0 0 10 10"></svg><div class="mut mapcap">The starred (pink) hexes are the entrances. One or two players start at the bottom (and the top). With 3 or 4 players in free for all, each also gets a west or east entrance; in Teams mode Team A starts at the bottom and Team B at the top. With computer creatures, all the players start at the bottom and the creatures come in from the top. Before the fight, each player taps one of the four outlined hexes of their own entrance to start there.</div></div></div>
 </main>
 <script src="rules.js"></script>
+<script src="premade.js"></script>
 <script src="roster.js"></script>
 <script src="maps.js"></script>
 <script src="firebase-config.js"></script>
@@ -1530,6 +1532,20 @@ $("ltGo").onclick=()=>{ $("gvMsg").textContent=giveLoot(+$("ltWho").value,$("ltN
 $("giveCard").addEventListener("toggle",gvFill);
 </script>
 <script src="online-host.js"></script>
+<script>
+/* Premade fighters: the host picks one and the player (seat) to give it to */
+(function(){ const PM=window.PREMADE||[]; if(!$("premSel")) return;
+ const gear=o=>[o.a,o.b,o.s1,o.d1].filter(k=>k&&k!=="none").map(k=>(W[k]&&W[k].n)||(SHIELDS[k]&&SHIELDS[k].n)||k).join(", ");
+ const info=()=>{ const o=PM[+$("premSel").value]; $("premInfo").textContent=o?`${o.race} ${o.cls}, ST ${o.st} DX ${o.dx} IQ ${o.iq}. ${gear(o)}${o.armor!=="none"?"; "+(ARMOR[o.armor]&&ARMOR[o.armor].n):""}.${o.spells?" Spells: "+o.spells.join(", ")+".":""}`:""; };
+ $("premSel").innerHTML=PM.map((o,i)=>`<option value="${i}">${esc(o.name)}</option>`).join("");
+ const seats=()=>{ const keep=$("premSeat").value; $("premSeat").innerHTML=[...Array(NP)].map((_,i)=>`<option value="${i}">Player ${i+1}${slot[i]?" (now "+esc(slot[i].name)+")":""}</option>`).join(""); if(keep&&+keep<NP) $("premSeat").value=keep; };
+ $("premSel").onchange=info; $("premCard").addEventListener("toggle",()=>{ seats(); info(); }); $("npSel").addEventListener("change",seats); info(); seats();
+ $("premGo").onclick=()=>{ const o=PM[+$("premSel").value], i=+$("premSeat").value; if(!o||!(i>=0)) return; seats();
+  const src=JSON.parse(JSON.stringify(o)); let f; try{ f=fromBuilder(src); }catch(e){ $("premMsg").textContent="Could not use that fighter: "+e.message; return; }
+  const sent=window.Online&&Online.assign&&Online.assign(i,f,src);
+  setP(i,f,sent?"Premade fighter, sent to that phone.":"Premade fighter."); seats(); $("premMsg").textContent=o.name+" is now Player "+(i+1)+(sent?" and is on that phone too.":".")+(slot[i]&&slot[i].name!==o.name?" (named "+slot[i].name+" because that name was taken)":""); };
+})();
+</script>
 <script>
 /* Menu button "Host a campaign table": ?campaign=1 sets up the campaign night in one go */
 (function(){ if(!/[?&]campaign=1/.test(location.search)) return;
