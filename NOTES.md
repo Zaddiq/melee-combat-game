@@ -614,3 +614,6 @@ An encounter may give `map` instead of `room` (feet): {cols (5-30), rows (5-40),
 
 ## Campaign builder: new characters start with $1000
 - BLANKC (a new character) has a purse of 1000; saved characters keep what they have. Test: tests/starter_data_test.py (T7b).
+
+## Campaign builder: Sword includes Knife
+- ITL: "Sword: ability includes Knife, and costs only one point if you already have Knife". A talent that includes others (INCLUDES in the builder, or an "inc" list in the data) counts them for every effect (dagger and main-gauche use Knife) but they cost nothing and show ticked and locked. Sword then Knife and Knife then Sword both cost 2 IQ in all. Test: tests/starter_data_test.py (K1-K3).

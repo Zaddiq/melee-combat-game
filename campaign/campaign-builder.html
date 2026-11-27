@@ -151,10 +151,15 @@ const hasStaff=c=>c.cls==="wizard"&&spellsOf(c).includes("Staff");
 
 /* ---- talents ---- */
 const T=id=>D.talents.find(t=>t.id===id);
-const has=(id)=>C.tal.includes(id);
+/* a talent can include others (Sword includes Knife, ITL: "Sword: ability includes Knife, and costs only one point if you already have Knife"): the included talent counts for every effect but costs nothing and is not bought */
+const INCLUDES={sword:["knife"]};
+const incOf=t=>(t&&t.inc)||INCLUDES[t&&t.id]||[];
+const ownT=(id)=>C.tal.includes(id);
+const includedBy=(id)=>C.tal.some(x=>x!==id&&incOf(T(x)).includes(id));
+const has=(id)=>ownT(id)||includedBy(id);
 function costOf(t){
   const w=C.cls==="wizard", base=w?(t.wc!=null?t.wc:t.c*2):t.c; let c=base;
-  for(const [x,v] of t.cIf||[]) if(has(x)) c=Math.min(c,w?(t.wc!=null?Math.min(t.wc,v):v*2):v);
+  for(const [x,v] of t.cIf||[]) if(ownT(x)) c=Math.min(c,w?(t.wc!=null?Math.min(t.wc,v):v*2):v);
   return c; }
 function reasons(t){   /* why this talent cannot be taken now (empty = it can) */
   const r=[]; if(t.iq>C.iq) r.push("needs IQ "+t.iq);
@@ -213,8 +218,8 @@ function buildStatic(){
     s+="</table>"; }
   $("shop").innerHTML=s; }
 function updateTalents(used0){
-  for(const t of D.talents){ const on=has(t.id), r=reasons(t), cost=costOf(t), can=on||(!r.length&&used0+cost<=C.iq), cb=$("tal_"+t.id);
-    const why=on?"":r.length?r.join(", "):(used0+cost>C.iq?"not enough IQ left":"");
+  for(const t of D.talents){ const inc=!ownT(t.id)&&includedBy(t.id), on=has(t.id), r=inc?[]:reasons(t), cost=inc?0:costOf(t), can=!inc&&(on||(!r.length&&used0+cost<=C.iq)), cb=$("tal_"+t.id);
+    const why=inc?"included with "+C.tal.map(T).filter(x=>x&&incOf(x).includes(t.id)).map(x=>x.n).join(", "):on?"":r.length?r.join(", "):(used0+cost>C.iq?"not enough IQ left":"");
     cb.checked=on; cb.disabled=!can; cb.nextElementSibling.className=can?"":"mut"; $("talc_"+t.id).textContent=cost+" IQ"+(why?" · "+why:""); } }
 function updateShop(){
   for(const [,ks] of SHOPKEYS()) for(const k of ks){ const p=priceOf(k), tf=talentFor(k);

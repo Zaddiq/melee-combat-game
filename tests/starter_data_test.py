@@ -22,5 +22,11 @@ with sync_playwright() as p:
     pg.evaluate("document.getElementById('dataCard').open=true"); pg.click("#dataClear")
     ok("T7 removing it goes back to the starter data", "starter" in (pg.text_content("#dataState") or "") and pg.locator("#talents .tal").count()>50)
     ok("T7b a new character starts with $1000 to spend", pg.evaluate("()=>BLANKC().purse")==1000)
+    pg.evaluate("document.getElementById('dataCard').open=true"); pg.click("#dataClear") if pg.locator("#dataClear").is_visible() else None
+    r=pg.evaluate("""()=>{ const out={}; C.iq=12; C.tal=['sword']; render(); out.a=[iqUsed(), has('knife'), document.getElementById('tal_knife').checked, document.getElementById('tal_knife').disabled, document.getElementById('talc_knife').textContent];
+      C.tal=['knife','sword']; render(); out.b=iqUsed(); C.tal=['sword']; C.iq=12; render(); const g=talentFor('dagger'); out.c=[g&&g.id, has(g.id)]; return out; }""")
+    ok("K1 Sword alone costs 2 IQ and brings Knife with it (ticked, locked, 0 IQ)", r["a"][0]==2 and r["a"][1] and r["a"][2] and r["a"][3] and r["a"][4].startswith("0 IQ"))
+    ok("K2 Knife then Sword is also 2 IQ in all", r["b"]==2)
+    ok("K3 with Sword a dagger or main-gauche no longer lacks its talent", r["c"]==["knife",True])
     ok("T8 no script errors", not errs)
 print(f"{n-bad}/{n} passed")
