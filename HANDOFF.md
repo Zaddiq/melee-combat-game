@@ -1,5 +1,7 @@
 # Handoff notes (read this first in a new chat)
 
+> Campaign game status and to-do list: see CAMPAIGN-TODO.md.
+
 **What this is:** browser versions of The Fantasy Trip (Melee and Wizard) in single-file HTML/JS pages. Repo: https://github.com/Zaddiq/melee-combat-game · Site: https://zaddiq.github.io/melee-combat-game/
 
 **Authoritative rules:** the owner's own Melee Third Edition 2018 and Wizard 2018 PDFs (not committed; ask the owner to attach them). Keep characters "Melee legal". Design decisions and guessed rules are in `NOTES.md`.
